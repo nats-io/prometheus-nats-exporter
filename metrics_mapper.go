@@ -1,36 +1,37 @@
 package main
+
 // Initializes by reading in a json file of metric definitions.
 // Will map results of a metric values to the metric definitons.
 // Any numeric values undefined will be mapped as a gauge.
 import (
-  "io/ioutil"
-  "fmt"
-  "encoding/json"
-  "os"
-  "github.com/prometheus/client_golang/prometheus"
-  "net/http"
-  "strings"
+	"encoding/json"
+	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
 )
 
 type Root struct {
-  Metrics map[string]PrometheusMetricConfig
+	Metrics map[string]PrometheusMetricConfig
 }
 
 type PrometheusMetricConfig struct {
-    Help string `json:"help"`
-    MetricType string `json:"type"`
+	Help       string `json:"help"`
+	MetricType string `json:"type"`
 }
 
 var metricDefinitions = make(map[string]map[string]PrometheusMetricConfig)
 
 const (
-  namespace = "gnatsd"
+	namespace = "gnatsd"
 )
 
 func check(e error) {
-  if e != nil {
-    panic(e)
-  }
+	if e != nil {
+		panic(e)
+	}
 }
 
 // func createPrometheusCounter(subsystem string, name string, help string) {
@@ -49,86 +50,86 @@ func check(e error) {
 // Based on our current integration, we're going to treat all metrics as gauges.
 // We are going to call the set message on the gauge when we receive an updated
 // metrics pull.
-func NewPrometheusGaugeVec(pollingURL []string, subsystem string, name string, help string) (metric *prometheus.GaugeVec){
-  if help == "" {
-    help = name
-  }
-  opts := prometheus.GaugeOpts {
-    Namespace: namespace,
-    Subsystem: subsystem,
-    Name: name,
-    Help: help,
-  }
-  metric = prometheus.NewGaugeVec(opts,[]string{"polling_url"})
+func NewPrometheusGaugeVec(pollingURL []string, subsystem string, name string, help string) (metric *prometheus.GaugeVec) {
+	if help == "" {
+		help = name
+	}
+	opts := prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      name,
+		Help:      help,
+	}
+	metric = prometheus.NewGaugeVec(opts, []string{"polling_url"})
 
-  fmt.Println("Returning metric:", pollingURL, subsystem, name, help)
-  return metric
+	fmt.Println("Returning metric:", pollingURL, subsystem, name, help)
+	return metric
 }
 
 func loadMetricConfig(subsystem string, configFileName string) {
-    cfg, err := ioutil.ReadFile(configFileName);
-    check(err)
-    fmt.Print(string(cfg))
+	cfg, err := ioutil.ReadFile(configFileName)
+	check(err)
+	fmt.Print(string(cfg))
 
-    var root Root
+	var root Root
 
-    err = json.Unmarshal(cfg, &root)
-    check(err)
+	err = json.Unmarshal(cfg, &root)
+	check(err)
 
-    p, err := json.MarshalIndent(root, "", "  ")
-    os.Stdout.Write(p)
-    check(err)
+	p, err := json.MarshalIndent(root, "", "  ")
+	os.Stdout.Write(p)
+	check(err)
 
-    // for each metric name
-    // add to metric definitions
-    for k := range root.Metrics {
-      fmt.Println(k + ": " + root.Metrics[k].Help)
-    }
+	// for each metric name
+	// add to metric definitions
+	for k := range root.Metrics {
+		fmt.Println(k + ": " + root.Metrics[k].Help)
+	}
 }
 
 // Retrieves a NATS Metrics JSON. This can be called against any monitoring URL for NATS.
 func GetMetricURL(URL string) (response map[string]interface{}) {
-  resp, err := http.Get(URL)
-  check(err)
+	resp, err := http.Get(URL)
+	check(err)
 
-  defer resp.Body.Close()
-  body, err := ioutil.ReadAll(resp.Body)
-  check(err)
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	check(err)
 
-  fmt.Println(string(body))
+	fmt.Println(string(body))
 
-  // now parse the body into json
-  err = json.Unmarshal(body, &response)
-  check(err)
+	// now parse the body into json
+	err = json.Unmarshal(body, &response)
+	check(err)
 
-  return response
+	return response
 }
 
-func LoadMetricConfigFromResponse(pollingURLs []string, response map[string]interface{}) (out map[string]*prometheus.GaugeVec){
-  // get the subsystem name.
-  first := pollingURLs[0]
+func LoadMetricConfigFromResponse(pollingURLs []string, response map[string]interface{}) (out map[string]*prometheus.GaugeVec) {
+	// get the subsystem name.
+	first := pollingURLs[0]
 
-  subsystem := first[strings.LastIndex(first, "/")+1:]
+	subsystem := first[strings.LastIndex(first, "/")+1:]
 
-  out = make(map[string]*prometheus.GaugeVec)
+	out = make(map[string]*prometheus.GaugeVec)
 
-  // for each metric
-  for k := range response {
-  //  if it's not already defined in metricDefinitions
-    _, ok := metricDefinitions[k]
-    if !ok {
-      i := response[k]
-      switch v := i.(type) {
-      case float64: // not sure why, but all my json numbers are coming here.
-        fmt.Println("i is a float", k, v)
-        out[k] = NewPrometheusGaugeVec(pollingURLs, subsystem, k, "")
-      case string:
-        fmt.Println("i is a string", k, v)
-      default:
-        // i isn't one of the types above
-        fmt.Println("i don't know what i is", v)
-      }
-    }
-  }
-  return out
+	// for each metric
+	for k := range response {
+		//  if it's not already defined in metricDefinitions
+		_, ok := metricDefinitions[k]
+		if !ok {
+			i := response[k]
+			switch v := i.(type) {
+			case float64: // not sure why, but all my json numbers are coming here.
+				fmt.Println("i is a float", k, v)
+				out[k] = NewPrometheusGaugeVec(pollingURLs, subsystem, k, "")
+			case string:
+				fmt.Println("i is a string", k, v)
+			default:
+				// i isn't one of the types above
+				fmt.Println("i don't know what i is", v)
+			}
+		}
+	}
+	return out
 }
