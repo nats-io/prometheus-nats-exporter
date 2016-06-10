@@ -66,6 +66,7 @@ func NewPrometheusGaugeVec(pollingURL []string, subsystem string, name string, h
 	return metric
 }
 
+// TODO: Add Metric configs for help text and type updates.
 func loadMetricConfig(subsystem string, configFileName string) {
 	cfg, err := ioutil.ReadFile(configFileName)
 	check(err)
@@ -105,26 +106,26 @@ func GetMetricURL(URL string) (response map[string]interface{}) {
 	return response
 }
 
+// For each NATS Metrics endpoint (/*z)
+// Get the first URL to determine the list of possible metrics.
+// TODO: flatten embedded maps.
 func LoadMetricConfigFromResponse(pollingURLs []string, response map[string]interface{}) (out map[string]*prometheus.GaugeVec) {
 	// get the subsystem name.
 	first := pollingURLs[0]
-
-	subsystem := first[strings.LastIndex(first, "/")+1:]
-
+	endpoint := first[strings.LastIndex(first, "/")+1:]
 	out = make(map[string]*prometheus.GaugeVec)
 
 	// for each metric
 	for k := range response {
 		//  if it's not already defined in metricDefinitions
-		_, ok := metricDefinitions[k]
+		_, ok := metricDefinitions[k] // TODO: Populate Metrics Definitios
 		if !ok {
 			i := response[k]
 			switch v := i.(type) {
 			case float64: // not sure why, but all my json numbers are coming here.
-				fmt.Println("i is a float", k, v)
-				out[k] = NewPrometheusGaugeVec(pollingURLs, subsystem, k, "")
+				out[k] = NewPrometheusGaugeVec(pollingURLs, endpoint, k, "")
 			case string:
-				fmt.Println("i is a string", k, v)
+				// do nothing
 			default:
 				// i isn't one of the types above
 				fmt.Println("i don't know what i is", v)
