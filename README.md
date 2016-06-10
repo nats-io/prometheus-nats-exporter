@@ -1,5 +1,8 @@
 # prometheus-nats-exporter
-A Prometheus exporter for NATS metrics
+A [Prometheus](https://prometheus.io/) exporter for NATS metrics. Maps all numeric NATS server metrics to Prometheus for monitoring. 
+
+Aggregates any number of metrics endpoints (varz, connz, subsz, routez) across any number of monitored NATS servers into a
+single Prometheus Exporter endpoint to simplify configuration of Prometheus.
 
 # Prerequisites
 ``` bash
