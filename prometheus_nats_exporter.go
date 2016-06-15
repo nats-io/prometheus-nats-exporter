@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
+	"github.com/nats-io/prometheus-nats-exporter/collector"
 )
 
 // scrape the endpoints listed.
@@ -22,51 +22,6 @@ var (
 	listenAddress string
 	listenPort    int
 )
-
-type NATSCollector struct {
-	URLs  []string
-	Stats map[string]*prometheus.GaugeVec
-	mtx   sync.Mutex
-}
-
-func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
-	// for each stat in nc.Stats
-	for _, k := range nc.Stats {
-		// Describe it to the channel.
-		k.Describe(ch)
-	}
-}
-
-func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
-	nc.mtx.Lock()
-	defer nc.mtx.Unlock()
-	// query the URL for the most recent stats.
-	// get all the Metrics at once, then set the stats and collect them together.
-	resps := make(map[string]map[string]interface{})
-	for _, u := range nc.URLs {
-		resps[u] = GetMetricURL(u)
-	}
-
-	// for each stat, see if each response contains that stat. then collect.
-	for idx, k := range nc.Stats {
-		for url, response := range resps {
-			switch v := response[idx].(type) {
-			case float64: // not sure why, but all my json numbers are coming here.
-				k.WithLabelValues(url).Set(v)
-			default:
-				fmt.Println("value no longer a float", url, v)
-			}
-		}
-		k.Collect(ch) // update the stat.
-	}
-}
-
-func NewNATSCollector(urls []string) *NATSCollector {
-	return &NATSCollector{
-		URLs:  urls,
-		Stats: LoadMetricConfigFromResponse(urls, GetMetricURL(urls[0])),
-	}
-}
 
 func main() {
 	// Parse flags
@@ -92,7 +47,7 @@ func main() {
 
 	for _, v := range metrics {
 		fmt.Println("registering", v)
-		nc := NewNATSCollector(v)
+		nc := collector.New(v)
 		prometheus.MustRegister(nc)
 	}
 
