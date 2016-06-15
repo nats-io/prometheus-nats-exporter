@@ -1,4 +1,4 @@
-package main
+package collector
 
 // Initializes by reading in a json file of metric definitions.
 // Will map results of a metric values to the metric definitons.
@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"log"
 )
 
 type Root struct {
@@ -89,31 +90,50 @@ func loadMetricConfig(subsystem string, configFileName string) {
 }
 
 // Retrieves a NATS Metrics JSON. This can be called against any monitoring URL for NATS.
-func GetMetricURL(URL string) (response map[string]interface{}) {
+//
+// On any this function will error, warn and return nil.
+func GetMetricURL(URL string) (response map[string]interface{}, err error) {
 	resp, err := http.Get(URL)
-	check(err)
+	if (err != nil) {
+		return response, err
+	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	check(err)
-
-	fmt.Println(string(body))
+	if (err != nil) {
+		return response, err
+	}
 
 	// now parse the body into json
 	err = json.Unmarshal(body, &response)
-	check(err)
+	if (err != nil) {
+		return response, err
+	}
 
-	return response
+	return response, err
 }
 
 // For each NATS Metrics endpoint (/*z)
 // Get the first URL to determine the list of possible metrics.
 // TODO: flatten embedded maps.
-func LoadMetricConfigFromResponse(pollingURLs []string, response map[string]interface{}) (out map[string]*prometheus.GaugeVec) {
+func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interface{}) {
 	// get the subsystem name.
 	first := pollingURLs[0]
 	endpoint := first[strings.LastIndex(first, "/")+1:]
-	out = make(map[string]*prometheus.GaugeVec)
+	out = make(map[string]interface{})
+
+	var response map[string]interface{}
+	var err error
+
+	// gets URLs until one responds.
+	for _, v := range pollingURLs {
+		response, err = GetMetricURL(v)
+		if (err != nil) {
+			log.Printf("Error loading metric config from response: %s", err)
+		} else {
+			break
+		}
+	}
 
 	// for each metric
 	for k := range response {
@@ -128,7 +148,7 @@ func LoadMetricConfigFromResponse(pollingURLs []string, response map[string]inte
 				// do nothing
 			default:
 				// i isn't one of the types above
-				fmt.Println("i don't know what i is", v)
+				fmt.Println("i don't know what i is", k, v)
 			}
 		}
 	}
