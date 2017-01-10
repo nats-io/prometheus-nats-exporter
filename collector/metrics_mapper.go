@@ -6,18 +6,20 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
-	"log"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Root is the base of the prometheus metrics
 type Root struct {
 	Metrics map[string]PrometheusMetricConfig
 }
 
+// PrometheusMetricConfig holds configuration for the metrics.
 type PrometheusMetricConfig struct {
 	Help       string `json:"help"`
 	MetricType string `json:"type"`
@@ -48,6 +50,7 @@ func check(e error) {
 //   prometheus.MustRegister(metric)
 // }
 
+// NewPrometheusGaugeVec creates a custom GuageVec
 // Based on our current integration, we're going to treat all metrics as gauges.
 // We are going to call the set message on the gauge when we receive an updated
 // metrics pull.
@@ -63,7 +66,7 @@ func NewPrometheusGaugeVec(pollingURL []string, subsystem string, name string, h
 	}
 	metric = prometheus.NewGaugeVec(opts, []string{"polling_url"})
 
-	fmt.Println("Returning metric:", pollingURL, subsystem, name, help)
+	Tracef("Returning metric: %s, %s, %s, %s", pollingURL, subsystem, name, help)
 	return metric
 }
 
@@ -85,36 +88,37 @@ func loadMetricConfig(subsystem string, configFileName string) {
 	// for each metric name
 	// add to metric definitions
 	for k := range root.Metrics {
-		fmt.Println(k + ": " + root.Metrics[k].Help)
+		Tracef(k + ": " + root.Metrics[k].Help)
 	}
 }
 
-// Retrieves a NATS Metrics JSON. This can be called against any monitoring URL for NATS.
-//
+// GetMetricURL retrieves a NATS Metrics JSON.
+// This can be called against any monitoring URL for NATS.
 // On any this function will error, warn and return nil.
 func GetMetricURL(URL string) (response map[string]interface{}, err error) {
 	resp, err := http.Get(URL)
-	if (err != nil) {
+	if err != nil {
 		return response, err
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	if (err != nil) {
+	if err != nil {
 		return response, err
 	}
 
 	// now parse the body into json
 	err = json.Unmarshal(body, &response)
-	if (err != nil) {
+	if err != nil {
 		return response, err
 	}
 
 	return response, err
 }
 
-// For each NATS Metrics endpoint (/*z)
-// Get the first URL to determine the list of possible metrics.
+// LoadMetricConfigFromResponse builds the configuration
+// For each NATS Metrics endpoint (/*z) get the first URL
+// to determine the list of possible metrics.
 // TODO: flatten embedded maps.
 func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interface{}) {
 	// get the subsystem name.
@@ -128,8 +132,8 @@ func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interfac
 	// gets URLs until one responds.
 	for _, v := range pollingURLs {
 		response, err = GetMetricURL(v)
-		if (err != nil) {
-			log.Printf("Error loading metric config from response: %s", err)
+		if err != nil {
+			Errorf("Error loading metric config from response: %s", err)
 		} else {
 			break
 		}
@@ -148,7 +152,7 @@ func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interfac
 				// do nothing
 			default:
 				// i isn't one of the types above
-				fmt.Println("i don't know what i is", k, v)
+				Tracef("Unknown type:  %v, %v", k, v)
 			}
 		}
 	}

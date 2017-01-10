@@ -3,32 +3,28 @@ package collector
 
 import (
 	"fmt"
-	"net/http"
 	"net"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
-	"strings"
 
-	"github.com/nats-io/nats"
 	"github.com/nats-io/gnatsd/server"
+	"github.com/nats-io/go-nats"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
-
 )
 
-const CLIENT_PORT = 11224
-const MONITOR_PORT = 11424
-const CLUSTER_PORT = 12444
+const ClientPort = 11224
+const MonitorPort = 11424
 
 var DefaultMonitorOptions = server.Options{
-	Host:        "localhost",
-	Port:        CLIENT_PORT,
-	HTTPHost:    "127.0.0.1",
-	HTTPPort:    MONITOR_PORT,
-	ClusterHost: "localhost",
-	ClusterPort: CLUSTER_PORT,
-	NoLog:       true,
-	NoSigs:      true,
+	Host:     "localhost",
+	Port:     ClientPort,
+	HTTPHost: "127.0.0.1",
+	HTTPPort: MonitorPort,
+	NoLog:    true,
+	NoSigs:   true,
 }
 
 func runMonitorServer() *server.Server {
@@ -59,7 +55,11 @@ func RunServer(opts *server.Options) *server.Server {
 
 	end := time.Now().Add(10 * time.Second)
 	for time.Now().Before(end) {
-		addr := s.GetListenEndpoint()
+		netAddr := s.Addr()
+		if netAddr == nil {
+			continue
+		}
+		addr := s.Addr().String()
 		if addr == "" {
 			time.Sleep(10 * time.Millisecond)
 			// Retry. We might take a little while to open a connection.
@@ -91,7 +91,7 @@ func TestVarz(t *testing.T) {
 	s := runMonitorServer()
 	defer s.Shutdown()
 
-	url := fmt.Sprintf("http://localhost:%d/", MONITOR_PORT)
+	url := fmt.Sprintf("http://localhost:%d/", MonitorPort)
 
 	nc := createClientConnSubscribeAndPublish(t)
 	defer nc.Close()
@@ -99,16 +99,16 @@ func TestVarz(t *testing.T) {
 	// see if we get the same stats as the original monitor testing code.
 	// just for our monitoring_port
 	var urls []string
-	urls = append(urls, url + "varz")
+	urls = append(urls, url+"varz")
 
 	cases := map[string]float64{
 		"gnatsd_varz_total_connections": 2,
-		"gnatsd_varz_connections": 1,
-		"gnatsd_varz_in_msgs": 1,
-		"gnatsd_varz_out_msgs": 1,
-		"gnatsd_varz_in_bytes": 5,
-		"gnatsd_varz_out_bytes": 5,
-		"gnatsd_varz_subscriptions": 1,
+		"gnatsd_varz_connections":       1,
+		"gnatsd_varz_in_msgs":           1,
+		"gnatsd_varz_out_msgs":          1,
+		"gnatsd_varz_in_bytes":          5,
+		"gnatsd_varz_out_bytes":         5,
+		"gnatsd_varz_subscriptions":     1,
 	}
 
 	verifyCollector(urls, cases, t)
@@ -116,25 +116,24 @@ func TestVarz(t *testing.T) {
 }
 
 // return fqName from parsing the Desc() field of a metric.
-func parseDesc(desc string) (string){
+func parseDesc(desc string) string {
 	// split on quotes.
 	return strings.Split(desc, "\"")[1]
 }
-
 
 func TestConnz(t *testing.T) {
 	s := runMonitorServer()
 	defer s.Shutdown()
 
-	url := fmt.Sprintf("http://localhost:%d/", MONITOR_PORT)
+	url := fmt.Sprintf("http://localhost:%d/", MonitorPort)
 	// see if we get the same stats as the original monitor testing code.
 	// just for our monitoring_port
 	var urls []string
-	urls = append(urls, url + "connz")
+	urls = append(urls, url+"connz")
 
 	cases := map[string]float64{
 		"gnatsd_connz_total_connections": 0,
-		"gnatsd_varz_connections": 0,
+		"gnatsd_varz_connections":        0,
 	}
 
 	verifyCollector(urls, cases, t)
@@ -170,7 +169,7 @@ func verifyCollector(urls []string, cases map[string]float64, t *testing.T) {
 					t.Fatalf("Expected %s=%v, got %v", name, expected, val)
 				}
 			}
-		case <- time.After(10 * time.Millisecond):
+		case <-time.After(10 * time.Millisecond):
 			return // pjm: there must be a smarter, safer, faster way to do this.
 		}
 	}
@@ -1168,7 +1167,7 @@ func verifyCollector(urls []string, cases map[string]float64, t *testing.T) {
 //
 // Create a connection to test ConnInfo
 func createClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
-	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", CLIENT_PORT))
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", ClientPort))
 	if err != nil {
 		t.Fatalf("Error creating client: %v\n", err)
 	}
@@ -1182,7 +1181,7 @@ func createClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
 }
 
 func createClientConnWithName(t *testing.T, name string) *nats.Conn {
-	natsURI := fmt.Sprintf("nats://localhost:%d", CLIENT_PORT)
+	natsURI := fmt.Sprintf("nats://localhost:%d", ClientPort)
 
 	client := nats.DefaultOptions
 	client.Servers = []string{natsURI}

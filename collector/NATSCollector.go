@@ -1,12 +1,12 @@
 package collector
 
 import (
-  "github.com/prometheus/client_golang/prometheus"
-  "sync"
-  "log"
-  "fmt"
+	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
+//NATSCollector collects NATS metrics
 type NATSCollector struct {
 	URLs  []string
 	Stats map[string]interface{}
@@ -15,23 +15,23 @@ type NATSCollector struct {
 
 // Describe the metric to the Prometheus server.
 func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
-  nc.mtx.Lock()
-  defer nc.mtx.Unlock()
+	nc.mtx.Lock()
+	defer nc.mtx.Unlock()
 
 	// for each stat in nc.Stats
 	for _, k := range nc.Stats {
-    switch m := k.(type) {
+		switch m := k.(type) {
 
-    // is it a Gauge
-    // or Counter
+		// is it a Gauge
+		// or Counter
 		// Describe it to the channel.
-    case *prometheus.GaugeVec:
-      m.Describe(ch)
-    case *prometheus.CounterVec:
-      m.Describe(ch)
-    default:
-      log.Printf("Describe: Unknown Metric Type %s:", k)
-    }
+		case *prometheus.GaugeVec:
+			m.Describe(ch)
+		case *prometheus.CounterVec:
+			m.Describe(ch)
+		default:
+			Debugf("Describe: Unknown Metric Type %s:", k)
+		}
 	}
 }
 
@@ -47,43 +47,42 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, u := range nc.URLs {
 		var err error
 		resps[u], err = GetMetricURL(u)
-		if (err != nil) {
-			log.Printf("ignoring %s", u)
+		if err != nil {
+			Tracef("ignoring %s", u)
 			delete(resps, u)
 		}
 	}
 
 	// for each stat, see if each response contains that stat. then collect.
 	for idx, k := range nc.Stats {
-    switch m := k.(type) {
-    case *prometheus.GaugeVec:
-      for url, response := range resps {
-        switch v := response[idx].(type) {
-        case float64: // not sure why, but all my json numbers are coming here.
-           m.WithLabelValues(url).Set(v)
-        default:
-          fmt.Println("value no longer a float", url, v)
-        }
-      }
-      m.Collect(ch) // update the stat.
-    case *prometheus.CounterVec:
-  		for url, response := range resps {
-  			switch v := response[idx].(type) {
-  			case float64: // not sure why, but all my json numbers are coming here.
-  			   m.WithLabelValues(url).Set(v)
-  			default:
-  				fmt.Println("value no longer a float", url, v)
-  			}
-      }
-      m.Collect(ch) // update the stat.
-    default:
-      log.Printf("Unknown Metric Type %s", k)
+		switch m := k.(type) {
+		case *prometheus.GaugeVec:
+			for url, response := range resps {
+				switch v := response[idx].(type) {
+				case float64: // not sure why, but all my json numbers are coming here.
+					m.WithLabelValues(url).Set(v)
+				default:
+					Debugf("value no longer a float", url, v)
+				}
+			}
+			m.Collect(ch) // update the stat.
+		case *prometheus.CounterVec:
+			for url, response := range resps {
+				switch v := response[idx].(type) {
+				case float64: // not sure why, but all my json numbers are coming here.
+					m.WithLabelValues(url).Add(v)
+				default:
+					Debugf("value no longer a float", url, v)
+				}
+			}
+			m.Collect(ch) // update the stat.
+		default:
+			Debugf("Unknown Metric Type %s", k)
 		}
 	}
 }
 
-// Create a new NATS Collector from a list of monitoring URLs.
-//
+// New creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. /varz, /connz, subsz, or routez)
 func New(urls []string) *NATSCollector {
 	return &NATSCollector{
