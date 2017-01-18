@@ -1,3 +1,5 @@
+// Copyright 2016 Apcera Inc. All rights reserved.
+
 package collector
 
 // Initializes by reading in a json file of metric definitions.
@@ -50,7 +52,7 @@ func check(e error) {
 //   prometheus.MustRegister(metric)
 // }
 
-// NewPrometheusGaugeVec creates a custom GuageVec
+// NewPrometheusGaugeVec creates a custom GaugeVec
 // Based on our current integration, we're going to treat all metrics as gauges.
 // We are going to call the set message on the gauge when we receive an updated
 // metrics pull.
@@ -95,6 +97,7 @@ func loadMetricConfig(subsystem string, configFileName string) {
 // GetMetricURL retrieves a NATS Metrics JSON.
 // This can be called against any monitoring URL for NATS.
 // On any this function will error, warn and return nil.
+// TODO:  This is reported as a race condition in testing.
 func GetMetricURL(URL string) (response map[string]interface{}, err error) {
 	resp, err := http.Get(URL)
 	if err != nil {
@@ -133,7 +136,13 @@ func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interfac
 	for _, v := range pollingURLs {
 		response, err = GetMetricURL(v)
 		if err != nil {
-			Errorf("Error loading metric config from response: %s", err)
+			// if a server is not running, silently ignore it.
+			if strings.Contains(err.Error(), "connection refused") {
+				Debugf("Unable to connect to the NATS server: %v", err)
+			} else {
+				// TODO:  Do not retry for other errors?
+				Errorf("Error loading metric config from response: %s", err)
+			}
 		} else {
 			break
 		}
@@ -152,7 +161,7 @@ func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interfac
 				// do nothing
 			default:
 				// i isn't one of the types above
-				Tracef("Unknown type:  %v, %v", k, v)
+				Debugf("Unknown type:  %v, %v", k, v)
 			}
 		}
 	}

@@ -2,12 +2,16 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
+	"os"
+	"os/signal"
+	"runtime"
+
+	"time"
 
 	"github.com/nats-io/prometheus-nats-exporter/collector"
+	"github.com/nats-io/prometheus-nats-exporter/exporter"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -24,69 +28,79 @@ var (
 )
 
 func main() {
-	lOpts := &collector.LoggerOptions{}
 	var useSysLog bool
 	var debugAndTrace bool
+	var retryInterval int
+
+	opts := exporter.GetDefaultExporterOptions()
+
 	// Parse flags
-	flag.IntVar(&listenPort, "port", 7777, "Prometheus port to listen on.")
-	flag.IntVar(&listenPort, "p", 7777, "Prometheus port to listen on.")
-	flag.StringVar(&listenAddress, "addr", "0.0.0.0", "Network host to listen on.")
-	flag.StringVar(&listenAddress, "a", "", "Network host to listen on.")
-	flag.StringVar(&lOpts.LogFile, "l", "", "")
-	flag.StringVar(&lOpts.LogFile, "log", "", "")
-	flag.BoolVar(&useSysLog, "s", false, "")
-	flag.BoolVar(&useSysLog, "syslog", false, "")
-	flag.StringVar(&lOpts.RemoteSyslog, "r", "", "")
-	flag.StringVar(&lOpts.RemoteSyslog, "remote_syslog", "", "")
-	flag.BoolVar(&lOpts.Debug, "D", false, "")
-	flag.BoolVar(&lOpts.Debug, "debug", false, "")
-	flag.BoolVar(&lOpts.Trace, "V", false, "")
-	flag.BoolVar(&lOpts.Trace, "trace", false, "")
-	flag.BoolVar(&debugAndTrace, "DV", false, "")
+	flag.IntVar(&listenPort, "port", exporter.DefaultListenPort, "Prometheus port to listen on.")
+	flag.IntVar(&listenPort, "p", exporter.DefaultListenPort, "Prometheus port to listen on.")
+	flag.StringVar(&listenAddress, "addr", exporter.DefaultListenAddress, "Network host to listen on.")
+	flag.StringVar(&listenAddress, "a", exporter.DefaultListenAddress, "Network host to listen on.")
+	flag.IntVar(&retryInterval, "ri", exporter.DefaultRetryIntervalSecs, "Interval in seconds to retry NATS Server monitor URLS.")
+	flag.StringVar(&opts.LogFile, "l", "", "Log file name.")
+	flag.StringVar(&opts.LogFile, "log", "", "Log file name.")
+	flag.BoolVar(&useSysLog, "s", false, "Write log statements to the syslog.")
+	flag.BoolVar(&useSysLog, "syslog", false, "Write log statements to the syslog.")
+	flag.StringVar(&opts.RemoteSyslog, "r", "", "Remote syslog address to write log statements.")
+	flag.StringVar(&opts.RemoteSyslog, "remote_syslog", "", "Write log statements to a remote syslog.")
+	flag.BoolVar(&opts.Debug, "D", false, "Enable debug log level.")
+	flag.BoolVar(&opts.Trace, "V", false, "Enable trace log level.")
+	flag.BoolVar(&debugAndTrace, "DV", false, "Enable debug and trace log levels.")
 
 	flag.Parse()
 
-	if debugAndTrace {
-		lOpts.Debug = true
-		lOpts.Trace = true
+	opts.RetryInterval = time.Duration(retryInterval) * time.Second
+
+	if len(flag.Args()) < 1 {
+		fmt.Printf("Usage:  %s <flags> url <url url url>\n\n", os.Args[0])
+		flag.Usage()
+		return
 	}
-	// default is console, then handle in order of precenence:
+
+	if debugAndTrace {
+		opts.Debug = true
+		opts.Trace = true
+	}
+
+	// default is console, then handle in order of precedence:
 	// remote sys log, syslog, then file.  This simplifies error handling.
-	// TODO: fix this
-	if lOpts.LogFile != "" {
-		lOpts.LogType = collector.FileLogType
+	if opts.LogFile != "" {
+		opts.LogType = collector.FileLogType
 	}
 	if useSysLog {
-		lOpts.LogType = collector.SysLogType
+		opts.LogType = collector.SysLogType
 	}
-	if lOpts.RemoteSyslog != "" {
-		lOpts.LogType = collector.RemoteSysLogType
+	if opts.RemoteSyslog != "" {
+		opts.LogType = collector.RemoteSysLogType
 	}
-	collector.ConfigureLogger(lOpts)
 
-	// indexed.Inc()
-	// size.Set(5)
 	http.Handle("/metrics", prometheus.Handler())
 
-	metrics := make(map[string][]string)
-
 	// for each URL in args
+	urls := make([]string, 0)
 	for _, arg := range flag.Args() {
-		// create a map of possible metric endpoints.
-		endpoint := arg[strings.LastIndex(arg, "/")+1:] // TODO: not safe.
-		// append the url to that endpoint.
-		metrics[endpoint] = append(metrics[endpoint], arg)
+		urls = append(urls, arg)
 	}
 
-	for _, v := range metrics {
-		collector.Tracef("Registering server: ", v)
-		nc := collector.New(v)
-		prometheus.MustRegister(nc)
+	opts.ListenAddress = listenAddress
+	opts.ListenPort = listenPort
+	opts.MonitorURLs = urls
+	exp := exporter.NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		collector.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
+	//defer exp.Stop()
 
-	collector.Noticef("NATS Prometheus exporter starting on " + listenAddress + ":" + strconv.Itoa(listenPort))
-	log.Fatal(http.ListenAndServe(listenAddress+":"+strconv.Itoa(listenPort), nil))
-}
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		exp.Stop()
+		os.Exit(0)
+	}()
 
-func init() {
+	runtime.Goexit()
 }

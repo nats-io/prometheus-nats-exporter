@@ -59,7 +59,7 @@ func ConfigureLogger(lOpts *LoggerOptions) {
 	}
 
 	// always log time
-	lOpts.Logtime = true
+	opts.Logtime = true
 
 	switch opts.LogType {
 	case FileLogType:

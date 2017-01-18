@@ -8,15 +8,15 @@ import (
 
 //NATSCollector collects NATS metrics
 type NATSCollector struct {
+	sync.Mutex
 	URLs  []string
 	Stats map[string]interface{}
-	mtx   sync.Mutex
 }
 
 // Describe the metric to the Prometheus server.
 func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
-	nc.mtx.Lock()
-	defer nc.mtx.Unlock()
+	nc.Lock()
+	defer nc.Unlock()
 
 	// for each stat in nc.Stats
 	for _, k := range nc.Stats {
@@ -38,8 +38,8 @@ func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect all metrics for all URLs to send to Prometheus.
 // TODO: Refactor!
 func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
-	nc.mtx.Lock()
-	defer nc.mtx.Unlock()
+	nc.Lock()
+	defer nc.Unlock()
 
 	// query the URL for the most recent stats.
 	// get all the Metrics at once, then set the stats and collect them together.
@@ -77,14 +77,14 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			m.Collect(ch) // update the stat.
 		default:
-			Debugf("Unknown Metric Type %s", k)
+			Tracef("Unknown Metric Type %s", k)
 		}
 	}
 }
 
-// New creates a new NATS Collector from a list of monitoring URLs.
+// NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. /varz, /connz, subsz, or routez)
-func New(urls []string) *NATSCollector {
+func NewCollector(urls []string) *NATSCollector {
 	return &NATSCollector{
 		URLs:  urls,
 		Stats: LoadMetricConfigFromResponse(urls),
