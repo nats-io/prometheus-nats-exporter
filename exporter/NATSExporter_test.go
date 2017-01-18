@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -138,14 +139,14 @@ func TestExporterWait(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	var didStop bool
+	var didStop int32
 	go func() {
 		time.Sleep(time.Second * 1)
 		exp.Stop()
-		didStop = true
+		atomic.AddInt32(&didStop, 1)
 	}()
 	exp.WaitUntilDone()
-	if !didStop {
+	if atomic.LoadInt32(&didStop) == 0 {
 		t.Fatalf("did not wait until completed.")
 	}
 }
@@ -158,7 +159,6 @@ func TestExporterNoNATSServer(t *testing.T) {
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.RetryInterval = 1 * time.Second
-
 	opts.MonitorURLs = []string{url}
 	exp := NewExporter(opts)
 	if err := exp.Start(); err != nil {

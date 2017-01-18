@@ -70,18 +70,17 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 
 func (ne *NATSExporter) scheduleRetry(urls []string) {
 	time.Sleep(ne.opts.RetryInterval)
-
 	ne.Lock()
 	ne.createCollector(urls)
 	ne.Unlock()
 }
 
-// Caller mus lock.
+// Caller must lock.
 func (ne *NATSExporter) createCollector(urls []string) {
 	collector.Debugf("Registering server: %s", urls)
 	nc := collector.NewCollector(urls)
 	if err := prometheus.Register(nc); err != nil {
-		collector.Debugf("Unable to register server %s (%v), Retrying.", nc.URLs, err)
+		collector.Debugf("Unable to register server %s (%v), Retrying.", urls, err)
 		go ne.scheduleRetry(urls)
 	} else {
 		ne.collectors = append(ne.collectors, nc)
@@ -161,8 +160,9 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 		MaxHeaderBytes: 1 << 20,
 	}
 
+	sHTTP := ne.http
 	go func() {
-		srv.Serve(ne.http)
+		srv.Serve(sHTTP)
 		srv.Handler = nil
 	}()
 

@@ -12,11 +12,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Root is the base of the prometheus metrics
+// Root is the base of the prometheus metrics - TODO:  Used?
 type Root struct {
 	Metrics map[string]PrometheusMetricConfig
 }
@@ -27,6 +28,8 @@ type PrometheusMetricConfig struct {
 	MetricType string `json:"type"`
 }
 
+// TODO:  Roll these into an object
+var pLock sync.Mutex
 var metricDefinitions = make(map[string]map[string]PrometheusMetricConfig)
 
 const (
@@ -151,7 +154,9 @@ func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interfac
 	// for each metric
 	for k := range response {
 		//  if it's not already defined in metricDefinitions
+		pLock.Lock()
 		_, ok := metricDefinitions[k] // TODO: Populate Metrics Definitios
+		pLock.Unlock()
 		if !ok {
 			i := response[k]
 			switch v := i.(type) {
