@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,8 +10,9 @@ import (
 //NATSCollector collects NATS metrics
 type NATSCollector struct {
 	sync.Mutex
-	URLs  []string
-	Stats map[string]interface{}
+	URLs       []string
+	Stats      map[string]interface{}
+	httpClient *http.Client
 }
 
 // Describe the metric to the Prometheus server.
@@ -46,7 +48,7 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 	resps := make(map[string]map[string]interface{})
 	for _, u := range nc.URLs {
 		var err error
-		resps[u], err = GetMetricURL(u)
+		resps[u], err = GetMetricURL(nc.httpClient, u)
 		if err != nil {
 			Tracef("ignoring %s", u)
 			delete(resps, u)
@@ -85,8 +87,12 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. /varz, /connz, subsz, or routez)
 func NewCollector(urls []string) *NATSCollector {
+	// TODO:  Potentially add TLS config in the transport.
+	tr := &http.Transport{}
+	hc := &http.Client{Transport: tr}
 	return &NATSCollector{
-		URLs:  urls,
-		Stats: LoadMetricConfigFromResponse(urls),
+		URLs:       urls,
+		Stats:      LoadMetricConfigFromResponse(hc, urls),
+		httpClient: hc,
 	}
 }

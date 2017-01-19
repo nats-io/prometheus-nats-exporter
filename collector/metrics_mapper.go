@@ -101,8 +101,8 @@ func loadMetricConfig(subsystem string, configFileName string) {
 // This can be called against any monitoring URL for NATS.
 // On any this function will error, warn and return nil.
 // TODO:  This is reported as a race condition in testing.
-func GetMetricURL(URL string) (response map[string]interface{}, err error) {
-	resp, err := http.Get(URL)
+func GetMetricURL(httpClient *http.Client, URL string) (response map[string]interface{}, err error) {
+	resp, err := httpClient.Get(URL)
 	if err != nil {
 		return response, err
 	}
@@ -126,7 +126,7 @@ func GetMetricURL(URL string) (response map[string]interface{}, err error) {
 // For each NATS Metrics endpoint (/*z) get the first URL
 // to determine the list of possible metrics.
 // TODO: flatten embedded maps.
-func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interface{}) {
+func LoadMetricConfigFromResponse(httpClient *http.Client, pollingURLs []string) (out map[string]interface{}) {
 	// get the subsystem name.
 	first := pollingURLs[0]
 	endpoint := first[strings.LastIndex(first, "/")+1:]
@@ -137,7 +137,7 @@ func LoadMetricConfigFromResponse(pollingURLs []string) (out map[string]interfac
 
 	// gets URLs until one responds.
 	for _, v := range pollingURLs {
-		response, err = GetMetricURL(v)
+		response, err = GetMetricURL(httpClient, v)
 		if err != nil {
 			// if a server is not running, silently ignore it.
 			if strings.Contains(err.Error(), "connection refused") {
