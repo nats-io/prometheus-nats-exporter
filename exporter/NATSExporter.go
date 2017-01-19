@@ -163,7 +163,6 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	sHTTP := ne.http
 	go func() {
 		srv.Serve(sHTTP)
-		srv.Handler = nil
 	}()
 
 	return nil
