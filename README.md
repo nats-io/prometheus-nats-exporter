@@ -18,7 +18,7 @@ go build
 Start prometheus-nats-exporter pointed to the varz metrics endpoints of NATS servers 
 with monitoring ports: localhost:5555 and localhost:5656
 ``` bash
-prometheus-nats-exporter "http://localhost:5555/varz" "http://localhost:5656/varz"
+prometheus-nats-exporter -varz "http://localhost:5555" "http://localhost:5656"
 ```
 
 ##usage
