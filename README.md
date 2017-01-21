@@ -25,6 +25,8 @@ prometheus-nats-exporter "http://localhost:5555/varz" "http://localhost:5656/var
 ```
 prometheus-nats-exporter <flags> url <url url url>
 
+Flags must include at least one of: -varz, -connz, -routez, -subz
+
 Usage of ./prometheus-nats-exporter:
   -D	Enable debug log level.
   -DV   Enable debug and trace log levels.
@@ -67,8 +69,8 @@ The NATS prometheus exporter can be run within another go application.  Use the 
 	opts = GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
-    opts.GetVarz = true
-    opts.AddServer("myserver", "http://localhost:8222")
+      opts.GetVarz = true
+      opts.AddServer("myserver", "http://localhost:8222")
 
 	// create an exporter instance, ready to be launched.
 	exp := NewExporter(opts)
