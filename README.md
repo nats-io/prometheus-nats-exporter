@@ -33,6 +33,8 @@ Usage of ./prometheus-nats-exporter:
     	Network host to listen on. (default "0.0.0.0")
   -addr string
     	Network host to listen on. (default "0.0.0.0")
+  -connz
+    	Get connection metrics.        
   -l string
     	Log file name.
   -log string
@@ -47,8 +49,14 @@ Usage of ./prometheus-nats-exporter:
     	Write log statements to a remote syslog.
   -ri int
     	Interval in seconds to retry NATS Server monitor URLS. (default 30)
+  -routez 
+        Get route metrics.        
   -s	  Write log statements to the syslog.
+  -subz 
+        Get subscription metrics.
   -syslog Write log statements to the syslog.
+  -varz
+        Get general metrics. 
 ```
 
 # Using the API
@@ -59,7 +67,8 @@ The NATS prometheus exporter can be run within another go application.  Use the 
 	opts = GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
-	opts.MonitorURLs = []string{"http://localhost:5555/varz"}
+    opts.GetVarz = true
+    opts.AddServer("myserver", "http://localhost:8222")
 
 	// create an exporter instance, ready to be launched.
 	exp := NewExporter(opts)

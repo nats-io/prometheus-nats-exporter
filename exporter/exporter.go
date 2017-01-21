@@ -3,10 +3,10 @@
 package exporter
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,7 +19,10 @@ type NATSExporterOptions struct {
 	collector.LoggerOptions
 	ListenAddress string
 	ListenPort    int
-	MonitorURLs   []string
+	GetConnz      bool
+	GetVarz       bool
+	GetSubz       bool
+	GetRoutez     bool
 	RetryInterval time.Duration
 }
 
@@ -30,6 +33,7 @@ type NATSExporter struct {
 	doneWg     sync.WaitGroup
 	http       net.Listener
 	collectors []*collector.NATSCollector
+	servers    []*collector.CollectedServer
 	running    bool
 }
 
@@ -37,17 +41,15 @@ type NATSExporter struct {
 var (
 	DefaultListenPort        = 7777
 	DefaultListenAddress     = "0.0.0.0"
-	DefaultMonitorURL        = "http://localhost:8222/varz"
+	DefaultMonitorURL        = "http://localhost:8222"
 	DefaultRetryIntervalSecs = 30
 )
 
 // GetDefaultExporterOptions returns the default set of exporter options
 func GetDefaultExporterOptions() *NATSExporterOptions {
-	u := []string{DefaultMonitorURL}
 	opts := &NATSExporterOptions{
 		ListenAddress: DefaultListenAddress,
 		ListenPort:    DefaultListenPort,
-		MonitorURLs:   u,
 		RetryInterval: time.Duration(DefaultRetryIntervalSecs) * time.Second,
 	}
 	return opts
@@ -61,33 +63,55 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 		o = GetDefaultExporterOptions()
 	}
 	ne := &NATSExporter{
-		opts:       o,
-		http:       nil,
-		collectors: make([]*collector.NATSCollector, 0),
+		opts: o,
+		http: nil,
 	}
 	return ne
 }
 
-func (ne *NATSExporter) scheduleRetry(urls []string) {
+func (ne *NATSExporter) scheduleRetry(endpoint string) {
 	time.Sleep(ne.opts.RetryInterval)
 	ne.Lock()
-	ne.createCollector(urls)
+	ne.createCollector(endpoint)
 	ne.Unlock()
 }
 
 // Caller must lock.
-func (ne *NATSExporter) createCollector(urls []string) {
-	collector.Debugf("Registering server: %s", urls)
-	nc := collector.NewCollector(urls)
+func (ne *NATSExporter) createCollector(endpoint string) {
+	collector.Debugf("Creating a collector for endpoint: %s.", endpoint)
+	nc := collector.NewCollector(endpoint, ne.servers)
 	if err := prometheus.Register(nc); err != nil {
-		collector.Debugf("Unable to register server %s (%v), Retrying.", urls, err)
-		go ne.scheduleRetry(urls)
+		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			collector.Errorf("A collector for this server's metrics has already been registered.")
+		} else {
+			collector.Debugf("Unable to register collector %s (%v), Retrying.", endpoint, err)
+			go ne.scheduleRetry(endpoint)
+		}
 	} else {
+		collector.Debugf("Registered collector for endppoint %s.", endpoint)
 		ne.collectors = append(ne.collectors, nc)
 	}
 }
 
-// Start runs the exporter process
+// AddServer adds a NATS server to the exporter.  The exporter cannot be
+// running.
+func (ne *NATSExporter) AddServer(id, url string) error {
+	ne.Lock()
+	defer ne.Unlock()
+
+	if ne.running {
+		return fmt.Errorf("servers cannot be added after the exporter is started")
+	}
+	cs := &collector.CollectedServer{ID: id, URL: url}
+	if ne.servers == nil {
+		ne.servers = make([]*collector.CollectedServer, 0)
+	}
+	ne.servers = append(ne.servers, cs)
+	return nil
+}
+
+// Start runs the exporter process.  Servers should be addded with the
+// AddServer API. before starting it.
 func (ne *NATSExporter) Start() error {
 	var err error
 	ne.Lock()
@@ -96,22 +120,28 @@ func (ne *NATSExporter) Start() error {
 		return nil
 	}
 
-	ne.doneWg.Add(1)
-
-	opts := ne.opts
-	collector.ConfigureLogger(&opts.LoggerOptions)
-	metrics := make(map[string][]string)
-
-	// for each URL in args
-	for _, arg := range ne.opts.MonitorURLs {
-		// create a map of possible metric endpoints.
-		endpoint := arg[strings.LastIndex(arg, "/")+1:] // TODO: not safe.
-		// append the url to that endpoint.
-		metrics[endpoint] = append(metrics[endpoint], arg)
+	if len(ne.servers) == 0 {
+		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	for _, v := range metrics {
-		ne.createCollector(v)
+	opts := ne.opts
+	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz {
+		return fmt.Errorf("no collectors specfied")
+	}
+
+	ne.doneWg.Add(1)
+	collector.ConfigureLogger(&opts.LoggerOptions)
+	if opts.GetSubz {
+		ne.createCollector("subsz")
+	}
+	if opts.GetVarz {
+		ne.createCollector("varz")
+	}
+	if opts.GetConnz {
+		ne.createCollector("connz")
+	}
+	if opts.GetRoutez {
+		ne.createCollector("routez")
 	}
 
 	if err = ne.startHTTP(opts.ListenAddress, opts.ListenPort); err != nil {
@@ -145,7 +175,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	ne.http, err = net.Listen("tcp", hp)
 
 	if err != nil {
-		collector.Fatalf("can't listen to the monitor port: %v", err)
+		collector.Fatalf("can't listen to the export port: %v", err)
 		return err
 	}
 
@@ -179,6 +209,7 @@ func (ne *NATSExporter) WaitUntilDone() {
 
 // Stop stops the collector
 func (ne *NATSExporter) Stop() {
+	collector.Debugf("Stopping.")
 	ne.Lock()
 	defer ne.Unlock()
 
@@ -189,7 +220,6 @@ func (ne *NATSExporter) Stop() {
 	ne.running = false
 	ne.http.Close()
 	for _, c := range ne.collectors {
-		collector.Tracef("Unregistering servers: %s", c.URLs)
 		prometheus.Unregister(c)
 	}
 	ne.collectors = nil
