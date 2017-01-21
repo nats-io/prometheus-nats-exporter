@@ -69,8 +69,8 @@ The NATS prometheus exporter can be run within another go application.  Use the 
 	opts = GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
-      opts.GetVarz = true
-      opts.AddServer("myserver", "http://localhost:8222")
+        opts.GetVarz = true
+        opts.AddServer("myserver", "http://localhost:8222")
 
 	// create an exporter instance, ready to be launched.
 	exp := NewExporter(opts)
