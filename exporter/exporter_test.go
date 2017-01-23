@@ -15,8 +15,8 @@ import (
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 )
 
-func checkExporter() error {
-	resp, err := http.Get("http://127.0.0.1:8888/metrics")
+func checkExporter(url string) error {
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", url))
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func TestExporter(t *testing.T) {
 
 	opts := GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
-	opts.ListenPort = 8888
+	opts.ListenPort = 0
 	opts.GetVarz = true
 	opts.GetConnz = true
 	opts.GetSubz = true
@@ -56,7 +56,7 @@ func TestExporter(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(); err != nil {
+	if err := checkExporter(exp.http.Addr().String()); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -67,7 +67,7 @@ func TestExporterWait(t *testing.T) {
 
 	opts := GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
-	opts.ListenPort = 8888
+	opts.ListenPort = 0
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
@@ -78,7 +78,7 @@ func TestExporterWait(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	if err := checkExporter(); err != nil {
+	if err := checkExporter(exp.http.Addr().String()); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -97,7 +97,7 @@ func TestExporterWait(t *testing.T) {
 func TestExporterNoNATSServer(t *testing.T) {
 	opts := GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
-	opts.ListenPort = 8888
+	opts.ListenPort = 0
 	opts.RetryInterval = 1 * time.Second
 	opts.GetVarz = true
 
@@ -110,7 +110,7 @@ func TestExporterNoNATSServer(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(); err == nil {
+	if err := checkExporter(exp.http.Addr().String()); err == nil {
 		t.Fatalf("Expected an error, received none.")
 	}
 
@@ -123,7 +123,7 @@ func TestExporterNoNATSServer(t *testing.T) {
 
 	time.Sleep(opts.RetryInterval + (time.Millisecond * 500))
 
-	if err := checkExporter(); err != nil {
+	if err := checkExporter(exp.http.Addr().String()); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -163,7 +163,7 @@ func TestExporterBounce(t *testing.T) {
 
 	opts := GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
-	opts.ListenPort = 8888
+	opts.ListenPort = 0
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
@@ -175,12 +175,12 @@ func TestExporterBounce(t *testing.T) {
 	if err := exp.Start(); err != nil {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
-	if err := checkExporter(); err != nil {
+	if err := checkExporter(exp.http.Addr().String()); err != nil {
 		t.Fatalf("%v", err)
 	}
 	// test stop
 	exp.Stop()
-	if err := checkExporter(); err == nil {
+	if err := checkExporter(exp.http.Addr().String()); err == nil {
 		t.Fatalf("Did not received expected error")
 	}
 
@@ -191,7 +191,7 @@ func TestExporterBounce(t *testing.T) {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 	defer exp.Stop()
-	if err := checkExporter(); err != nil {
+	if err := checkExporter(exp.http.Addr().String()); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -203,7 +203,7 @@ func TestExporterStartNoServersConfigured(t *testing.T) {
 
 	opts := GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
-	opts.ListenPort = 8888
+	opts.ListenPort = 0
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
@@ -222,7 +222,7 @@ func TestExporterStartNoServersConfigured(t *testing.T) {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 	defer exp.Stop()
-	if err := checkExporter(); err != nil {
+	if err := checkExporter(exp.http.Addr().String()); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
