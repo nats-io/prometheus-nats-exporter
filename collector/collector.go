@@ -122,7 +122,7 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 		var err error
 		resps[u.ID], err = getMetricURL(nc.httpClient, u.URL)
 		if err != nil {
-			Tracef("ignoring server %s: err", u.ID, err)
+			Debugf("ignoring server %s: %v", u.ID, err)
 			delete(resps, u.ID)
 		}
 	}

@@ -99,7 +99,6 @@ func main() {
 	if err := exp.Start(); err != nil {
 		collector.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
-	//defer exp.Stop()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
