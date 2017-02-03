@@ -21,11 +21,16 @@ const MonitorPort = 11424
 
 // RunServer runs the NATS server in a go routine
 func RunServer() *server.Server {
+	return RunServerWithPorts(ClientPort, MonitorPort)
+}
+
+// RunServerWithPorts runs the NATS server with a monitor port in a go routine
+func RunServerWithPorts(cport, mport int) *server.Server {
 	opts := &server.Options{
 		Host:     "localhost",
-		Port:     ClientPort,
+		Port:     cport,
 		HTTPHost: "127.0.0.1",
-		HTTPPort: MonitorPort,
+		HTTPPort: mport,
 		NoLog:    true,
 		NoSigs:   true,
 	}
