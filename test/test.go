@@ -19,7 +19,7 @@ const ClientPort = 11224
 // MonitorPort is the default monitor port
 const MonitorPort = 11424
 
-// RunServer runs
+// RunServer runs the NATS server in a go routine
 func RunServer() *server.Server {
 	return RunServerWithPorts(ClientPort, MonitorPort)
 }
