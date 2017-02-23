@@ -25,10 +25,6 @@ type PrometheusMetricConfig struct {
 	MetricType string `json:"type"`
 }
 
-var pLock sync.Mutex
-
-//var metricDefinitions = make(map[string]map[string]interface{})
-
 // CollectedServer is a NATS server polled by this collector
 type CollectedServer struct {
 	URL string
@@ -70,19 +66,22 @@ func newPrometheusGaugeVec(subsystem string, name string, help string) (metric *
 func getMetricURL(httpClient *http.Client, URL string) (response map[string]interface{}, err error) {
 	resp, err := httpClient.Get(URL)
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
 	// now parse the body into json
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return response, err
+		return nil, err
 	}
 
 	return response, err
@@ -110,11 +109,9 @@ func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
 	}
 }
 
-// Collect all metrics for all URLs to send to Prometheus.
-func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
-	nc.Lock()
-	defer nc.Unlock()
-
+// makeRequests makes HTTP request to the NATS server(s) monitor URLs and returns
+// a map of responses.
+func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 	// query the URL for the most recent stats.
 	// get all the Metrics at once, then set the stats and collect them together.
 	resps := make(map[string]map[string]interface{})
@@ -126,32 +123,39 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 			delete(resps, u.ID)
 		}
 	}
+	return resps
+}
 
+// Collects a Float64 metric, using the appropriate prometheus data structure (Gauge, Counter).
+func collectMetricFloat64(ch chan<- prometheus.Metric, metric interface{}, id string, value float64) {
+	switch m := metric.(type) {
+	case *prometheus.GaugeVec:
+		m.WithLabelValues(id).Set(value)
+		m.Collect(ch)
+	case *prometheus.CounterVec:
+		m.WithLabelValues(id).Add(value)
+		m.Collect(ch)
+	default:
+		Tracef("Unknown Metric Type %s", metric)
+		return
+	}
+}
+
+// Collect all metrics for all URLs to send to Prometheus.
+func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
+	nc.Lock()
+	defer nc.Unlock()
+
+	resps := nc.makeRequests()
 	// for each stat, see if each response contains that stat. then collect.
 	for idx, k := range nc.Stats {
-		switch m := k.(type) {
-		case *prometheus.GaugeVec:
-			for id, response := range resps {
-				switch v := response[idx].(type) {
-				case float64: // not sure why, but all my json numbers are coming here.
-					m.WithLabelValues(id).Set(v)
-				default:
-					Debugf("value no longer a float", id, v)
-				}
+		for id, response := range resps {
+			switch v := response[idx].(type) {
+			case float64: // not sure why, but all my json numbers are coming here.
+				collectMetricFloat64(ch, k, id, v)
+			default:
+				Debugf("value no longer a float", id, v)
 			}
-			m.Collect(ch) // update the stat.
-		case *prometheus.CounterVec:
-			for id, response := range resps {
-				switch v := response[idx].(type) {
-				case float64: // not sure why, but all my json numbers are coming here.
-					m.WithLabelValues(id).Add(v)
-				default:
-					Debugf("value no longer a float", id, v)
-				}
-			}
-			m.Collect(ch) // update the stat.
-		default:
-			Tracef("Unknown Metric Type %s", k)
 		}
 	}
 }

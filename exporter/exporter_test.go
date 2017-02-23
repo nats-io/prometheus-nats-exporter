@@ -23,7 +23,11 @@ func checkExporter(url string) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Expected a 200 response, got %d\n", resp.StatusCode)
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("Got an error reading the body: %v\n", err)
