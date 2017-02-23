@@ -126,36 +126,38 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 	return resps
 }
 
-// Collects a Float64 metric, using the appropriate prometheus data structure (Gauge, Counter).
-func collectMetricFloat64(ch chan<- prometheus.Metric, metric interface{}, id string, value float64) {
-	switch m := metric.(type) {
-	case *prometheus.GaugeVec:
-		m.WithLabelValues(id).Set(value)
-		m.Collect(ch)
-	case *prometheus.CounterVec:
-		m.WithLabelValues(id).Add(value)
-		m.Collect(ch)
-	default:
-		Tracef("Unknown Metric Type %s", metric)
-		return
-	}
-}
-
 // Collect all metrics for all URLs to send to Prometheus.
 func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 	nc.Lock()
 	defer nc.Unlock()
 
 	resps := nc.makeRequests()
+
 	// for each stat, see if each response contains that stat. then collect.
 	for idx, k := range nc.Stats {
-		for id, response := range resps {
-			switch v := response[idx].(type) {
-			case float64: // not sure why, but all my json numbers are coming here.
-				collectMetricFloat64(ch, k, id, v)
-			default:
-				Debugf("value no longer a float", id, v)
+		switch m := k.(type) {
+		case *prometheus.GaugeVec:
+			for id, response := range resps {
+				switch v := response[idx].(type) {
+				case float64: // not sure why, but all my json numbers are coming here.
+					m.WithLabelValues(id).Set(v)
+				default:
+					Debugf("value no longer a float", id, v)
+				}
 			}
+			m.Collect(ch) // update the stat.
+		case *prometheus.CounterVec:
+			for id, response := range resps {
+				switch v := response[idx].(type) {
+				case float64: // not sure why, but all my json numbers are coming here.
+					m.WithLabelValues(id).Add(v)
+				default:
+					Debugf("value no longer a float", id, v)
+				}
+			}
+			m.Collect(ch) // update the stat.
+		default:
+			Tracef("Unknown Metric Type %s", k)
 		}
 	}
 }
