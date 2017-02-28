@@ -12,6 +12,7 @@ import (
 
 	"github.com/nats-io/prometheus-nats-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // NATSExporterOptions are options to set the NATS collector
@@ -110,27 +111,19 @@ func (ne *NATSExporter) AddServer(id, url string) error {
 	return nil
 }
 
-// Start runs the exporter process.  Servers should be addded with the
-// AddServer API. before starting it.
-func (ne *NATSExporter) Start() error {
-	var err error
-	ne.Lock()
-	defer ne.Unlock()
-	if ne.running {
-		return nil
-	}
+// initializeCollectors initializes the collectors for the exporter.
+// Caller must lock
+func (ne *NATSExporter) initializeCollectors() error {
+	opts := ne.opts
+	collector.ConfigureLogger(&opts.LoggerOptions)
 
 	if len(ne.servers) == 0 {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	opts := ne.opts
 	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz {
 		return fmt.Errorf("no collectors specfied")
 	}
-
-	ne.doneWg.Add(1)
-	collector.ConfigureLogger(&opts.LoggerOptions)
 	if opts.GetSubz {
 		ne.createCollector("subsz")
 	}
@@ -143,14 +136,30 @@ func (ne *NATSExporter) Start() error {
 	if opts.GetRoutez {
 		ne.createCollector("routez")
 	}
+	return nil
+}
 
-	if err = ne.startHTTP(opts.ListenAddress, opts.ListenPort); err != nil {
-		collector.Fatalf("Error serving http:  %v", err)
+// Start runs the exporter process.  Servers should be addded with the
+// AddServer API. before starting it.
+func (ne *NATSExporter) Start() error {
+	ne.Lock()
+	defer ne.Unlock()
+	if ne.running {
+		return nil
 	}
 
+	if err := ne.initializeCollectors(); err != nil {
+		return err
+	}
+
+	if err := ne.startHTTP(ne.opts.ListenAddress, ne.opts.ListenPort); err != nil {
+		return fmt.Errorf("Error serving http:  %v", err)
+	}
+
+	ne.doneWg.Add(1)
 	ne.running = true
 
-	return err
+	return nil
 }
 
 // caller must lock
@@ -180,7 +189,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", prometheus.Handler())
+	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{
 		Addr:           hp,
@@ -192,7 +201,16 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 
 	sHTTP := ne.http
 	go func() {
-		srv.Serve(sHTTP)
+		for i := 0; i < 10; i++ {
+			var err error
+			if err = srv.Serve(sHTTP); err != nil {
+				// In a test environment, this can fail because the server is already running.
+				// TODO:  Fix this.
+				collector.Debugf("Unable to start HTTP server (may already be running): %v", err)
+			} else {
+				collector.Debugf("Started HTTP server.")
+			}
+		}
 	}()
 
 	return nil
@@ -218,7 +236,9 @@ func (ne *NATSExporter) Stop() {
 	}
 
 	ne.running = false
-	ne.http.Close()
+	if err := ne.http.Close(); err != nil {
+		collector.Debugf("Did not close HTTP: %v", err)
+	}
 	for _, c := range ne.collectors {
 		prometheus.Unregister(c)
 	}

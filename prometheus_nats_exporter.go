@@ -28,6 +28,32 @@ func getNameAndURL(urlArg string) (string, string) {
 	return name, url
 }
 
+// updateOptions sets up the options based on the provided flags.
+func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOptions) {
+	if debugAndTrace {
+		opts.Debug = true
+		opts.Trace = true
+	}
+
+	// default is console, then handle in order of precedence:
+	// remote sys log, syslog, then file.  This simplifies error handling.
+	if opts.LogFile != "" {
+		opts.LogType = collector.FileLogType
+	}
+	if useSysLog {
+		opts.LogType = collector.SysLogType
+	}
+	if opts.RemoteSyslog != "" {
+		opts.LogType = collector.RemoteSysLogType
+	}
+
+	if !opts.GetConnz && !opts.GetVarz && !opts.GetSubz && !opts.GetRoutez {
+		// Mo logger setup yet...
+		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
+		opts.GetVarz = true
+	}
+}
+
 func main() {
 	var useSysLog bool
 	var debugAndTrace bool
@@ -65,35 +91,16 @@ func main() {
 		return
 	}
 
-	if debugAndTrace {
-		opts.Debug = true
-		opts.Trace = true
-	}
-
-	// default is console, then handle in order of precedence:
-	// remote sys log, syslog, then file.  This simplifies error handling.
-	if opts.LogFile != "" {
-		opts.LogType = collector.FileLogType
-	}
-	if useSysLog {
-		opts.LogType = collector.SysLogType
-	}
-	if opts.RemoteSyslog != "" {
-		opts.LogType = collector.RemoteSysLogType
-	}
-
-	if !opts.GetConnz && !opts.GetVarz && !opts.GetSubz && !opts.GetRoutez {
-		// Mo logger setup yet...
-		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
-		opts.GetVarz = true
-	}
+	updateOptions(debugAndTrace, useSysLog, opts)
 
 	exp := exporter.NewExporter(opts)
 
 	// for each URL in args
 	for _, arg := range flag.Args() {
 		name, url := getNameAndURL(arg)
-		exp.AddServer(name, url)
+		if err := exp.AddServer(name, url); err != nil {
+			collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", name, url, err)
+		}
 	}
 
 	if err := exp.Start(); err != nil {

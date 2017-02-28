@@ -83,13 +83,13 @@ func verifyCollector(url string, cases map[string]float64, t *testing.T) {
 		select {
 		case metric := <-c:
 			pb := &dto.Metric{}
-			metric.Write(pb)
+			if err := metric.Write(pb); err != nil {
+				t.Fatalf("Unable to write metric: %v", err)
+			}
 			gauge := pb.GetGauge()
 			val := gauge.GetValue()
 
 			name := parseDesc(metric.Desc().String())
-			fmt.Println("checking ", name)
-
 			expected, ok := cases[name]
 			if ok {
 				if val != expected {

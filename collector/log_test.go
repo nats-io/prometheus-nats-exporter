@@ -65,9 +65,14 @@ func TestLogging(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create tmp dir")
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	file, err := ioutil.TempFile(tmpDir, "stan_server:log_")
+	if err != nil {
+		t.Fatalf("unable to create temporary file")
+	}
 
 	opts = &LoggerOptions{}
 	opts.LogFile = file.Name()
