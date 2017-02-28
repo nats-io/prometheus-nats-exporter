@@ -38,6 +38,24 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/nats-io/gnatsd/logger",
+			"repository": "https://github.com/nats-io/gnatsd",
+			"vcs": "git",
+			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
+			"branch": "master",
+			"path": "/logger",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/nats-io/gnatsd/vendor/golang.org/x/sys/windows",
+			"repository": "https://github.com/nats-io/gnatsd",
+			"vcs": "git",
+			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
+			"branch": "master",
+			"path": "vendor/golang.org/x/sys/windows",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/prometheus/client_golang/prometheus",
 			"repository": "https://github.com/prometheus/client_golang",
 			"vcs": "git",
