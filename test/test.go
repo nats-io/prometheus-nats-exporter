@@ -87,6 +87,7 @@ func CreateClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
 	ch := make(chan bool)
 	nc.Subscribe("foo", func(m *nats.Msg) { ch <- true })
 	nc.Publish("foo", []byte("Hello"))
+	nc.Flush()
 	// Wait for message
 	<-ch
 	return nc

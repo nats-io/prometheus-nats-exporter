@@ -209,7 +209,7 @@ func (nc *NATSCollector) initMetricsFromServers() {
 }
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
-// Each URL should be to a specific endpoint (e.g. /varz, /connz, subsz, or routez)
+// Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
 func NewCollector(endpoint string, servers []*CollectedServer) *NATSCollector {
 	// TODO:  Potentially add TLS config in the transport.
 	tr := &http.Transport{}
