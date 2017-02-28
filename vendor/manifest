@@ -38,66 +38,12 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/nats-io/gnatsd/conf",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "conf",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/nats-io/gnatsd/logger",
 			"repository": "https://github.com/nats-io/gnatsd",
 			"vcs": "git",
 			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
 			"branch": "master",
 			"path": "/logger",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/nats-io/gnatsd/server",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "/server",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/nats-io/gnatsd/util",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "util",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/nats-io/gnatsd/vendor/github.com/nats-io/nuid",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "vendor/github.com/nats-io/nuid",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/nats-io/gnatsd/vendor/golang.org/x/crypto/bcrypt",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "vendor/golang.org/x/crypto/bcrypt",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/nats-io/gnatsd/vendor/golang.org/x/crypto/blowfish",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "vendor/golang.org/x/crypto/blowfish",
 			"notests": true
 		},
 		{
@@ -160,24 +106,6 @@
 			"vcs": "git",
 			"revision": "fcdb11ccb4389efb1b210b7ffb623ab71c5fdd60",
 			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/crypto/ssh/terminal",
-			"repository": "https://go.googlesource.com/crypto",
-			"vcs": "git",
-			"revision": "453249f01cfeb54c3d549ddb75ff152ca243f9d8",
-			"branch": "master",
-			"path": "/ssh/terminal",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/net/context",
-			"repository": "https://go.googlesource.com/net",
-			"vcs": "git",
-			"revision": "60c41d1de8da134c05b7b40154a9a82bf5b7edb9",
-			"branch": "master",
-			"path": "/context",
 			"notests": true
 		},
 		{
