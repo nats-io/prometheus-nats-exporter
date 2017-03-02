@@ -78,7 +78,6 @@ func TestVarz(t *testing.T) {
 	}
 
 	verifyCollector(url, "varz", cases, t)
-
 }
 
 func TestConnz(t *testing.T) {
@@ -147,7 +146,7 @@ func TestRegister(t *testing.T) {
 	if err := prometheus.Register(nc); err != nil {
 		t.Fatalf("Got unexpected error: %v", err)
 	}
-	defer prometheus.Unregister(nc)
+	prometheus.Unregister(nc)
 
 	// test collect with an invalid endpoint
 	nc = NewCollector("GARBAGE", servers)

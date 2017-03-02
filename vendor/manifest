@@ -107,15 +107,6 @@
 			"revision": "fcdb11ccb4389efb1b210b7ffb623ab71c5fdd60",
 			"branch": "master",
 			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/sys/unix",
-			"repository": "https://go.googlesource.com/sys",
-			"vcs": "git",
-			"revision": "21f2569f6feb83b68a25c98c1b20eca5d4e1e6ae",
-			"branch": "master",
-			"path": "/unix",
-			"notests": true
 		}
 	]
 }

@@ -40,9 +40,6 @@ func checkExporter(url string) error {
 }
 
 func TestExporter(t *testing.T) {
-	s := pet.RunServer()
-	defer s.Shutdown()
-
 	opts := GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
@@ -52,6 +49,9 @@ func TestExporter(t *testing.T) {
 	opts.GetRoutez = true
 	opts.Debug = true
 	opts.Trace = true
+
+	s := pet.RunServer()
+	defer s.Shutdown()
 
 	exp := NewExporter(opts)
 	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
