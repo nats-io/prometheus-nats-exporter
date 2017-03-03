@@ -38,6 +38,24 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/nats-io/gnatsd/logger",
+			"repository": "https://github.com/nats-io/gnatsd",
+			"vcs": "git",
+			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
+			"branch": "master",
+			"path": "/logger",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/nats-io/gnatsd/vendor/golang.org/x/sys/windows",
+			"repository": "https://github.com/nats-io/gnatsd",
+			"vcs": "git",
+			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
+			"branch": "master",
+			"path": "vendor/golang.org/x/sys/windows",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/prometheus/client_golang/prometheus",
 			"repository": "https://github.com/prometheus/client_golang",
 			"vcs": "git",
@@ -88,15 +106,6 @@
 			"vcs": "git",
 			"revision": "fcdb11ccb4389efb1b210b7ffb623ab71c5fdd60",
 			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/net/context",
-			"repository": "https://go.googlesource.com/net",
-			"vcs": "git",
-			"revision": "60c41d1de8da134c05b7b40154a9a82bf5b7edb9",
-			"branch": "master",
-			"path": "/context",
 			"notests": true
 		}
 	]

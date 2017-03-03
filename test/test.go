@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/gnatsd/logger"
 	"github.com/nats-io/gnatsd/server"
 	"github.com/nats-io/go-nats"
 )
@@ -26,18 +27,31 @@ func RunServer() *server.Server {
 
 // RunServerWithPorts runs the NATS server with a monitor port in a go routine
 func RunServerWithPorts(cport, mport int) *server.Server {
+	var enableLogging bool
+
+	resetPreviousHTTPConnections()
+
+	// To enable debug/trace output in the NATS server,
+	// flip the enableLogging flag.
+	// enableLogging = true
+
 	opts := &server.Options{
 		Host:     "localhost",
 		Port:     cport,
 		HTTPHost: "127.0.0.1",
 		HTTPPort: mport,
-		NoLog:    true,
+		NoLog:    !enableLogging,
 		NoSigs:   true,
 	}
 
 	s := server.New(opts)
 	if s == nil {
 		panic("No NATS Server object returned.")
+	}
+
+	if enableLogging {
+		l := logger.NewStdLogger(true, true, true, false, true)
+		s.SetLogger(l, true, true)
 	}
 
 	// Run server in Go routine.
@@ -61,7 +75,8 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 			time.Sleep(50 * time.Millisecond)
 			continue
 		}
-		conn.Close()
+		_ = conn.Close()
+
 		// Wait a bit to give a chance to the server to remove this
 		// "client" from its state, which may otherwise interfere with
 		// some tests.
@@ -70,7 +85,6 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 		return s
 	}
 	panic("Unable to start NATS Server in Go Routine")
-
 }
 
 func resetPreviousHTTPConnections() {
@@ -85,8 +99,15 @@ func CreateClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
 	}
 
 	ch := make(chan bool)
-	nc.Subscribe("foo", func(m *nats.Msg) { ch <- true })
-	nc.Publish("foo", []byte("Hello"))
+	if _, err = nc.Subscribe("foo", func(m *nats.Msg) { ch <- true }); err != nil {
+		t.Fatalf("unable to subscribe: %v", err)
+	}
+	if err := nc.Publish("foo", []byte("Hello")); err != nil {
+		t.Fatalf("unable to publish: %v", err)
+	}
+	if err := nc.Flush(); err != nil {
+		t.Fatalf("flush error: %v", err)
+	}
 	// Wait for message
 	<-ch
 	return nc

@@ -62,6 +62,7 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	o := opts
 	if o == nil {
 		o = GetDefaultExporterOptions()
+		o.GetVarz = true
 	}
 	ne := &NATSExporter{
 		opts: o,
@@ -184,7 +185,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	ne.http, err = net.Listen("tcp", hp)
 
 	if err != nil {
-		collector.Fatalf("can't listen to the export port: %v", err)
+		collector.Errorf("can't listen to the export port: %v", err)
 		return err
 	}
 

@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 
 	"github.com/nats-io/gnatsd/logger"
-	natsd "github.com/nats-io/gnatsd/server"
 )
 
 // Logging in the collector
@@ -19,6 +18,27 @@ import (
 // All logging functions are fully implemented (versus calling into the NATS
 // server).
 
+// Logger interface, duplicating that of the NATS Server
+// This interface was copied from gnatsd to avoid vendoring
+// dependencies.
+type Logger interface {
+
+	// Log a notice statement
+	Noticef(format string, v ...interface{})
+
+	// Log a fatal error
+	Fatalf(format string, v ...interface{})
+
+	// Log an error
+	Errorf(format string, v ...interface{})
+
+	// Log a debug statement
+	Debugf(format string, v ...interface{})
+
+	// Log a trace statement
+	Tracef(format string, v ...interface{})
+}
+
 // Package globals for performance checks
 var trace int32
 var debug int32
@@ -26,7 +46,7 @@ var debug int32
 // The STAN logger, encapsulates a NATS logger
 var collectorLog = struct {
 	sync.Mutex
-	logger natsd.Logger
+	logger Logger
 }{}
 
 // Log Types
@@ -49,7 +69,7 @@ type LoggerOptions struct {
 
 // ConfigureLogger configures logging for the NATS exporter.
 func ConfigureLogger(lOpts *LoggerOptions) {
-	var newLogger natsd.Logger
+	var newLogger Logger
 
 	var opts *LoggerOptions
 	if lOpts != nil {
@@ -103,21 +123,21 @@ func RemoveLogger() {
 
 // Noticef logs a notice statement
 func Noticef(format string, v ...interface{}) {
-	executeLogCall(func(log natsd.Logger, format string, v ...interface{}) {
+	executeLogCall(func(log Logger, format string, v ...interface{}) {
 		log.Noticef(format, v...)
 	}, format, v...)
 }
 
 // Errorf logs an error
 func Errorf(format string, v ...interface{}) {
-	executeLogCall(func(log natsd.Logger, format string, v ...interface{}) {
+	executeLogCall(func(log Logger, format string, v ...interface{}) {
 		log.Errorf(format, v...)
 	}, format, v...)
 }
 
 // Fatalf logs a fatal error
 func Fatalf(format string, v ...interface{}) {
-	executeLogCall(func(log natsd.Logger, format string, v ...interface{}) {
+	executeLogCall(func(log Logger, format string, v ...interface{}) {
 		log.Fatalf(format, v...)
 	}, format, v...)
 }
@@ -125,7 +145,7 @@ func Fatalf(format string, v ...interface{}) {
 // Debugf logs a debug statement
 func Debugf(format string, v ...interface{}) {
 	if atomic.LoadInt32(&debug) != 0 {
-		executeLogCall(func(log natsd.Logger, format string, v ...interface{}) {
+		executeLogCall(func(log Logger, format string, v ...interface{}) {
 			log.Debugf(format, v...)
 		}, format, v...)
 	}
@@ -134,13 +154,13 @@ func Debugf(format string, v ...interface{}) {
 // Tracef logs a trace statement
 func Tracef(format string, v ...interface{}) {
 	if atomic.LoadInt32(&trace) != 0 {
-		executeLogCall(func(logger natsd.Logger, format string, v ...interface{}) {
+		executeLogCall(func(logger Logger, format string, v ...interface{}) {
 			logger.Tracef(format, v...)
 		}, format, v...)
 	}
 }
 
-func executeLogCall(f func(logger natsd.Logger, format string, v ...interface{}), format string, args ...interface{}) {
+func executeLogCall(f func(logger Logger, format string, v ...interface{}), format string, args ...interface{}) {
 	collectorLog.Lock()
 	defer collectorLog.Unlock()
 	if collectorLog.logger == nil {
