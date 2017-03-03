@@ -1,3 +1,4 @@
+[![License][License-Image]][License-Url] [![Build][Build-Status-Image]][Build-Status-Url] [![Coverage][Coverage-Image]][Coverage-Url]
 # prometheus-nats-exporter
 A [Prometheus](https://prometheus.io/) exporter for NATS metrics. Maps all numeric NATS server metrics to Prometheus for monitoring. 
 
@@ -84,3 +85,10 @@ The NATS prometheus exporter can be run within another go application.  Use the 
 	// For convenience, you can block until the exporter is stopped, using
 	exp.WaitUntilDone()
 ```
+
+[License-Url]: http://opensource.org/licenses/MIT
+[License-Image]: https://img.shields.io/badge/License-MIT-blue.svg
+[Build-Status-Url]: http://travis-ci.com/nats-io/prometheus-nats-exporter
+[Build-Status-Image]: https://travis-ci.com/nats-io/prometheus-nats-exporter.svg?token=bQqsBkZfycgqwrXTwekn&branch=master
+[Coverage-Url]: https://coveralls.io/r/nats-io/prometheus-nats-exporter?branch=master
+[Coverage-image]: https://coveralls.io/repos/github/nats-io/prometheus-nats-exporter/badge.svg?branch=master
