@@ -75,7 +75,7 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 			time.Sleep(50 * time.Millisecond)
 			continue
 		}
-		_ = conn.Close()
+		_ = conn.Close() // nolint
 
 		// Wait a bit to give a chance to the server to remove this
 		// "client" from its state, which may otherwise interfere with
