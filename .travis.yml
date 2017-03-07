@@ -11,12 +11,11 @@ install:
 - gometalinter --install
 before_script:
 - EXCLUDE_VENDOR=$(go list ./... | grep -v "/vendor/")
-- EXCLUDE_VENDOR_DIRS=$(go list -f '{{.Dir}}' ./... | grep -v "/vendor/")
 - go fmt ./...
 - go build
 - go install
 - go vet $EXCLUDE_VENDOR
-- gometalinter $EXCLUDE_VENDOR_DIRS --deadline 10m
+- gometalinter ./... --vendor --deadline 10m
 script:
 - go test -i -race $EXCLUDE_VENDOR -p 1
 - go test -v -race $EXCLUDE_VENDOR -p 1
