@@ -16,7 +16,7 @@ before_script:
 - go build
 - go install
 - go vet $EXCLUDE_VENDOR
-- gometalinter $EXCLUDE_VENDOR_DIRS --deadline 360s
+- gometalinter $EXCLUDE_VENDOR_DIRS --deadline 10m
 script:
 - go test -i -race $EXCLUDE_VENDOR -p 1
 - go test -v -race $EXCLUDE_VENDOR -p 1
