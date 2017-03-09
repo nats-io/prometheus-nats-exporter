@@ -126,38 +126,44 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 	return resps
 }
 
+// collectStatsFromRequests collects the statistics from a set of responses
+// returned by a NATS server.
+func (nc *NATSCollector) collectStatsFromRequests(key string, stat interface{}, resps map[string]map[string]interface{}, ch chan<- prometheus.Metric) {
+	switch m := stat.(type) {
+	case *prometheus.GaugeVec:
+		for id, response := range resps {
+			switch v := response[key].(type) {
+			case float64: // not sure why, but all my json numbers are coming here.
+				m.WithLabelValues(id).Set(v)
+			default:
+				Debugf("value no longer a float", id, v)
+			}
+		}
+		m.Collect(ch) // update the stat.
+	case *prometheus.CounterVec:
+		for id, response := range resps {
+			switch v := response[key].(type) {
+			case float64: // not sure why, but all my json numbers are coming here.
+				m.WithLabelValues(id).Add(v)
+			default:
+				Debugf("value no longer a float", id, v)
+			}
+		}
+		m.Collect(ch) // update the stat.
+	default:
+		Tracef("Unknown Metric Type %s", key)
+	}
+}
+
 // Collect all metrics for all URLs to send to Prometheus.
 func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 	nc.Lock()
 	defer nc.Unlock()
 
 	resps := nc.makeRequests()
-
-	// for each stat, see if each response contains that stat. then collect.
-	for idx, k := range nc.Stats {
-		switch m := k.(type) {
-		case *prometheus.GaugeVec:
-			for id, response := range resps {
-				switch v := response[idx].(type) {
-				case float64: // not sure why, but all my json numbers are coming here.
-					m.WithLabelValues(id).Set(v)
-				default:
-					Debugf("value no longer a float", id, v)
-				}
-			}
-			m.Collect(ch) // update the stat.
-		case *prometheus.CounterVec:
-			for id, response := range resps {
-				switch v := response[idx].(type) {
-				case float64: // not sure why, but all my json numbers are coming here.
-					m.WithLabelValues(id).Add(v)
-				default:
-					Debugf("value no longer a float", id, v)
-				}
-			}
-			m.Collect(ch) // update the stat.
-		default:
-			Tracef("Unknown Metric Type %s", k)
+	if len(resps) > 0 {
+		for key, stat := range nc.Stats {
+			nc.collectStatsFromRequests(key, stat, resps, ch)
 		}
 	}
 }

@@ -21,9 +21,6 @@ func getNameAndURL(urlArg string) (string, string) {
 		idx := strings.LastIndex(urlArg, ",")
 		name = urlArg[:idx]
 		url = urlArg[idx+1:]
-	} else {
-		name = urlArg
-		url = urlArg
 	}
 	return name, url
 }

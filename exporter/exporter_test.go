@@ -21,7 +21,7 @@ func checkExporter(url string) error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Expected a 200 response, got %d\n", resp.StatusCode)
+		return fmt.Errorf("expected a 200 response, got %d", resp.StatusCode)
 	}
 
 	defer func() {
@@ -30,11 +30,11 @@ func checkExporter(url string) error {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Got an error reading the body: %v\n", err)
+		return fmt.Errorf("got an error reading the body: %v", err)
 	}
 
 	if !strings.Contains(string(body), "gnatsd_varz_connections") {
-		return fmt.Errorf("Response did not have NATS data")
+		return fmt.Errorf("response did not have NATS data")
 	}
 	return nil
 }
