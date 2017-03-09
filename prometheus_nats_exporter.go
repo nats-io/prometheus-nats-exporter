@@ -1,7 +1,7 @@
 package main
 
 import (
-  "flag"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
