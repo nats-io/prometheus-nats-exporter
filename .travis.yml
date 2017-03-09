@@ -15,7 +15,7 @@ before_script:
 - go build
 - go install
 - go vet $EXCLUDE_VENDOR
-- gometalinter ./... --vendor --deadline 10m
+- travis_wait 20 gometalinter ./... --vendor --deadline 20m
 script:
 - go test -i -race $EXCLUDE_VENDOR -p 1
 - go test -v -race $EXCLUDE_VENDOR -p 1
