@@ -17,7 +17,7 @@ with monitoring ports: localhost:5555 and localhost:5656
 prometheus-nats-exporter -varz "http://localhost:5555" "http://localhost:5656"
 ```
 
-##Usage
+## Usage
 ```
 prometheus-nats-exporter <flags> url <url url url>
 
