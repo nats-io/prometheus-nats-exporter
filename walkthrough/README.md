@@ -1,8 +1,8 @@
 
 # A Walkthough of Monitoring NATS with Prometheus and Grafana
 
-This describes the basic setup and walks through a 
-NATS/Prometheus/Grafana monitoring setup.
+This walkthrough covers the basic setup and configuration for monitoring a
+NATS server using the NATS Prometheus exporter, Prometheus, and Grafana.
 
 ## Prerequisites
 For this walkthrough, you'll need to install the NATS Prometheus Exporter, [NATS Server](https://github.com/nats-io/gnatsd), [Prometheus](https://prometheus.io/), and [Grafana](https://grafana.com/)
@@ -13,23 +13,20 @@ go get github.com/nats-io/gnatsd
 ```
 
 ### Prometheus
-```sh
-brew install prometheus
-```
+
+You'll need Prometheus installed; refer to the Prometheus [download](https://prometheus.io/download/) and [installation](https://prometheus.io/docs/introduction/install/) instructions.
 
 ### Grafana
-```sh
-brew install grafana
-```
+For this walkthough you'll also need to [download](https://grafana.com/grafana/download) and [install](http://docs.grafana.org/#installing-grafana) Grafana.
 
 ## Launching the processes
 
-Change directory to the walkthrough directory
+Ensure you are working in the walkthrough directory:
 ```sh
 cd walkthrough
 ```
 
-It is helpful to setup three console windows, one for each process.
+It is helpful to start four console windows, one for each component.
 
 ### 1) Start the NATS server 
 Be sure to include the a monitoring port:
@@ -48,14 +45,14 @@ prometheus-nats-exporter -varz test-nats-server,http://localhost:8222
 You should see something like this:
 ```text
 [21690] 2017/05/02 10:10:37.461404 [INF] Prometheus exporter listening at 0.0.0.0:7777
-^CColins-MacBook-Pro:prometheus-nats-exporter colinsullivan$ ./prometheus-nats-eorter -varz test-nats-server,http://localhost:8222
-[21709] 2017/05/02 10:11:26.919467 [INF] Prometheus exporter listening at 0.0.0.0:7777
 ```
 
-### 2) Launch Prometheus
+### 2) Start Prometheus
 ```sh
 prometheus
 ```
+
+Prometheus will use the configuration file located in this directory.
 
 You'll see something like this:
 ```text
@@ -69,11 +66,11 @@ WARN[0000] No AlertManagers configured, not dispatching any alerts  source=notif
 INFO[0000] Starting target manager...                    source=targetmanager.go:76
 ```
 
-For this walkthrough, we'll use the default URL, http://localhost:9090.
+For this walkthrough we use the default URL, `http://localhost:9090`.
 
 ### 3) Start Grafana
 
-Start your Grafana Server (__your settings may differ__).
+Start your Grafana server (__your settings may differ__).
 ```bash
 grafana-server --config=/usr/local/etc/grafana/grafana.ini --homepath /usr/local/share/grafana cfg:default.paths.logs=/usr/local/var/log/grafana cfg:default.paths.data=/usr/local/var/lib/grafana cfg:default.paths.plugins=/usr/local/var/lib/grafana/plugins
 ```
@@ -96,11 +93,11 @@ Leave the rest as defaults.
 
 ![Data Source Image](images/GrafanaDatasource.jpg?raw=true "Grafana NATS Data Source")
 
-Next import the NATS dashboard, `grafana-nats-dash.json` from into grafana, and associate the 
-datasource previously added.  You should start seeing data graph as follows (note that
+Next import the NATS dashboard, `grafana-nats-dash.json` from into Grafana, and associate the 
+Prometheus datasource you just created.  You should start seeing data graph as follows (note that
 selecting a view of the last five minutes will be more exciting).
 
-Experiment running benchmarks and applications, to see a dashboard like the one below.
+Experiment running benchmarks and applications and you'll see a dashboard like the one below!
 
 ![Dashboard Image](images/GrafanaDashboard.jpg?raw=true "Grafana NATS Dashboard")
 
