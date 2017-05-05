@@ -1,9 +1,6 @@
 [![License][License-Image]][License-Url] [![Build][Build-Status-Image]][Build-Status-Url] [![Coverage][Coverage-Image]][Coverage-Url]
-# prometheus-nats-exporter
-A [Prometheus](https://prometheus.io/) exporter for NATS metrics. Maps all numeric NATS server metrics to Prometheus for monitoring. 
-
-The NATS prometheus exporter aggregates the metrics endpoints you choose (varz, connz, subsz, routez) across any number of monitored NATS servers into a
-single Prometheus Exporter endpoint.
+# The Prometheus NATS Exporter
+The Prometheus NATS Exporter consists of both a both a package and application that exports [NATS server](http://nats.io/documentation/server/gnatsd-intro/) metrics to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates metrics from the server monitoring endpoints you choose (varz, connz, subsz, routez) across any number of monitored NATS servers into a single Prometheus Exporter endpoint.
 
 # Build
 ``` bash
@@ -57,8 +54,38 @@ Usage of prometheus-nats-exporter:
         Get general metrics. 
 ```
 
+###  The URL parameter
+The url parameter is a standard NATS url, with an optional tag prefix delimited by a comma.
+
+`<tag>,<url>`
+
+This adds a tag identified as `server-id` into the prometheus metrics allowing you to identify the server by a convenient name. 
+
+e.g.
+`production-denver-1,http://denver1.foobar.com:8222`
+
+# Monitoring
+
+The NATS Prometheus exporter exposes metrics through an HTTP interface, and will default to 
+`http://0.0.0.0:7777/metrics`.
+
+It will return output that is readable by Prometheus.  
+
+The returned data looks like this:
+```text
+# HELP gnatsd_varz_in_bytes in_bytes
+# TYPE gnatsd_varz_in_bytes gauge
+gnatsd_varz_in_bytes{server_id="production-denver-1"} 0
+# HELP gnatsd_varz_in_msgs in_msgs
+# TYPE gnatsd_varz_in_msgs gauge
+gnatsd_varz_in_msgs{server_id="production-denver-1"} 0
+# HELP gnatsd_varz_max_connections max_connections
+# TYPE gnatsd_varz_max_connections gauge
+gnatsd_varz_max_connections{server_id="production-denver-1"} 65536
+```
+
 # The NATS Prometheus Exporter API
-The NATS prometheus exporter also provides a simple, easy to use, API that allows it to run embedded.  
+The NATS prometheus exporter also provides a simple and easy to use API that allows it to run embedded in your code.  
 
 ## Import the exporter package
 ```go
