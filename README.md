@@ -95,8 +95,7 @@ In just a few lines of code, configure and launch an instance of the exporter.
 ```
 
 # Monitoring Walkthrough
-For further information, refer to the [walkthough](walkthrough/README.md) of monitoring NATS with 
-Prometheus and Grafana.
+For further information, refer to the [walkthough](walkthrough/README.md) of monitoring NATS with Prometheus and Grafana.
 
 [License-Url]: http://opensource.org/licenses/MIT
 [License-Image]: https://img.shields.io/badge/License-MIT-blue.svg
