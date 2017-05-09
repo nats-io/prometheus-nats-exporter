@@ -28,7 +28,7 @@ cd walkthrough
 
 It is helpful to start four console windows, one for each component.
 
-### 1) Start the NATS server 
+### 1) Start the NATS server and NATS Prometheus Exporter
 Be sure to include the a monitoring port:
 ```sh
 gnatsd -m 8222
@@ -93,7 +93,7 @@ Leave the rest as defaults.
 
 ![Data Source Image](images/GrafanaDatasource.jpg?raw=true "Grafana NATS Data Source")
 
-Next import the NATS dashboard, `grafana-nats-dash.json` from into Grafana, and associate the 
+Next import the NATS dashboard, `grafana-nats-dash.json` into Grafana, and associate the 
 Prometheus datasource you just created.  You should start seeing data graph as follows (note that
 selecting a view of the last five minutes will be more exciting).
 
