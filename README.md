@@ -15,7 +15,7 @@ prometheus-nats-exporter -varz "http://localhost:5555" "http://localhost:5656"
 ```
 
 ## Usage
-```
+```bash
 prometheus-nats-exporter <flags> url <url url url>
 
 Flags must include at least one of: -varz, -connz, -routez, -subz
@@ -49,7 +49,14 @@ Usage of prometheus-nats-exporter:
   -s	  Write log statements to the syslog.
   -subz 
         Get subscription metrics.
-  -syslog Write log statements to the syslog.
+  -syslog 
+        Write log statements to the syslog.
+  -tlscacert string
+    	Client certificate CA for verification (used with HTTPS).
+  -tlscert string
+    	Server certificate file (Enables HTTPS).
+  -tlskey string
+    	Private key for server certificate (used with HTTPS).  
   -varz
         Get general metrics. 
 ```

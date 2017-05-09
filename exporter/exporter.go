@@ -3,7 +3,10 @@
 package exporter
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -25,6 +28,9 @@ type NATSExporterOptions struct {
 	GetSubz       bool
 	GetRoutez     bool
 	RetryInterval time.Duration
+	CertFile      string
+	KeyFile       string
+	CaFile        string
 }
 
 //NATSExporter collects NATS metrics
@@ -140,6 +146,16 @@ func (ne *NATSExporter) initializeCollectors() error {
 	return nil
 }
 
+// caller must lock
+func (ne *NATSExporter) clearCollectors() {
+	if ne.collectors != nil {
+		for _, c := range ne.collectors {
+			prometheus.Unregister(c)
+		}
+		ne.collectors = nil
+	}
+}
+
 // Start runs the exporter process.  Servers should be addded with the
 // AddServer API. before starting it.
 func (ne *NATSExporter) Start() error {
@@ -150,10 +166,12 @@ func (ne *NATSExporter) Start() error {
 	}
 
 	if err := ne.initializeCollectors(); err != nil {
+		ne.clearCollectors()
 		return err
 	}
 
 	if err := ne.startHTTP(ne.opts.ListenAddress, ne.opts.ListenPort); err != nil {
+		ne.clearCollectors()
 		return fmt.Errorf("Error serving http:  %v", err)
 	}
 
@@ -163,29 +181,70 @@ func (ne *NATSExporter) Start() error {
 	return nil
 }
 
+// generates the TLS config for https
+func (ne *NATSExporter) generateTLSConfig() (*tls.Config, error) {
+	//  Load in cert and private key
+	cert, err := tls.LoadX509KeyPair(ne.opts.CertFile, ne.opts.KeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing X509 certificate/key pair (%s, %s): %v",
+			ne.opts.CertFile, ne.opts.KeyFile, err)
+	}
+	cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return nil, fmt.Errorf("error parsing certificate (%s): %v",
+			ne.opts.CertFile, err)
+	}
+	// Create our TLS configuration
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.NoClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+	// Add in CAs if applicable.
+	if ne.opts.CaFile != "" {
+		rootPEM, err := ioutil.ReadFile(ne.opts.CaFile)
+		if err != nil || rootPEM == nil {
+			return nil, fmt.Errorf("failed to load root ca certificate (%s): %v", ne.opts.CaFile, err)
+		}
+		pool := x509.NewCertPool()
+		ok := pool.AppendCertsFromPEM(rootPEM)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse root ca certificate")
+		}
+		config.ClientCAs = pool
+	}
+	return config, nil
+}
+
 // caller must lock
 func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	var hp string
 	var err error
+	var proto string
+	var config *tls.Config
 
-	/* TODO:  setup TLS
-	if secure {
-		hp = net.JoinHostPort(s.opts.HTTPHost, strconv.Itoa(s.opts.HTTPSPort))
-		config := opts.TLSConfig)
-		config.ClientAuth = tls.NoClientCert
-		s.http, err = tls.Listen("tcp", hp, config)
-
-	} else {
-		hp = net.JoinHostPort(s.opts.HTTPHost, strconv.Itoa(s.opts.HTTPPort))
-		s.http, err = net.Listen("tcp", hp)
-	}
-	*/
 	hp = net.JoinHostPort(ne.opts.ListenAddress, strconv.Itoa(ne.opts.ListenPort))
-	collector.Noticef("Prometheus exporter listening at %s", hp)
-	ne.http, err = net.Listen("tcp", hp)
+
+	// If a certificate file has been specified, setup TLS with the
+	// key provided.
+	if ne.opts.CertFile != "" {
+		proto = "https"
+		collector.Debugf("Certificate file specfied; using https.")
+		config, err = ne.generateTLSConfig()
+		if err != nil {
+			return err
+		}
+		ne.http, err = tls.Listen("tcp", hp, config)
+	} else {
+		proto = "http"
+		collector.Debugf("No certificate file specified; using http.")
+		ne.http, err = net.Listen("tcp", hp)
+	}
+
+	collector.Noticef("Prometheus exporter listening at %s://%s/metrics", proto, hp)
 
 	if err != nil {
-		collector.Errorf("can't listen to the export port: %v", err)
+		collector.Errorf("can't start HTTP listener: %v", err)
 		return err
 	}
 
@@ -198,6 +257,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 		ReadTimeout:    2 * time.Second,
 		WriteTimeout:   2 * time.Second,
 		MaxHeaderBytes: 1 << 20,
+		TLSConfig:      config,
 	}
 
 	sHTTP := ne.http
@@ -240,9 +300,6 @@ func (ne *NATSExporter) Stop() {
 	if err := ne.http.Close(); err != nil {
 		collector.Debugf("Did not close HTTP: %v", err)
 	}
-	for _, c := range ne.collectors {
-		prometheus.Unregister(c)
-	}
-	ne.collectors = nil
+	ne.clearCollectors()
 	ne.doneWg.Done()
 }

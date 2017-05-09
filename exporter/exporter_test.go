@@ -3,6 +3,8 @@
 package exporter
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,8 +17,44 @@ import (
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 )
 
-func checkExporter(url string) error {
-	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", url))
+const (
+	clientCert = "../test/certs/client-cert.pem"
+	clientKey  = "../test/certs/client-key.pem"
+	serverCert = "../test/certs/server-cert.pem"
+	serverKey  = "../test/certs/server-key.pem"
+	caCertFile = "../test/certs/ca.pem"
+)
+
+func getSecure(t *testing.T, url string) (*http.Response, error) {
+	tlsConfig := &tls.Config{}
+	caCert, err := ioutil.ReadFile(caCertFile)
+	if err != nil {
+		t.Fatalf("Got error reading RootCA file: %s", err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	tlsConfig.RootCAs = caCertPool
+
+	cert, err := tls.LoadX509KeyPair(
+		clientCert,
+		clientKey)
+	if err != nil {
+		t.Fatalf("Got error reading client certificates: %s", err)
+	}
+	tlsConfig.Certificates = []tls.Certificate{cert}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	httpClient := &http.Client{Transport: transport}
+	return httpClient.Get(url)
+}
+
+func checkExporter(t *testing.T, addr string, secure bool) error {
+	var resp *http.Response
+	var err error
+	if secure {
+		resp, err = getSecure(t, fmt.Sprintf("https://%s/metrics", addr))
+	} else {
+		resp, err = http.Get(fmt.Sprintf("http://%s/metrics", addr))
+	}
 	if err != nil {
 		return err
 	}
@@ -47,8 +85,6 @@ func TestExporter(t *testing.T) {
 	opts.GetConnz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
-	opts.Debug = true
-	opts.Trace = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
@@ -62,9 +98,82 @@ func TestExporter(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
+}
+
+func TestExporterHTTPS(t *testing.T) {
+	opts := GetDefaultExporterOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetVarz = true
+	opts.CaFile = caCertFile
+	opts.CertFile = serverCert
+	opts.KeyFile = serverKey
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
+		t.Fatalf("Error adding a server: %v", err)
+	}
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	// Check that we CANNOT connect with http
+	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
+		t.Fatalf("Did not receive expected error.")
+	}
+	// Check that we CAN connect with https
+	if err := checkExporter(t, exp.http.Addr().String(), true); err != nil {
+		t.Fatalf("Received TLS error:  %v", err)
+	}
+}
+
+func TestExporterHTTPSInvalidConfig(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	opts := GetDefaultExporterOptions()
+
+	checkExporterStart := func() {
+		exp := NewExporter(opts)
+		if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
+			t.Fatalf("Error adding a server: %v", err)
+		}
+		if err := exp.Start(); err == nil {
+			t.Fatalf("Did not receive expected error.")
+			exp.Stop()
+		}
+	}
+
+	// Test invalid certificate authority
+	opts.CaFile = "garbage"
+	opts.CertFile = serverCert
+	opts.KeyFile = serverKey
+	checkExporterStart()
+
+	// test invalid server certificate
+	opts.CaFile = caCertFile
+	opts.CertFile = "garbage"
+	opts.KeyFile = clientKey
+	checkExporterStart()
+
+	// test invalid server key
+	opts.CaFile = caCertFile
+	opts.CertFile = serverCert
+	opts.KeyFile = "invalid"
+	checkExporterStart()
+
+	// test invalid server/key pair
+	opts.CaFile = caCertFile
+	opts.CertFile = serverCert
+	opts.KeyFile = clientKey
+	checkExporterStart()
 }
 
 func TestExporterDefaultOptions(t *testing.T) {
@@ -80,7 +189,7 @@ func TestExporterDefaultOptions(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -102,7 +211,7 @@ func TestExporterWait(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -134,7 +243,7 @@ func TestExporterNoNATSServer(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(exp.http.Addr().String()); err == nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
 		t.Fatalf("Expected an error, received none.")
 	}
 
@@ -147,7 +256,7 @@ func TestExporterNoNATSServer(t *testing.T) {
 
 	time.Sleep(opts.RetryInterval + (time.Millisecond * 500))
 
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -254,12 +363,12 @@ func TestExporterBounce(t *testing.T) {
 	if err := exp.Start(); err != nil {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 	// test stop
 	exp.Stop()
-	if err := checkExporter(exp.http.Addr().String()); err == nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
 		t.Fatalf("Did not received expected error")
 	}
 
@@ -270,7 +379,7 @@ func TestExporterBounce(t *testing.T) {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 	defer exp.Stop()
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -301,7 +410,7 @@ func TestExporterStartNoServersConfigured(t *testing.T) {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 	defer exp.Stop()
-	if err := checkExporter(exp.http.Addr().String()); err != nil {
+	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
