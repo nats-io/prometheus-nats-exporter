@@ -1,4 +1,4 @@
-// Copyright 2016 Apcera Inc. All rights reserved.
+// Copyright 2017 Apcera Inc. All rights reserved.
 
 package collector
 
@@ -61,7 +61,7 @@ func TestLogging(t *testing.T) {
 	//ConfigureLogger(sOpts, nOpts)
 
 	// test file
-	tmpDir, err := ioutil.TempDir("", "_stan_server")
+	tmpDir, err := ioutil.TempDir("", "_exporter")
 	if err != nil {
 		t.Fatal("Could not create tmp dir")
 	}
@@ -69,7 +69,7 @@ func TestLogging(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	file, err := ioutil.TempFile(tmpDir, "stan_server:log_")
+	file, err := ioutil.TempFile(tmpDir, "exporter:log_")
 	if err != nil {
 		t.Fatalf("unable to create temporary file")
 	}

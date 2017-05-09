@@ -1,4 +1,4 @@
-// Copyright 2016 Apcera Inc. All rights reserved.
+// Copyright 2017 Apcera Inc. All rights reserved.
 
 package collector
 
@@ -12,15 +12,10 @@ import (
 
 // Logging in the collector
 //
-// The collector logger is an instance of a NATS logger, (basically duplicated
-// from the NATS server code), and is passed into the NATS server.
-//
-// All logging functions are fully implemented (versus calling into the NATS
-// server).
+// The collector logger is an instance of a NATS logger based on
+// the NATS server logger.
 
-// Logger interface, duplicating that of the NATS Server
-// This interface was copied from gnatsd to avoid vendoring
-// dependencies.
+// Logger provides an interface to logging methods.
 type Logger interface {
 
 	// Log a notice statement

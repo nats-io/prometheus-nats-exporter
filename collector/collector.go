@@ -1,3 +1,5 @@
+// Copyright 2017 Apcera Inc. All rights reserved.
+
 package collector
 
 import (
@@ -14,11 +16,6 @@ const (
 	namespace = "gnatsd"
 )
 
-// Root is the base of the prometheus metrics - TODO:  Used?
-type Root struct {
-	Metrics map[string]PrometheusMetricConfig
-}
-
 // PrometheusMetricConfig holds configuration for the metrics.
 type PrometheusMetricConfig struct {
 	Help       string `json:"help"`
@@ -31,7 +28,7 @@ type CollectedServer struct {
 	ID  string
 }
 
-//NATSCollector collects NATS metrics
+// NATSCollector collects NATS metrics
 type NATSCollector struct {
 	sync.Mutex
 	Stats      map[string]interface{}
@@ -78,7 +75,6 @@ func getMetricURL(httpClient *http.Client, URL string) (response map[string]inte
 		return nil, err
 	}
 
-	// now parse the body into json
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
@@ -96,9 +92,7 @@ func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, k := range nc.Stats {
 		switch m := k.(type) {
 
-		// is it a Gauge
-		// or Counter
-		// Describe it to the channel.
+		// Describe the stat to the channel
 		case *prometheus.GaugeVec:
 			m.Describe(ch)
 		case *prometheus.CounterVec:
@@ -202,12 +196,12 @@ func (nc *NATSCollector) initMetricsFromServers() {
 		if !ok {
 			i := response[k]
 			switch v := i.(type) {
-			case float64: // not sure why, but all my json numbers are coming here.
+			case float64: // all json numbers are handled here.
 				nc.Stats[k] = newPrometheusGaugeVec(nc.endpoint, k, "")
 			case string:
 				// do nothing
 			default:
-				// i isn't one of the types above
+				// not one of the types currently handled
 				Tracef("Unknown type:  %v, %v", k, v)
 			}
 		}

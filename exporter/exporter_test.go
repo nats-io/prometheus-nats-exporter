@@ -1,4 +1,4 @@
-// Copyright 2016 Apcera Inc. All rights reserved.
+// Copyright 2017 Apcera Inc. All rights reserved.
 
 package exporter
 
@@ -47,8 +47,6 @@ func TestExporter(t *testing.T) {
 	opts.GetConnz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
-	opts.Debug = true
-	opts.Trace = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
