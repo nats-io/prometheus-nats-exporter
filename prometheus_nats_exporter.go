@@ -1,3 +1,5 @@
+// Copyright 2017 Apcera Inc. All rights reserved.
+
 package main
 
 import (
@@ -14,18 +16,19 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
-func getNameAndURL(urlArg string) (string, string) {
-	name := urlArg
+// parseServerIDAndURL parses the url arguemnt the optional id for the server ID.
+func parseServerIDAndURL(urlArg string) (string, string) {
+	id := urlArg
 	url := urlArg
 	if strings.Contains(urlArg, ",") {
 		idx := strings.LastIndex(urlArg, ",")
-		name = urlArg[:idx]
+		id = urlArg[:idx]
 		url = urlArg[idx+1:]
 	}
-	return name, url
+	return id, url
 }
 
-// updateOptions sets up the options based on the provided flags.
+// updateOptions sets up additional options based on the provided flags.
 func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOptions) {
 	if debugAndTrace {
 		opts.Debug = true
@@ -45,7 +48,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 	}
 
 	if !opts.GetConnz && !opts.GetVarz && !opts.GetSubz && !opts.GetRoutez {
-		// Mo logger setup yet...
+		// Mo logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
 		opts.GetVarz = true
 	}
@@ -93,20 +96,23 @@ func main() {
 
 	updateOptions(debugAndTrace, useSysLog, opts)
 
+	// Create an instance of the NATS exporter.
 	exp := exporter.NewExporter(opts)
 
-	// for each URL in args
+	// For each URL specified, add the NATS server with the optional ID.
 	for _, arg := range flag.Args() {
-		name, url := getNameAndURL(arg)
-		if err := exp.AddServer(name, url); err != nil {
-			collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", name, url, err)
+		id, url := parseServerIDAndURL(arg)
+		if err := exp.AddServer(id, url); err != nil {
+			collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", id, url, err)
 		}
 	}
 
+	// Start the exporter.
 	if err := exp.Start(); err != nil {
 		collector.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 
+	// Setup the interrupt handler to gracefully exit.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {

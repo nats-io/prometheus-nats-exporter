@@ -1,4 +1,4 @@
-// Copyright 2016 Apcera Inc. All rights reserved.
+// Copyright 2017 Apcera Inc. All rights reserved.
 
 package exporter
 
@@ -18,7 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// NATSExporterOptions are options to set the NATS collector
+// NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
 	ListenAddress string
@@ -62,8 +62,7 @@ func GetDefaultExporterOptions() *NATSExporterOptions {
 	return opts
 }
 
-// NewExporter creates a new NATS exporte from a list of monitoring URLs.
-// Each URL should be to a specific endpoint (e.g. /varz, /connz, subsz, or routez)
+// NewExporter creates a new NATS exporter from a list of monitoring URLs.
 func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	o := opts
 	if o == nil {
@@ -216,6 +215,8 @@ func (ne *NATSExporter) generateTLSConfig() (*tls.Config, error) {
 	return config, nil
 }
 
+// startHTTP configures and starts the HTTP server for applications to poll data from
+// exporter.
 // caller must lock
 func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	var hp string
@@ -266,7 +267,6 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 			var err error
 			if err = srv.Serve(sHTTP); err != nil {
 				// In a test environment, this can fail because the server is already running.
-				// TODO:  Fix this.
 				collector.Debugf("Unable to start HTTP server (may already be running): %v", err)
 			} else {
 				collector.Debugf("Started HTTP server.")
@@ -286,7 +286,7 @@ func (ne *NATSExporter) WaitUntilDone() {
 	wg.Wait()
 }
 
-// Stop stops the collector
+// Stop stops the collector.
 func (ne *NATSExporter) Stop() {
 	collector.Debugf("Stopping.")
 	ne.Lock()
