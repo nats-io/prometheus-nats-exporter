@@ -1,8 +1,8 @@
 {
   "__inputs": [
     {
-      "name": "DS_PROMETHEUS-HOST1",
-      "label": "Prometheus-Host1",
+      "name": "DS_NATS-PROMETHEUS",
+      "label": "NATS-Prometheus",
       "description": "",
       "type": "datasource",
       "pluginId": "prometheus",
@@ -47,7 +47,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -127,7 +127,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -215,7 +215,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -294,7 +294,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -373,7 +373,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -452,7 +452,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -541,7 +541,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -620,7 +620,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -700,7 +700,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_PROMETHEUS-HOST1}",
+          "datasource": "${DS_NATS-PROMETHEUS}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -782,7 +782,7 @@
     }
   ],
   "time": {
-    "from": "now-30m",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {
@@ -818,7 +818,7 @@
   },
   "refresh": false,
   "schemaVersion": 12,
-  "version": 72,
+  "version": 2,
   "links": [],
   "gnetId": null
 }
