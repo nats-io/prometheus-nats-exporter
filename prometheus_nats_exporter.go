@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 	"runtime"
@@ -16,16 +17,29 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
-// parseServerIDAndURL parses the url arguemnt the optional id for the server ID.
-func parseServerIDAndURL(urlArg string) (string, string) {
-	id := urlArg
-	url := urlArg
+// parseServerIDAndURL parses the url argument the optional id for the server ID.
+func parseServerIDAndURL(urlArg string) (string, string, error) {
+	var id string
+	var monURL string
+
+	// if there is an optional tag, parse it out and check the url
 	if strings.Contains(urlArg, ",") {
 		idx := strings.LastIndex(urlArg, ",")
 		id = urlArg[:idx]
-		url = urlArg[idx+1:]
+		monURL = urlArg[idx+1:]
+		if _, err := url.ParseRequestURI(monURL); err != nil {
+			return "", "", err
+		}
+	} else {
+		// The URL is the basis for a default id with credentials stripped out.
+		u, err := url.ParseRequestURI(urlArg)
+		if err != nil {
+			return "", "", err
+		}
+		id = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+		monURL = urlArg
 	}
-	return id, url
+	return id, monURL, nil
 }
 
 // updateOptions sets up additional options based on the provided flags.
@@ -109,7 +123,10 @@ necessary.`)
 
 	// For each URL specified, add the NATS server with the optional ID.
 	for _, arg := range flag.Args() {
-		id, url := parseServerIDAndURL(arg)
+		id, url, err := parseServerIDAndURL(arg)
+		if err != nil {
+			collector.Fatalf("Unable to parse URL %q: %v", arg, err)
+		}
 		if err := exp.AddServer(id, url); err != nil {
 			collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", id, url, err)
 		}
