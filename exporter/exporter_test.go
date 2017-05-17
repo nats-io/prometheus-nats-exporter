@@ -25,6 +25,13 @@ const (
 	caCertFile = "../test/certs/ca.pem"
 )
 
+func getDefaultExporterTestOptions() (opts *NATSExporterOptions) {
+	o := GetDefaultExporterOptions()
+	o.NATSServerTag = "test-server"
+	o.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
+	return o
+}
+
 func getSecure(t *testing.T, url string) (*http.Response, error) {
 	tlsConfig := &tls.Config{}
 	caCert, err := ioutil.ReadFile(caCertFile)
@@ -78,7 +85,7 @@ func checkExporter(t *testing.T, addr string, secure bool) error {
 }
 
 func TestExporter(t *testing.T) {
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -90,9 +97,6 @@ func TestExporter(t *testing.T) {
 	defer s.Shutdown()
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 	if err := exp.Start(); err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -104,7 +108,7 @@ func TestExporter(t *testing.T) {
 }
 
 func TestExporterHTTPS(t *testing.T) {
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -116,9 +120,6 @@ func TestExporterHTTPS(t *testing.T) {
 	defer s.Shutdown()
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 	if err := exp.Start(); err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -138,13 +139,10 @@ func TestExporterHTTPSInvalidConfig(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 
 	checkExporterStart := func() {
 		exp := NewExporter(opts)
-		if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-			t.Fatalf("Error adding a server: %v", err)
-		}
 		if err := exp.Start(); err == nil {
 			t.Fatalf("Did not receive expected error.")
 			exp.Stop()
@@ -181,9 +179,16 @@ func TestExporterDefaultOptions(t *testing.T) {
 	defer s.Shutdown()
 
 	exp := NewExporter(nil)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
+
+	// test without a server configured
+	if err := exp.Start(); err == nil {
+		t.Fatalf("Did not recieve expected error.")
 	}
+
+	opts := GetDefaultExporterOptions()
+	opts.GetVarz = true
+	opts.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
+	exp = NewExporter(opts)
 	if err := exp.Start(); err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -198,15 +203,12 @@ func TestExporterWait(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 	if err := exp.Start(); err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -228,16 +230,13 @@ func TestExporterWait(t *testing.T) {
 }
 
 func TestExporterNoNATSServer(t *testing.T) {
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.RetryInterval = 1 * time.Second
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 	if err := exp.Start(); err != nil {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
@@ -266,15 +265,12 @@ func TestExporterAPIIdempotency(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 
 	// test start
 	if err := exp.Start(); err != nil {
@@ -294,15 +290,12 @@ func TestExporterAddServerAfterStart(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 
 	// test start
 	if err := exp.Start(); err != nil {
@@ -319,15 +312,12 @@ func TestPortReuse(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 	if err := exp.Start(); err != nil {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
@@ -335,9 +325,6 @@ func TestPortReuse(t *testing.T) {
 
 	// attempt to start another exporter on the same port
 	exp2 := NewExporter(opts)
-	if err := exp2.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 	if err := exp2.Start(); err == nil {
 		t.Fatalf("Did not recieve expected error.")
 		exp2.Stop()
@@ -349,15 +336,12 @@ func TestExporterBounce(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := GetDefaultExporterOptions()
+	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	if err := exp.AddServer("test-server", fmt.Sprintf("http://localhost:%d", pet.MonitorPort)); err != nil {
-		t.Fatalf("Error adding a server: %v", err)
-	}
 
 	// test start
 	if err := exp.Start(); err != nil {
@@ -395,7 +379,7 @@ func TestExporterStartNoServersConfigured(t *testing.T) {
 	opts.GetVarz = true
 
 	exp := NewExporter(opts)
-	// do not configura a server
+	// do not configure a server
 	if err := exp.Start(); err == nil {
 		t.Fatalf("Did not receive expected start failure.")
 	}

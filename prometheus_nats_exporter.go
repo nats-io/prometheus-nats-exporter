@@ -88,10 +88,18 @@ func main() {
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second
 
-	if len(flag.Args()) < 1 {
-		fmt.Printf("Usage:  %s <flags> url <url url url>\n\n", os.Args[0])
+	args := flag.Args()
+	if len(args) < 1 {
+		fmt.Printf("Usage:  %s <flags> url\n\n", os.Args[0])
 		flag.Usage()
 		return
+	} else if len(args) > 1 {
+		fmt.Println(
+			`WARNING:  While permitted by this exporter, monitoring more than one server 
+violates Prometheus guidelines and best practices.  Each Prometheus NATS 
+exporter should monitor exactly one NATS server, preferably sitting right 
+beside it on the same machine.  Aggregate multiple servers only when 
+necessary.`)
 	}
 
 	updateOptions(debugAndTrace, useSysLog, opts)
@@ -109,7 +117,7 @@ func main() {
 
 	// Start the exporter.
 	if err := exp.Start(); err != nil {
-		collector.Fatalf("Got an error starting the exporter: %v\n", err)
+		collector.Fatalf("error starting the exporter: %v\n", err)
 	}
 
 	// Setup the interrupt handler to gracefully exit.

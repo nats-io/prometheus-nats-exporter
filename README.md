@@ -1,6 +1,6 @@
 [![License][License-Image]][License-Url] [![Build][Build-Status-Image]][Build-Status-Url] [![Coverage][Coverage-Image]][Coverage-Url]
 # The Prometheus NATS Exporter
-The Prometheus NATS Exporter consists of both a both a package and application that exports [NATS server](http://nats.io/documentation/server/gnatsd-intro/) metrics to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates metrics from the server monitoring endpoints you choose (varz, connz, subsz, routez) across any number of monitored NATS servers into a single Prometheus Exporter endpoint.
+The Prometheus NATS Exporter consists of both a both a package and application that exports [NATS server](http://nats.io/documentation/server/gnatsd-intro/) metrics to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates metrics from the server monitoring endpoints you choose (varz, connz, subsz, routez) from a NATS server into a single Prometheus exporter endpoint.
 
 # Build
 ``` bash
@@ -8,15 +8,15 @@ go build
 ```
 
 # Run
-Start the prometheus-nats-exporter executable, and poll the varz metrics endpoints of NATS servers 
-located at localhost:5555 and localhost:5656
+Start the prometheus-nats-exporter executable, and poll the `varz` metrics endpoints of the NATS server
+located on `localhost` configured with a monitor port of `5555`.
 ``` bash
-prometheus-nats-exporter -varz "http://localhost:5555" "http://localhost:5656"
+prometheus-nats-exporter -varz "http://localhost:5555"
 ```
 
 ## Usage
 ```bash
-prometheus-nats-exporter <flags> url <url url url>
+prometheus-nats-exporter <flags> url
 
 Flags must include at least one of: -varz, -connz, -routez, -subz
 
@@ -105,18 +105,17 @@ The NATS prometheus exporter also provides a simple and easy to use API that all
 ## API Usage
 In just a few lines of code, configure and launch an instance of the exporter.
 ```go 
-	// Get the default options, and set what you need to.  The listen address and Port
+	// Get the default options, and set what you need to.  The listen address and port
 	// is how prometheus can poll for collected data.
 	opts := exporter.GetDefaultExporterOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
+	opts.NATSServerURL = "http://localhost:8222"
+	opts.NATSServerTag = "myserver"
 
 	// create an exporter instance, ready to be launched.
 	exp := exporter.NewExporter(opts)
-
-	// Add a NATS server providing a tag and the monitoring url
-	exp.AddServer("myserver", "http://localhost:8222")
 
 	// start collecting data
 	exp.Start()
