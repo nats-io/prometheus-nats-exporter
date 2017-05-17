@@ -31,6 +31,8 @@ type NATSExporterOptions struct {
 	CertFile      string
 	KeyFile       string
 	CaFile        string
+	NATSServerURL string
+	NATSServerTag string
 }
 
 //NATSExporter collects NATS metrics
@@ -53,6 +55,7 @@ var (
 )
 
 // GetDefaultExporterOptions returns the default set of exporter options
+// The NATS server url must be set
 func GetDefaultExporterOptions() *NATSExporterOptions {
 	opts := &NATSExporterOptions{
 		ListenAddress: DefaultListenAddress,
@@ -62,7 +65,7 @@ func GetDefaultExporterOptions() *NATSExporterOptions {
 	return opts
 }
 
-// NewExporter creates a new NATS exporter from a list of monitoring URLs.
+// NewExporter creates a new NATS exporter
 func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	o := opts
 	if o == nil {
@@ -72,6 +75,9 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	ne := &NATSExporter{
 		opts: o,
 		http: nil,
+	}
+	if o.NATSServerURL != "" {
+		_ = ne.AddServer(o.NATSServerTag, o.NATSServerURL) // nolint
 	}
 	return ne
 }
@@ -100,8 +106,9 @@ func (ne *NATSExporter) createCollector(endpoint string) {
 	}
 }
 
-// AddServer adds a NATS server to the exporter.  The exporter cannot be
-// running.
+// AddServer is an advanced API for Apcera's use; normally the NATS server
+// should be set through the options.  Adding more than one server will
+// violate Prometheus.io guidelines.
 func (ne *NATSExporter) AddServer(id, url string) error {
 	ne.Lock()
 	defer ne.Unlock()
@@ -155,8 +162,7 @@ func (ne *NATSExporter) clearCollectors() {
 	}
 }
 
-// Start runs the exporter process.  Servers should be addded with the
-// AddServer API. before starting it.
+// Start runs the exporter process.
 func (ne *NATSExporter) Start() error {
 	ne.Lock()
 	defer ne.Unlock()
