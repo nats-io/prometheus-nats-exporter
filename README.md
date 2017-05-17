@@ -62,7 +62,7 @@ Usage of prometheus-nats-exporter:
 ```
 
 ###  The URL parameter
-The url parameter is a standard NATS url, with an optional tag prefix delimited by a comma.
+The url parameter is a standard url, with an optional tag prefix delimited by a comma.  Both `http` and `https` (when TLS is configured) is supported.
 
 `<tag>,<url>`
 
