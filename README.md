@@ -1,6 +1,6 @@
 [![License][License-Image]][License-Url] [![Build][Build-Status-Image]][Build-Status-Url] [![Coverage][Coverage-Image]][Coverage-Url]
 # The Prometheus NATS Exporter
-The Prometheus NATS Exporter consists of both a both a package and application that exports [NATS server](http://nats.io/documentation/server/gnatsd-intro/) metrics to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates metrics from the server monitoring endpoints you choose (varz, connz, subsz, routez) from a NATS server into a single Prometheus exporter endpoint.
+The Prometheus NATS Exporter consists of both a package and an application that exports [NATS server](http://nats.io/documentation/server/gnatsd-intro/) metrics to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates metrics from the server monitoring endpoints you choose (varz, connz, subsz, routez) from a NATS server into a single Prometheus exporter endpoint.
 
 # Build
 ``` bash
