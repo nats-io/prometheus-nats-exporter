@@ -72,6 +72,7 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 		o = GetDefaultExporterOptions()
 		o.GetVarz = true
 	}
+	collector.ConfigureLogger(&o.LoggerOptions)
 	ne := &NATSExporter{
 		opts: o,
 		http: nil,
@@ -128,7 +129,6 @@ func (ne *NATSExporter) AddServer(id, url string) error {
 // Caller must lock
 func (ne *NATSExporter) initializeCollectors() error {
 	opts := ne.opts
-	collector.ConfigureLogger(&opts.LoggerOptions)
 
 	if len(ne.servers) == 0 {
 		return fmt.Errorf("no servers configured to obtain metrics")
