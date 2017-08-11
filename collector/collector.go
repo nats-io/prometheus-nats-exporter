@@ -16,12 +16,6 @@ const (
 	namespace = "gnatsd"
 )
 
-// PrometheusMetricConfig holds configuration for the metrics.
-type PrometheusMetricConfig struct {
-	Help       string `json:"help"`
-	MetricType string `json:"type"`
-}
-
 // CollectedServer is a NATS server polled by this collector
 type CollectedServer struct {
 	URL string
