@@ -62,14 +62,10 @@ Usage of prometheus-nats-exporter:
 ```
 
 ###  The URL parameter
-The url parameter is a standard url, with an optional tag prefix delimited by a comma.  Both `http` and `https` (when TLS is configured) is supported.
-
-`<tag>,<url>`
-
-This adds a tag identified as `server-id` into the prometheus metrics allowing you to identify the server by a convenient name. 
+The url parameter is a standard url.  Both `http` and `https` (when TLS is configured) is supported.
 
 e.g.
-`production-denver-1,http://denver1.foobar.com:8222`
+`http://denver1.foobar.com:8222`
 
 # Monitoring
 
@@ -82,13 +78,13 @@ The returned data looks like this:
 ```text
 # HELP gnatsd_varz_in_bytes in_bytes
 # TYPE gnatsd_varz_in_bytes gauge
-gnatsd_varz_in_bytes{server_id="production-denver-1"} 0
+gnatsd_varz_in_bytes{server_id="http://localhost:8222"} 0
 # HELP gnatsd_varz_in_msgs in_msgs
 # TYPE gnatsd_varz_in_msgs gauge
-gnatsd_varz_in_msgs{server_id="production-denver-1"} 0
+gnatsd_varz_in_msgs{server_id="http://localhost:8222"} 0
 # HELP gnatsd_varz_max_connections max_connections
 # TYPE gnatsd_varz_max_connections gauge
-gnatsd_varz_max_connections{server_id="production-denver-1"} 65536
+gnatsd_varz_max_connections{server_id="http://localhost:8222"} 65536
 ```
 
 # The NATS Prometheus Exporter API
@@ -112,7 +108,6 @@ In just a few lines of code, configure and launch an instance of the exporter.
 	opts.ListenPort = 8888
 	opts.GetVarz = true
 	opts.NATSServerURL = "http://localhost:8222"
-	opts.NATSServerTag = "myserver"
 
 	// create an exporter instance, ready to be launched.
 	exp := exporter.NewExporter(opts)

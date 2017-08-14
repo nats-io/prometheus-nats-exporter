@@ -34,12 +34,9 @@ Be sure to include the a monitoring port:
 gnatsd -m 8222
 ```
 
-Next, launch the NATS prometheus exporter.  Here we specified an optional tag
-of `test-nats-server`, and the monitor port we specified when launching the 
-NATS server.  If a NATS server is not running, the exporter will retry to connect
-to the NATS server indefinitely.
+Next, launch the NATS prometheus exporter.  Here we configure the same monitor port we specified when launching the NATS server.  If a NATS server is not running, the exporter will retry to connect to the NATS server indefinitely.
 ```sh
-prometheus-nats-exporter -varz test-nats-server,http://localhost:8222
+prometheus-nats-exporter -varz http://localhost:8222
 ```
 
 You should see something like this:
@@ -82,7 +79,7 @@ Look for a log line like this to find the Grafana URL:
 INFO[05-02|10:36:04] Server Listening logger=server address=0.0.0.0:3000 protocol=http subUrl=
 ```
 
-Connect to Grafana, using the correct host and port.
+Connect to Grafana, using the correct host and port.  The default Grafana user is `admin` and the default password is `admin`.
 
 Add a Prometheus data source with the following parameters:
 * Name:  NATS-Prometheus
