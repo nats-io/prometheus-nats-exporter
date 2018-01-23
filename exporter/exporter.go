@@ -263,7 +263,10 @@ func (ne *NATSExporter) getScrapeHandler() http.Handler {
 				return
 			}
 
-			payload, _ := base64.StdEncoding.DecodeString(auth[1])
+			payload, err := base64.StdEncoding.DecodeString(auth[1])
+			if err != nil {
+				http.Error(rw, "authorization failed", http.StatusBadRequest)
+			}
 			pair := strings.SplitN(string(payload), ":", 2)
 
 			if len(pair) != 2 || !ne.isValidUserPass(pair[0], pair[1]) {
