@@ -471,8 +471,6 @@ func TestExporterBasicAuth(t *testing.T) {
 	opts.GetConnz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
-	opts.HTTPUser = "colin"
-	opts.HTTPPassword = "password"
 
 	s := pet.RunServer()
 	defer s.Shutdown()
