@@ -1,6 +1,19 @@
 {
 	"comment": "",
 	"ignore": "",
-	"package": [],
+	"package": [
+		{
+			"checksumSHA1": "oaVDN97dJBiBHjHWDrsKIfOF92c=",
+			"path": "golang.org/x/crypto/bcrypt",
+			"revision": "d94f6bc902c2970500950e88ab1a54a0c26bec48",
+			"revisionTime": "2018-01-22T19:45:19Z"
+		},
+		{
+			"checksumSHA1": "xPfwt1dqdvXLKVesMfw+qcuCNfs=",
+			"path": "golang.org/x/crypto/blowfish",
+			"revision": "d94f6bc902c2970500950e88ab1a54a0c26bec48",
+			"revisionTime": "2018-01-22T19:45:19Z"
+		}
+	],
 	"rootPath": "github.com/nats-io/prometheus-nats-exporter"
 }
