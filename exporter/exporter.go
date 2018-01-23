@@ -5,17 +5,20 @@ package exporter
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/nats-io/prometheus-nats-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // NATSExporterOptions are options to configure the NATS collector
@@ -33,6 +36,8 @@ type NATSExporterOptions struct {
 	CaFile        string
 	NATSServerURL string
 	NATSServerTag string
+	HTTPUser      string // User in metrics scrape by prometheus.
+	HTTPPassword  string
 }
 
 //NATSExporter collects NATS metrics
@@ -52,6 +57,9 @@ var (
 	DefaultListenAddress     = "0.0.0.0"
 	DefaultMonitorURL        = "http://localhost:8222"
 	DefaultRetryIntervalSecs = 30
+
+	// bcryptPrefix from gnatsd
+	bcryptPrefix = "$2a$"
 )
 
 // GetDefaultExporterOptions returns the default set of exporter options
@@ -221,6 +229,55 @@ func (ne *NATSExporter) generateTLSConfig() (*tls.Config, error) {
 	return config, nil
 }
 
+// isBcrypt checks whether the given password or token is bcrypted.
+func isBcrypt(password string) bool {
+	return strings.HasPrefix(password, bcryptPrefix)
+}
+
+func (ne *NATSExporter) isValidUserPass(user, password string) bool {
+	if user != ne.opts.HTTPUser {
+		return false
+	}
+	exporterPassword := ne.opts.HTTPPassword
+	if isBcrypt(exporterPassword) {
+		if err := bcrypt.CompareHashAndPassword([]byte(exporterPassword), []byte(password)); err != nil {
+			return false
+		}
+	} else if exporterPassword != password {
+		return false
+	}
+	return true
+}
+
+// getScrapeHandler returns the defualt handler if no nttp
+// auhtorization has been specificed.  Otherwise, it checks
+// basic authorization.
+func (ne *NATSExporter) getScrapeHandler() http.Handler {
+	h := promhttp.Handler()
+
+	if ne.opts.HTTPUser != "" {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+			if len(auth) != 2 || auth[0] != "Basic" {
+				http.Error(rw, "authorization failed", http.StatusUnauthorized)
+				return
+			}
+
+			payload, _ := base64.StdEncoding.DecodeString(auth[1])
+			pair := strings.SplitN(string(payload), ":", 2)
+
+			if len(pair) != 2 || !ne.isValidUserPass(pair[0], pair[1]) {
+				http.Error(rw, "authorization failed", http.StatusUnauthorized)
+				return
+			}
+
+			h.ServeHTTP(rw, r)
+		})
+	}
+
+	return h
+}
+
 // startHTTP configures and starts the HTTP server for applications to poll data from
 // exporter.
 // caller must lock
@@ -256,7 +313,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", ne.getScrapeHandler())
 
 	srv := &http.Server{
 		Addr:           hp,

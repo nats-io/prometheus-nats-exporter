@@ -69,8 +69,11 @@ e.g.
 
 # Monitoring
 
-The NATS Prometheus exporter exposes metrics through an HTTP interface, and will default to 
+The NATS Prometheus exporter exposes metrics through an HTTP interface, and will default to:
 `http://0.0.0.0:7777/metrics`.
+
+When `--http_user` and `--http_pass` is used, you will need to set the username password
+in prometheus.  See `basic_auth` in the prometheus configuration.
 
 It will return output that is readable by Prometheus.  
 
