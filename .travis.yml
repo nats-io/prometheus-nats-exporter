@@ -1,7 +1,7 @@
 language: go
 go:
-- 1.7.4
-- 1.8
+- 1.8.5
+- 1.9.2
 install:
 - go get github.com/nats-io/go-nats
 - go get github.com/nats-io/gnatsd
@@ -21,5 +21,5 @@ script:
 - go test -i -race $EXCLUDE_VENDOR -p 1
 - go test -v -race $EXCLUDE_VENDOR -p 1
 after_success:
-- if [[ "$TRAVIS_GO_VERSION" == 1.7.* ]]; then ./scripts/cov.sh TRAVIS; fi
-- if [[ "$TRAVIS_GO_VERSION" == 1.7.* ]] && [ "$TRAVIS_TAG" != "" ]; then ./scripts/cross_compile.sh $TRAVIS_TAG; ghr --owner nats-io --token $GITHUB_TOKEN --draft --replace $TRAVIS_TAG pkg/; fi
+- if [[ "$TRAVIS_GO_VERSION" == 1.9.* ]]; then ./scripts/cov.sh TRAVIS; fi
+- if [[ "$TRAVIS_GO_VERSION" == 1.9.* ]] && [ "$TRAVIS_TAG" != "" ]; then ./scripts/cross_compile.sh $TRAVIS_TAG; ghr --owner nats-io --token $GITHUB_TOKEN --draft --replace $TRAVIS_TAG pkg/; fi
