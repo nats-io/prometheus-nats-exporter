@@ -76,11 +76,11 @@ func main() {
 	opts := exporter.GetDefaultExporterOptions()
 
 	// Parse flags
-	flag.IntVar(&opts.ListenPort, "port", exporter.DefaultListenPort, "Prometheus port to listen on.")
-	flag.IntVar(&opts.ListenPort, "p", exporter.DefaultListenPort, "Prometheus port to listen on.")
+	flag.IntVar(&opts.ListenPort, "port", exporter.DefaultListenPort, "Port to listen on.")
+	flag.IntVar(&opts.ListenPort, "p", exporter.DefaultListenPort, "Port to listen on.")
 	flag.StringVar(&opts.ListenAddress, "addr", exporter.DefaultListenAddress, "Network host to listen on.")
 	flag.StringVar(&opts.ListenAddress, "a", exporter.DefaultListenAddress, "Network host to listen on.")
-	flag.IntVar(&retryInterval, "ri", exporter.DefaultRetryIntervalSecs, "Interval in seconds to retry NATS Server monitor URLS.")
+	flag.IntVar(&retryInterval, "ri", exporter.DefaultRetryIntervalSecs, "Interval in seconds to retry NATS Server monitor URL.")
 	flag.StringVar(&opts.LogFile, "l", "", "Log file name.")
 	flag.StringVar(&opts.LogFile, "log", "", "Log file name.")
 	flag.BoolVar(&useSysLog, "s", false, "Write log statements to the syslog.")
@@ -97,7 +97,8 @@ func main() {
 	flag.StringVar(&opts.CertFile, "tlscert", "", "Server certificate file (Enables HTTPS).")
 	flag.StringVar(&opts.KeyFile, "tlskey", "", "Private key for server certificate (used with HTTPS).")
 	flag.StringVar(&opts.CaFile, "tlscacert", "", "Client certificate CA for verification (used with HTTPS).")
-
+	flag.StringVar(&opts.HTTPUser, "http_user", "", "Enable basic auth and set user name for HTTP scrapes.")
+	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes. NATS bcrypt supported.")
 	flag.Parse()
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second

@@ -32,11 +32,11 @@ func getDefaultExporterTestOptions() (opts *NATSExporterOptions) {
 	return o
 }
 
-func getSecure(t *testing.T, url string) (*http.Response, error) {
+func httpGetSecure(url string) (*http.Response, error) {
 	tlsConfig := &tls.Config{}
 	caCert, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
-		t.Fatalf("Got error reading RootCA file: %s", err)
+		return nil, fmt.Errorf("Got error reading RootCA file: %s", err)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -46,32 +46,59 @@ func getSecure(t *testing.T, url string) (*http.Response, error) {
 		clientCert,
 		clientKey)
 	if err != nil {
-		t.Fatalf("Got error reading client certificates: %s", err)
+		return nil, fmt.Errorf("Got error reading client certificates: %s", err)
 	}
 	tlsConfig.Certificates = []tls.Certificate{cert}
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	httpClient := &http.Client{Transport: transport}
+	httpClient := &http.Client{Transport: transport, Timeout: 30 * time.Second}
 	return httpClient.Get(url)
 }
 
-func checkExporter(t *testing.T, addr string, secure bool) error {
+func httpGet(url string) (*http.Response, error) {
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	return httpClient.Get(url)
+}
+
+func buildExporterURL(user, pass, addr string, secure bool) string {
+	proto := "http"
+	if secure {
+		proto = "https"
+	}
+
+	if user != "" {
+		return fmt.Sprintf("%s://%s:%s@%s/metrics", proto, user, pass, addr)
+	}
+
+	return fmt.Sprintf("%s://%s/metrics", proto, addr)
+}
+
+func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expectedRc int) error {
 	var resp *http.Response
 	var err error
+	url := buildExporterURL(user, pass, addr, secure)
+
 	if secure {
-		resp, err = getSecure(t, fmt.Sprintf("https://%s/metrics", addr))
+		resp, err = httpGetSecure(url)
 	} else {
-		resp, err = http.Get(fmt.Sprintf("http://%s/metrics", addr))
+		resp, err = httpGet(url)
 	}
 	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("expected a 200 response, got %d", resp.StatusCode)
+		return fmt.Errorf("error from get: %v", err)
 	}
 
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
+	rc := resp.StatusCode
+	if rc != expectedRc {
+		return fmt.Errorf("expected a %d response, got %d", expectedRc, rc)
+	}
+
+	// bail on auth error, etc.
+	if rc != 200 {
+		return nil
+	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -82,6 +109,10 @@ func checkExporter(t *testing.T, addr string, secure bool) error {
 		return fmt.Errorf("response did not have NATS data")
 	}
 	return nil
+}
+
+func checkExporter(t *testing.T, addr string, secure bool) error {
+	return checkExporterFull(t, "", "", addr, secure, http.StatusOK)
 }
 
 func TestExporter(t *testing.T) {
@@ -187,6 +218,11 @@ func TestExporterDefaultOptions(t *testing.T) {
 
 	opts := GetDefaultExporterOptions()
 	opts.GetVarz = true
+
+	// Travis CI errors on the default due to no ipv6 support, so
+	// use locahost for the test.
+	opts.ListenAddress = "localhost"
+
 	opts.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
 	exp = NewExporter(opts)
 	if err := exp.Start(); err != nil {
@@ -419,5 +455,62 @@ func TestExporterStartNoMetricsSelected(t *testing.T) {
 	if err := exp.Start(); err == nil {
 		t.Fatalf("Did not receive expected error adding a server.")
 		defer exp.Stop()
+	}
+}
+
+func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass string, expectedRc int) error {
+	http.DefaultTransport.(*http.Transport).CloseIdleConnections()
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		return err
+	}
+	defer exp.Stop()
+
+	return checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), false, expectedRc)
+}
+
+func TestExporterBasicAuth(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetVarz = true
+	opts.GetConnz = true
+	opts.GetSubz = true
+	opts.GetRoutez = true
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	// first try user/pass with no auth.
+	testBasicAuth(t, opts, "colin", "password", http.StatusOK)
+
+	// now try user/pass
+	opts.HTTPUser = "colin"
+	opts.HTTPPassword = "password"
+	if err := testBasicAuth(t, opts, "colin", "password", http.StatusOK); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// now failures...
+	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if err := testBasicAuth(t, opts, "garbage", "password", http.StatusUnauthorized); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if err := testBasicAuth(t, opts, "", "password", http.StatusUnauthorized); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if err := testBasicAuth(t, opts, "colin", "", http.StatusUnauthorized); err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// test bcrypt with a cost of 2 (use a low cost!).  Resolves to "password"
+	opts.HTTPPassword = "$2a$10$H753p./UP9XNoEmbXDSWrOw7/XGIdVCM80SFAbBIQJeqICAJypJqa"
+	if err := testBasicAuth(t, opts, "colin", "password", http.StatusOK); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
+		t.Fatalf("%v", err)
 	}
 }
