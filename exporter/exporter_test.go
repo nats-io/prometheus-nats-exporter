@@ -454,6 +454,7 @@ func TestExporterStartNoMetricsSelected(t *testing.T) {
 }
 
 func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass string, expectedRc int) error {
+	http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 	exp := NewExporter(opts)
 	if err := exp.Start(); err != nil {
 		return err
@@ -499,11 +500,11 @@ func TestExporterBasicAuth(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	opts.HTTPPassword = "$2a$11$SITqoMbjeKK1y9iV6nhXa.fC8o/QXEqs7o7DMkFtVErp0aTn12o1y"
+	// test bcrypt.  Cost of 2 (use a low cost!), resolves to "password"
+	opts.HTTPPassword = "$2a$10$H753p./UP9XNoEmbXDSWrOw7/XGIdVCM80SFAbBIQJeqICAJypJqa"
 	if err := testBasicAuth(t, opts, "colin", "password", http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
-	opts.HTTPPassword = "$2a$11$SITqoMbjeKK1y9iV6nhXa.fC8o/QXEqs7o7DMkFtVErp0aTn12o1y"
 	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}

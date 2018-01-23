@@ -322,8 +322,6 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	srv := &http.Server{
 		Addr:           hp,
 		Handler:        mux,
-		ReadTimeout:    2 * time.Second,
-		WriteTimeout:   2 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 		TLSConfig:      config,
 	}
