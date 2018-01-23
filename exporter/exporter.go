@@ -18,7 +18,6 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // NATSExporterOptions are options to configure the NATS collector
@@ -57,9 +56,6 @@ var (
 	DefaultListenAddress     = "0.0.0.0"
 	DefaultMonitorURL        = "http://localhost:8222"
 	DefaultRetryIntervalSecs = 30
-
-	// bcryptPrefix from gnatsd
-	bcryptPrefix = "$2a$"
 )
 
 // GetDefaultExporterOptions returns the default set of exporter options
@@ -229,21 +225,11 @@ func (ne *NATSExporter) generateTLSConfig() (*tls.Config, error) {
 	return config, nil
 }
 
-// isBcrypt checks whether the given password or token is bcrypted.
-func isBcrypt(password string) bool {
-	return strings.HasPrefix(password, bcryptPrefix)
-}
-
 func (ne *NATSExporter) isValidUserPass(user, password string) bool {
 	if user != ne.opts.HTTPUser {
 		return false
 	}
-	exporterPassword := ne.opts.HTTPPassword
-	if isBcrypt(exporterPassword) {
-		if err := bcrypt.CompareHashAndPassword([]byte(exporterPassword), []byte(password)); err != nil {
-			return false
-		}
-	} else if exporterPassword != password {
+	if ne.opts.HTTPPassword != password {
 		return false
 	}
 	return true

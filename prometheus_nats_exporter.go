@@ -98,7 +98,7 @@ func main() {
 	flag.StringVar(&opts.KeyFile, "tlskey", "", "Private key for server certificate (used with HTTPS).")
 	flag.StringVar(&opts.CaFile, "tlscacert", "", "Client certificate CA for verification (used with HTTPS).")
 	flag.StringVar(&opts.HTTPUser, "http_user", "", "Enable basic auth and set user name for HTTP scrapes.")
-	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes. NATS bcrypt supported.")
+	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes.")
 	flag.Parse()
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second

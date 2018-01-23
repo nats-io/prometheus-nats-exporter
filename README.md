@@ -77,8 +77,7 @@ The NATS Prometheus exporter exposes metrics through an HTTP interface, and will
 `http://0.0.0.0:7777/metrics`.
 
 When `--http_user` and `--http_pass` is used, you will need to set the username password
-in prometheus.  See `basic_auth` in the prometheus configuration.  If using a bcrypted 
-password be use a very low cost as scrapes tend to heppen requently.
+in prometheus.  See `basic_auth` in the prometheus configuration documentation.
 
 It will return output that is readable by Prometheus.  
 

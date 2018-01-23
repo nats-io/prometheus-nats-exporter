@@ -499,13 +499,4 @@ func TestExporterBasicAuth(t *testing.T) {
 	if err := testBasicAuth(t, opts, "colin", "", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}
-
-	// test bcrypt.  Cost of 2 (use a low cost!), resolves to "password"
-	opts.HTTPPassword = "$2a$10$H753p./UP9XNoEmbXDSWrOw7/XGIdVCM80SFAbBIQJeqICAJypJqa"
-	if err := testBasicAuth(t, opts, "colin", "password", http.StatusOK); err != nil {
-		t.Fatalf("%v", err)
-	}
-	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
-		t.Fatalf("%v", err)
-	}
 }
