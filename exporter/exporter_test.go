@@ -32,11 +32,11 @@ func getDefaultExporterTestOptions() (opts *NATSExporterOptions) {
 	return o
 }
 
-func getSecure(t *testing.T, url string) (*http.Response, error) {
+func httpGetSecure(url string) (*http.Response, error) {
 	tlsConfig := &tls.Config{}
 	caCert, err := ioutil.ReadFile(caCertFile)
 	if err != nil {
-		t.Fatalf("Got error reading RootCA file: %s", err)
+		return nil, fmt.Errorf("Got error reading RootCA file: %s", err)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -46,11 +46,16 @@ func getSecure(t *testing.T, url string) (*http.Response, error) {
 		clientCert,
 		clientKey)
 	if err != nil {
-		t.Fatalf("Got error reading client certificates: %s", err)
+		return nil, fmt.Errorf("Got error reading client certificates: %s", err)
 	}
 	tlsConfig.Certificates = []tls.Certificate{cert}
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
-	httpClient := &http.Client{Transport: transport}
+	httpClient := &http.Client{Transport: transport, Timeout: 30 * time.Second}
+	return httpClient.Get(url)
+}
+
+func httpGet(url string) (*http.Response, error) {
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 	return httpClient.Get(url)
 }
 
@@ -74,12 +79,12 @@ func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expec
 	url := buildExporterURL(user, pass, addr, secure)
 
 	if secure {
-		resp, err = getSecure(t, url)
+		resp, err = httpGetSecure(url)
 	} else {
-		resp, err = http.Get(url)
+		resp, err = httpGet(url)
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("error from get: %v", err)
 	}
 	// Avoid EOF errors in Travis
 	resp.Close = true
