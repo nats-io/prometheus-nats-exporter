@@ -29,7 +29,11 @@ Usage of prometheus-nats-exporter:
   -addr string
     	Network host to listen on. (default "0.0.0.0")
   -connz
-    	Get connection metrics.        
+    	Get connection metrics.    
+  -http_pass string
+    	Set the password for HTTP scrapes. NATS bcrypt supported.
+  -http_user string
+    	Enable basic auth and set user name for HTTP scrapes.		    
   -l string
     	Log file name.
   -log string
@@ -69,8 +73,12 @@ e.g.
 
 # Monitoring
 
-The NATS Prometheus exporter exposes metrics through an HTTP interface, and will default to 
+The NATS Prometheus exporter exposes metrics through an HTTP interface, and will default to:
 `http://0.0.0.0:7777/metrics`.
+
+When `--http_user` and `--http_pass` is used, you will need to set the username password
+in prometheus.  See `basic_auth` in the prometheus configuration documentation.  If using 
+a bcrypted password use **a very low cost** as scrapes occur frequently.
 
 It will return output that is readable by Prometheus.  
 
