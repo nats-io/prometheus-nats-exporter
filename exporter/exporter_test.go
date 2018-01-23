@@ -60,7 +60,6 @@ func httpGet(url string) (*http.Response, error) {
 }
 
 func buildExporterURL(user, pass, addr string, secure bool) string {
-
 	proto := "http"
 	if secure {
 		proto = "https"
@@ -86,8 +85,10 @@ func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expec
 	if err != nil {
 		return fmt.Errorf("error from get: %v", err)
 	}
-	// Avoid EOF errors in Travis
-	resp.Close = true
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	rc := resp.StatusCode
 	if rc != expectedRc {
@@ -98,10 +99,6 @@ func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expec
 	if rc != 200 {
 		return nil
 	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

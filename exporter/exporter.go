@@ -249,7 +249,7 @@ func (ne *NATSExporter) isValidUserPass(user, password string) bool {
 	return true
 }
 
-// getScrapeHandler returns the defualt handler if no nttp
+// getScrapeHandler returns the default handler if no nttp
 // auhtorization has been specificed.  Otherwise, it checks
 // basic authorization.
 func (ne *NATSExporter) getScrapeHandler() http.Handler {
