@@ -218,6 +218,11 @@ func TestExporterDefaultOptions(t *testing.T) {
 
 	opts := GetDefaultExporterOptions()
 	opts.GetVarz = true
+
+	// Travis CI errors on the default due to no ipv6 support, so
+	// use locahost for the test.
+	opts.ListenAddress = "localhost"
+
 	opts.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
 	exp = NewExporter(opts)
 	if err := exp.Start(); err != nil {
