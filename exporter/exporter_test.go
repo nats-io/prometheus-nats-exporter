@@ -81,6 +81,9 @@ func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expec
 	if err != nil {
 		return err
 	}
+	// Avoid EOF errors in Travis
+	resp.Close = true
+
 	rc := resp.StatusCode
 	if rc != expectedRc {
 		return fmt.Errorf("expected a %d response, got %d", expectedRc, rc)
