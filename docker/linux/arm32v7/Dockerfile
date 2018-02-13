@@ -1,8 +1,12 @@
 # Golang binary building stage
-FROM golang:1.7.6
-COPY . /go/src/github.com/nats-io/prometheus-nats-exporter
+FROM golang:1.9.2
+
+# download the source
 WORKDIR /go/src/github.com/nats-io/prometheus-nats-exporter
-RUN CGO_ENABLED=0 go build -v -a
+RUN git clone https://github.com/nats-io/prometheus-nats-exporter.git .
+
+# build 
+RUN CGO_ENABLED=0 GOARCH=arm GOARM=7 go build -v -a -tags netgo -installsuffix netgo -ldflags "-s -w"
 
 # Final docker image building stage
 FROM scratch
