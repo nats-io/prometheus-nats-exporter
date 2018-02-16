@@ -6,7 +6,7 @@ WORKDIR /go/src/github.com/nats-io/prometheus-nats-exporter
 RUN git clone https://github.com/nats-io/prometheus-nats-exporter.git .
 
 # build 
-RUN CGO_ENABLED=0 GOARCH=arm GOARM=7 go build -v -a -tags netgo -installsuffix netgo -ldflags "-s -w"
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -v -a -tags netgo -installsuffix netgo -ldflags "-s -w"
 
 # Final docker image building stage
 FROM scratch

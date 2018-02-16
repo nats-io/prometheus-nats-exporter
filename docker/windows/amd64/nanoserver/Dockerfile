@@ -12,5 +12,4 @@ RUN go build -v -a -tags netgo -installsuffix netgo
 FROM microsoft/nanoserver
 COPY --from=0 /go/src/github.com/nats-io/prometheus-nats-exporter/prometheus-nats-exporter.exe /prometheus-nats-exporter.exe
 EXPOSE 7777
-ENTRYPOINT ["/prometheus-nats-exporter.exe"]
-CMD ["--help"]
+CMD ["prometheus-nats-exporter.exe"]
