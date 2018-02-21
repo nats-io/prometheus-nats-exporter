@@ -14,6 +14,7 @@ install:
 - go get github.com/wadey/gocovmerge
 - go get github.com/alecthomas/gometalinter
 - gometalinter --install
+- find . -name "*" -print > /tmp/files.txt
 before_script:
 - EXCLUDE_VENDOR=$(go list ./... | grep -v "/vendor/")
 #- go fmt ./...
@@ -27,6 +28,8 @@ script:
 - go test -v -race $EXCLUDE_VENDOR -p 1
 after_success:
 - if [[ "$TRAVIS_GO_VERSION" == 1.9.* ]]; then ./scripts/cov.sh TRAVIS; fi
+- find . -name "*" -print > /tmp/files2.txt
+- diff /tmp/files.txt /tmp/files2.txt
 
 # calls goreleaser
 deploy:
