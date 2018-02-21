@@ -2,10 +2,11 @@
 project_name: prometheus-nats-exporter
 
 release:
+  prerelease: true
   github:
     owner: nats-io
     name: prometheus-nats-exporter
-  
+
   name_template: 'Release {{.Tag}}'
 
 builds:
