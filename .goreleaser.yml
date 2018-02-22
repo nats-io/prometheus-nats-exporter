@@ -4,7 +4,7 @@ project_name: prometheus-nats-exporter
 release:
   draft: true
   github:
-    owner: nats-io
+    owner: NATS-CI
     name: prometheus-nats-exporter
 
   name_template: 'Release {{.Tag}}'
