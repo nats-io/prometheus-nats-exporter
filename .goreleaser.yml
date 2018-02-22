@@ -2,7 +2,7 @@
 project_name: prometheus-nats-exporter
 
 release:
-  prerelease: true
+  draft: true
   github:
     owner: nats-io
     name: prometheus-nats-exporter
