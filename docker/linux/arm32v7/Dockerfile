@@ -1,5 +1,5 @@
 # Golang binary building stage
-FROM golang:1.9.2
+FROM golang:1.9.4
 
 # download the source
 WORKDIR /go/src/github.com/nats-io/prometheus-nats-exporter
