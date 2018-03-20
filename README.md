@@ -133,8 +133,8 @@ In just a few lines of code, configure and launch an instance of the exporter.
 # Monitoring Walkthrough
 For further information, refer to the [walkthough](walkthrough/README.md) of monitoring NATS with Prometheus and Grafana.
 
-[License-Url]: http://opensource.org/licenses/MIT
-[License-Image]: https://img.shields.io/badge/License-MIT-blue.svg
+[License-Url]: https://www.apache.org/licenses/LICENSE-2.0
+[License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg
 [Build-Status-Url]: http://travis-ci.org/nats-io/prometheus-nats-exporter
 [Build-Status-Image]: https://travis-ci.org/nats-io/prometheus-nats-exporter.svg?branch=master
 [Coverage-Url]: https://coveralls.io/r/nats-io/prometheus-nats-exporter?branch=master
