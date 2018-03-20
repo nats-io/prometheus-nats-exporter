@@ -50,7 +50,7 @@ nfpm:
   description: A Prometheus exporter for NATS
   vendor: nats.io
   homepage: https://nats.io
-  license: MIT
+  license: Apache 2.0
 
 snapshot:
   name_template: SNAPSHOT-{{ .Commit }}
