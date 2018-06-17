@@ -37,6 +37,7 @@ type NATSExporterOptions struct {
 	collector.LoggerOptions
 	ListenAddress string
 	ListenPort    int
+	ScrapePath    string
 	GetConnz      bool
 	GetVarz       bool
 	GetSubz       bool
@@ -66,6 +67,7 @@ type NATSExporter struct {
 var (
 	DefaultListenPort        = 7777
 	DefaultListenAddress     = "0.0.0.0"
+	DefaultScrapePath        = "/metrics"
 	DefaultMonitorURL        = "http://localhost:8222"
 	DefaultRetryIntervalSecs = 30
 
@@ -79,6 +81,7 @@ func GetDefaultExporterOptions() *NATSExporterOptions {
 	opts := &NATSExporterOptions{
 		ListenAddress: DefaultListenAddress,
 		ListenPort:    DefaultListenPort,
+		ScrapePath:    DefaultScrapePath,
 		RetryInterval: time.Duration(DefaultRetryIntervalSecs) * time.Second,
 	}
 	return opts
@@ -298,11 +301,13 @@ func (ne *NATSExporter) getScrapeHandler() http.Handler {
 // caller must lock
 func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	var hp string
+	var path string
 	var err error
 	var proto string
 	var config *tls.Config
 
 	hp = net.JoinHostPort(ne.opts.ListenAddress, strconv.Itoa(ne.opts.ListenPort))
+	path = ne.opts.ScrapePath
 
 	// If a certificate file has been specified, setup TLS with the
 	// key provided.
@@ -320,7 +325,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 		ne.http, err = net.Listen("tcp", hp)
 	}
 
-	collector.Noticef("Prometheus exporter listening at %s://%s/metrics", proto, hp)
+	collector.Noticef("Prometheus exporter listening at %s://%s%s", proto, hp, path)
 
 	if err != nil {
 		collector.Errorf("can't start HTTP listener: %v", err)
@@ -328,7 +333,7 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", ne.getScrapeHandler())
+	mux.Handle(path, ne.getScrapeHandler())
 
 	srv := &http.Server{
 		Addr:           hp,
