@@ -70,23 +70,23 @@ func httpGet(url string) (*http.Response, error) {
 	return httpClient.Get(url)
 }
 
-func buildExporterURL(user, pass, addr string, secure bool) string {
+func buildExporterURL(user, pass, addr string, path string, secure bool) string {
 	proto := "http"
 	if secure {
 		proto = "https"
 	}
 
 	if user != "" {
-		return fmt.Sprintf("%s://%s:%s@%s/metrics", proto, user, pass, addr)
+		return fmt.Sprintf("%s://%s:%s@%s%s", proto, user, pass, addr, path)
 	}
 
-	return fmt.Sprintf("%s://%s/metrics", proto, addr)
+	return fmt.Sprintf("%s://%s%s", proto, addr, path)
 }
 
-func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expectedRc int) error {
+func checkExporterFull(t *testing.T, user, pass, addr string, path string, secure bool, expectedRc int) error {
 	var resp *http.Response
 	var err error
-	url := buildExporterURL(user, pass, addr, secure)
+	url := buildExporterURL(user, pass, addr, path, secure)
 
 	if secure {
 		resp, err = httpGetSecure(url)
@@ -123,7 +123,7 @@ func checkExporterFull(t *testing.T, user, pass, addr string, secure bool, expec
 }
 
 func checkExporter(t *testing.T, addr string, secure bool) error {
-	return checkExporterFull(t, "", "", addr, secure, http.StatusOK)
+	return checkExporterFull(t, "", "", addr, "/metrics", secure, http.StatusOK)
 }
 
 func TestExporter(t *testing.T) {
@@ -242,6 +242,51 @@ func TestExporterDefaultOptions(t *testing.T) {
 	defer exp.Stop()
 
 	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterScrapePathOption(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.ScrapePath = "/some/other/path/to/metrics"
+	opts.GetVarz = true
+	opts.GetConnz = true
+	opts.GetSubz = true
+	opts.GetRoutez = true
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/some/other/path/to/metrics", false, http.StatusOK); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterScrapePathOptionAddsSlash(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.ScrapePath = "elsewhere"
+	opts.GetVarz = true
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/elsewhere", false, http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -477,7 +522,7 @@ func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass s
 	}
 	defer exp.Stop()
 
-	return checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), false, expectedRc)
+	return checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), "/metrics", false, expectedRc)
 }
 
 func TestExporterBasicAuth(t *testing.T) {
