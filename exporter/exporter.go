@@ -309,6 +309,10 @@ func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
 	hp = net.JoinHostPort(ne.opts.ListenAddress, strconv.Itoa(ne.opts.ListenPort))
 	path = ne.opts.ScrapePath
 
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
 	// If a certificate file has been specified, setup TLS with the
 	// key provided.
 	if ne.opts.CertFile != "" {

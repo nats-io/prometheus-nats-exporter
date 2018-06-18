@@ -270,6 +270,27 @@ func TestExporterScrapePathOption(t *testing.T) {
 	}
 }
 
+func TestExporterScrapePathOptionAddsSlash(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.ScrapePath = "elsewhere"
+	opts.GetVarz = true
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/elsewhere", false, http.StatusOK); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
 func TestExporterWait(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
