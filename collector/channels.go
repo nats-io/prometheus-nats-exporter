@@ -19,6 +19,7 @@ type channelsCollector struct {
 	chanLastSeq      *prometheus.Desc
 	subsLastSent     *prometheus.Desc
 	subsPendingCount *prometheus.Desc
+	subsMaxInFlight  *prometheus.Desc
 }
 
 // NewChannelsCollector collects channelsz metrics
@@ -27,37 +28,44 @@ func NewChannelsCollector(servers []*CollectedServer) prometheus.Collector {
 	tr := &http.Transport{}
 	hc := &http.Client{Transport: tr}
 
-	const ns = "streaming_channels"
+	const namespace = "nss"
+	const subsystem = "chan"
 
 	nc := &channelsCollector{
 		httpClient: hc,
 		chanBytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, ns, "chan_bytes_total"),
+			prometheus.BuildFQName(namespace, subsystem, "bytes_total"),
 			"Total of bytes",
 			[]string{"server", "channel"},
 			nil,
 		),
 		chanMsgsTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, ns, "chan_msgs_total"),
+			prometheus.BuildFQName(namespace, subsystem, "msgs_total"),
 			"Total of messages",
 			[]string{"server", "channel"},
 			nil,
 		),
 		chanLastSeq: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, ns, "chan_last_seq"),
+			prometheus.BuildFQName(namespace, subsystem, "last_seq"),
 			"Last seq",
 			[]string{"server", "channel"},
 			nil,
 		),
 		subsLastSent: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, ns, "subs_last_sent"),
+			prometheus.BuildFQName(namespace, subsystem, "subs_last_sent"),
 			"Last message sent",
 			[]string{"server", "channel", "client_id"},
 			nil,
 		),
 		subsPendingCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, ns, "subs_pending_count"),
+			prometheus.BuildFQName(namespace, subsystem, "subs_pending_count"),
 			"Pending message count",
+			[]string{"server", "channel", "client_id"},
+			nil,
+		),
+		subsMaxInFlight: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, "subs_max_in_flight"),
+			"Max in flight message count",
 			[]string{"server", "channel", "client_id"},
 			nil,
 		),
@@ -82,6 +90,7 @@ func (nc *channelsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.chanLastSeq
 	ch <- nc.subsLastSent
 	ch <- nc.subsPendingCount
+	ch <- nc.subsMaxInFlight
 }
 
 func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
@@ -100,6 +109,7 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 			for _, sub := range channel.Subscriptions {
 				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), server.ID, channel.Name, sub.ClientID)
 				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), server.ID, channel.Name, sub.ClientID)
+				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), server.ID, channel.Name, sub.ClientID)
 			}
 		}
 	}
