@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"strings"
 
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 )
@@ -134,6 +133,7 @@ func TestExporter(t *testing.T) {
 	opts.GetConnz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
+	opts.GetChannelz = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()

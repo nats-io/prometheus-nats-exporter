@@ -21,7 +21,6 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
-
 	"time"
 
 	"github.com/nats-io/prometheus-nats-exporter/collector"
@@ -72,7 +71,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 		opts.LogType = collector.RemoteSysLogType
 	}
 
-	if !opts.GetConnz && !opts.GetVarz && !opts.GetSubz && !opts.GetRoutez {
+	if !opts.GetConnz && !opts.GetVarz && !opts.GetSubz && !opts.GetRoutez && !opts.GetChannelz {
 		// Mo logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
 		opts.GetVarz = true
@@ -105,6 +104,7 @@ func main() {
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
 	flag.BoolVar(&opts.GetRoutez, "routez", false, "Get route metrics.")
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
+	flag.BoolVar(&opts.GetChannelz, "channelz", false, "Get channel metrics.")
 	flag.BoolVar(&opts.GetVarz, "varz", false, "Get general metrics.")
 	flag.StringVar(&opts.CertFile, "tlscert", "", "Server certificate file (Enables HTTPS).")
 	flag.StringVar(&opts.KeyFile, "tlskey", "", "Private key for server certificate (used with HTTPS).")
@@ -122,10 +122,10 @@ func main() {
 		return
 	} else if len(args) > 1 {
 		fmt.Println(
-			`WARNING:  While permitted by this exporter, monitoring more than one server 
-violates Prometheus guidelines and best practices.  Each Prometheus NATS 
-exporter should monitor exactly one NATS server, preferably sitting right 
-beside it on the same machine.  Aggregate multiple servers only when 
+			`WARNING:  While permitted by this exporter, monitoring more than one server
+violates Prometheus guidelines and best practices.  Each Prometheus NATS
+exporter should monitor exactly one NATS server, preferably sitting right
+beside it on the same machine.  Aggregate multiple servers only when
 necessary.`)
 	}
 

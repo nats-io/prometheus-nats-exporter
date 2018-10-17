@@ -42,6 +42,7 @@ type NATSExporterOptions struct {
 	GetVarz       bool
 	GetSubz       bool
 	GetRoutez     bool
+	GetChannelz   bool
 	RetryInterval time.Duration
 	CertFile      string
 	KeyFile       string
@@ -58,7 +59,7 @@ type NATSExporter struct {
 	opts       *NATSExporterOptions
 	doneWg     sync.WaitGroup
 	http       net.Listener
-	collectors []*collector.NATSCollector
+	collectors []prometheus.Collector
 	servers    []*collector.CollectedServer
 	running    bool
 }
@@ -105,26 +106,29 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	return ne
 }
 
-func (ne *NATSExporter) scheduleRetry(endpoint string) {
+func (ne *NATSExporter) scheduleRetry(nc prometheus.Collector) {
 	time.Sleep(ne.opts.RetryInterval)
 	ne.Lock()
-	ne.createCollector(endpoint)
+	ne.registerCollector(nc)
 	ne.Unlock()
 }
 
 // Caller must lock.
 func (ne *NATSExporter) createCollector(endpoint string) {
 	collector.Debugf("Creating a collector for endpoint: %s.", endpoint)
-	nc := collector.NewCollector(endpoint, ne.servers)
+	ne.registerCollector(collector.NewCollector(endpoint, ne.servers))
+}
+
+func (ne *NATSExporter) registerCollector(nc prometheus.Collector) {
 	if err := prometheus.Register(nc); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
 			collector.Errorf("A collector for this server's metrics has already been registered.")
 		} else {
-			collector.Debugf("Unable to register collector %s (%v), Retrying.", endpoint, err)
-			go ne.scheduleRetry(endpoint)
+			collector.Debugf("Unable to register collector %s (%v), Retrying.", nc, err)
+			go ne.scheduleRetry(nc)
 		}
 	} else {
-		collector.Debugf("Registered collector for endppoint %s.", endpoint)
+		collector.Debugf("Registered collector: %s.", nc)
 		ne.collectors = append(ne.collectors, nc)
 	}
 }
@@ -156,7 +160,7 @@ func (ne *NATSExporter) initializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz {
+	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz && !opts.GetChannelz {
 		return fmt.Errorf("no collectors specfied")
 	}
 	if opts.GetSubz {
@@ -170,6 +174,9 @@ func (ne *NATSExporter) initializeCollectors() error {
 	}
 	if opts.GetRoutez {
 		ne.createCollector("routez")
+	}
+	if opts.GetChannelz {
+		ne.registerCollector(collector.NewChannelsCollector(ne.servers))
 	}
 	return nil
 }

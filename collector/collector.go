@@ -65,10 +65,10 @@ func newPrometheusGaugeVec(subsystem string, name string, help string) (metric *
 // GetMetricURL retrieves a NATS Metrics JSON.
 // This can be called against any monitoring URL for NATS.
 // On any this function will error, warn and return nil.
-func getMetricURL(httpClient *http.Client, URL string) (response map[string]interface{}, err error) {
+func getMetricURL(httpClient *http.Client, URL string, response interface{}) error {
 	resp, err := httpClient.Get(URL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer func() {
@@ -77,15 +77,10 @@ func getMetricURL(httpClient *http.Client, URL string) (response map[string]inte
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, err
+	return json.Unmarshal(body, &response)
 }
 
 // Describe the metric to the Prometheus server.
@@ -115,12 +110,12 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 	// get all the Metrics at once, then set the stats and collect them together.
 	resps := make(map[string]map[string]interface{})
 	for _, u := range nc.servers {
-		var err error
-		resps[u.ID], err = getMetricURL(nc.httpClient, u.URL)
-		if err != nil {
+		var response = map[string]interface{}{}
+		if err := getMetricURL(nc.httpClient, u.URL, &response); err != nil {
 			Debugf("ignoring server %s: %v", u.ID, err)
 			delete(resps, u.ID)
 		}
+		resps[u.ID] = response
 	}
 	return resps
 }
@@ -173,15 +168,13 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 // TODO: flatten embedded maps.
 func (nc *NATSCollector) initMetricsFromServers() {
 	var response map[string]interface{}
-	var err error
 
 	nc.Stats = make(map[string]interface{})
 
 	// gets URLs until one responds.
 	for _, v := range nc.servers {
 		Tracef("Initializing metrics collection from: %s", v.URL)
-		response, err = getMetricURL(nc.httpClient, v.URL)
-		if err != nil {
+		if err := getMetricURL(nc.httpClient, v.URL, &response); err != nil {
 			// if a server is not running, silently ignore it.
 			if strings.Contains(err.Error(), "connection refused") {
 				Debugf("Unable to connect to the NATS server: %v", err)
@@ -215,7 +208,7 @@ func (nc *NATSCollector) initMetricsFromServers() {
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
-func NewCollector(endpoint string, servers []*CollectedServer) *NATSCollector {
+func NewCollector(endpoint string, servers []*CollectedServer) prometheus.Collector {
 	// TODO:  Potentially add TLS config in the transport.
 	tr := &http.Transport{}
 	hc := &http.Client{Transport: tr}
