@@ -25,9 +25,20 @@ builds:
   ignore:
     - goos: darwin
       goarch: 386
-
+  env:
+    - CGO_ENABLED=0
   ldflags: -s -w
   binary: prometheus-nats-exporter
+
+dockers:
+  - image: caarlos0/nats-streaming-server
+    tag_templates:
+    - latest
+    - "{{ .Tag }}"
+    build_flag_templates:
+    - "--label=org.label-schema.schema-version=1.0"
+    - "--label=org.label-schema.version={{ .Version }}"
+    - "--label=org.label-schema.name={{ .ProjectName }}"
 
 archive:
   wrap_in_directory: true
