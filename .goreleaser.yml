@@ -34,6 +34,7 @@ dockers:
   - image: caarlos0/nats-streaming-server
     tag_templates:
     - latest
+    - latest-stream
     - "{{ .Tag }}"
     build_flag_templates:
     - "--label=org.label-schema.schema-version=1.0"
