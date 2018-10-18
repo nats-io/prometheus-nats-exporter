@@ -7,7 +7,7 @@ release:
     owner: nats-io
     name: prometheus-nats-exporter
 
-  name_template: 'Release {{.Tag}}'
+  name_template: 'Release {{ .Tag }}'
 
 builds:
 - goos:
@@ -26,16 +26,12 @@ builds:
     - goos: darwin
       goarch: 386
 
-  main: .
   ldflags: -s -w
   binary: prometheus-nats-exporter
 
-  lang: go
-
 archive:
   wrap_in_directory: true
-  name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm
-    }}v{{ .Arm }}{{ end }}'
+  name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
   format: zip
   files:
   - LICENSE
@@ -44,8 +40,7 @@ archive:
 nfpm:
   formats:
     - deb
-  name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm
-    }}v{{ .Arm }}{{ end }}'
+  name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
   bindir: /usr/local/bin
   description: A Prometheus exporter for NATS
   vendor: nats.io
@@ -57,8 +52,3 @@ snapshot:
 
 checksum:
   name_template: '{{ .ProjectName }}-v{{ .Version }}-checksums.txt'
-
-dist: dist
-
-github_urls:
-  download: https://github.com
