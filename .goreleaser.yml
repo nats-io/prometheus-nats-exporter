@@ -31,7 +31,7 @@ builds:
   binary: prometheus-nats-exporter
 
 dockers:
-  - image: caarlos0/nats-streaming-server
+  - image: caarlos0/nats-prometheus-exporter
     tag_templates:
     - latest
     - latest-stream
