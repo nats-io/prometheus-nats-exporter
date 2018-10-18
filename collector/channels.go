@@ -24,15 +24,11 @@ type channelsCollector struct {
 
 // NewChannelsCollector collects channelsz metrics
 func NewChannelsCollector(servers []*CollectedServer) prometheus.Collector {
-	// TODO:  Potentially add TLS config in the transport.
-	tr := &http.Transport{}
-	hc := &http.Client{Transport: tr}
-
 	const namespace = "nss"
 	const subsystem = "chan"
 
 	nc := &channelsCollector{
-		httpClient: hc,
+		httpClient: http.DefaultClient,
 		chanBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, subsystem, "bytes_total"),
 			"Total of bytes",
