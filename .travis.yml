@@ -2,11 +2,6 @@ language: go
 go:
 - '1.11.x'
 
-addons:
-  apt:
-    packages:
-    # needed for the nfpm pipe:
-    - rpm
 install:
 - go get github.com/nats-io/go-nats
 - go get github.com/nats-io/gnatsd
