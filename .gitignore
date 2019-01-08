@@ -23,3 +23,6 @@ _testmain.go
 *.test
 *.prof
 travis_wait*.log
+
+# Exclude the go build binary
+prometheus-nats-exporter
