@@ -38,21 +38,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/nats-io/gnatsd/logger",
+			"importpath": "github.com/nats-io/gnatsd",
 			"repository": "https://github.com/nats-io/gnatsd",
 			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
+			"revision": "04deabf27d203a2b9ed2da4196cbd9f6d7de4d7b",
 			"branch": "master",
-			"path": "/logger",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/nats-io/gnatsd/vendor/golang.org/x/sys/windows",
-			"repository": "https://github.com/nats-io/gnatsd",
-			"vcs": "git",
-			"revision": "9dd2f7cb651ec27794ad3ac7774c742894940def",
-			"branch": "master",
-			"path": "vendor/golang.org/x/sys/windows",
 			"notests": true
 		},
 		{
@@ -106,6 +96,33 @@
 			"vcs": "git",
 			"revision": "fcdb11ccb4389efb1b210b7ffb623ab71c5fdd60",
 			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/ssh/terminal",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "a1f597ede03a7bef967a422b5b3a5bd08805a01e",
+			"branch": "master",
+			"path": "/ssh/terminal",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/sys/unix",
+			"repository": "https://go.googlesource.com/sys",
+			"vcs": "git",
+			"revision": "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771",
+			"branch": "master",
+			"path": "/unix",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/sys/windows",
+			"repository": "https://go.googlesource.com/sys",
+			"vcs": "git",
+			"revision": "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771",
+			"branch": "master",
+			"path": "windows",
 			"notests": true
 		}
 	]

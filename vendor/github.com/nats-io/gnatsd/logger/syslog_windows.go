@@ -22,9 +22,12 @@ import (
 	"golang.org/x/sys/windows/svc/eventlog"
 )
 
-const (
-	natsEventSource = "NATS-Server"
-)
+var natsEventSource = "NATS-Server"
+
+// SetSyslogName sets the name to use for the system log event source
+func SetSyslogName(name string) {
+	natsEventSource = name
+}
 
 // SysLogger logs to the windows event logger
 type SysLogger struct {
@@ -75,6 +78,11 @@ func formatMsg(tag, format string, v ...interface{}) string {
 // Noticef logs a notice statement
 func (l *SysLogger) Noticef(format string, v ...interface{}) {
 	l.writer.Info(1, formatMsg("NOTICE", format, v...))
+}
+
+// Noticef logs a notice statement
+func (l *SysLogger) Warnf(format string, v ...interface{}) {
+	l.writer.Info(1, formatMsg("WARN", format, v...))
 }
 
 // Fatalf logs a fatal error
