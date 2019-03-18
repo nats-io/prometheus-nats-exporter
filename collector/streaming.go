@@ -22,8 +22,8 @@ type channelsCollector struct {
 	subsMaxInFlight  *prometheus.Desc
 }
 
-// NewChannelsCollector collects channelsz metrics
-func NewChannelsCollector(servers []*CollectedServer) prometheus.Collector {
+// NewStreamingCollector collects channelsz metrics
+func NewStreamingCollector(endpoint string, servers []*CollectedServer) prometheus.Collector {
 	const namespace = "nss"
 	const subsystem = "chan"
 
@@ -60,7 +60,7 @@ func NewChannelsCollector(servers []*CollectedServer) prometheus.Collector {
 			nil,
 		),
 		subsMaxInFlight: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "subs_max_in_flight"),
+			prometheus.BuildFQName(namespace, subsystem, "subs_max_inflight"),
 			"Max in flight message count",
 			[]string{"server", "channel", "client_id"},
 			nil,
