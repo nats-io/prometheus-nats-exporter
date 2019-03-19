@@ -95,17 +95,12 @@ func checkExporterFull(t *testing.T, user, pass, addr string, path string, secur
 	if err != nil {
 		return fmt.Errorf("error from get: %v", err)
 	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer resp.Body.Close()
 
 	rc := resp.StatusCode
 	if rc != expectedRc {
 		return fmt.Errorf("expected a %d response, got %d", expectedRc, rc)
 	}
-
-	// bail on auth error, etc.
 	if rc != 200 {
 		return nil
 	}
@@ -114,7 +109,6 @@ func checkExporterFull(t *testing.T, user, pass, addr string, path string, secur
 	if err != nil {
 		return fmt.Errorf("got an error reading the body: %v", err)
 	}
-
 	if !strings.Contains(string(body), "gnatsd_varz_connections") {
 		return fmt.Errorf("response did not have NATS data")
 	}
@@ -133,7 +127,8 @@ func TestExporter(t *testing.T) {
 	opts.GetConnz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
-	opts.GetChannelz = true
+	opts.GetStreamingChannelz = true
+	opts.GetStreamingServerz = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
@@ -337,15 +332,13 @@ func TestExporterNoNATSServer(t *testing.T) {
 	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
 		t.Fatalf("Expected an error, received none.")
 	}
-
-	// allow for a few retries.
-	time.Sleep(opts.RetryInterval * 2)
+	time.Sleep(2 * opts.RetryInterval)
 
 	// start the server
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	time.Sleep(opts.RetryInterval + (time.Millisecond * 500))
+	time.Sleep(opts.RetryInterval + (500 * time.Millisecond))
 
 	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)

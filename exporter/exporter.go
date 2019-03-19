@@ -108,11 +108,11 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 }
 
 func (ne *NATSExporter) createCollector(endpoint string) {
+	if endpoint == "serverz" || endpoint == "channelsz" {
+		ne.registerCollector(endpoint, collector.NewStreamingCollector(endpoint, ne.servers))
+		return
+	}
 	ne.registerCollector(endpoint, collector.NewCollector(endpoint, ne.servers))
-}
-
-func (ne *NATSExporter) createStreamingCollector(endpoint string) {
-	ne.registerCollector(endpoint, collector.NewStreamingCollector(endpoint, ne.servers))
 }
 
 func (ne *NATSExporter) registerCollector(endpoint string, nc prometheus.Collector) {
@@ -124,7 +124,7 @@ func (ne *NATSExporter) registerCollector(endpoint string, nc prometheus.Collect
 			time.AfterFunc(ne.opts.RetryInterval, func() {
 				collector.Debugf("Creating a collector for endpoint: %s", endpoint)
 				ne.Lock()
-				ne.registerCollector(endpoint, nc)
+				ne.createCollector(endpoint)
 				ne.Unlock()
 			})
 		}
@@ -177,10 +177,10 @@ func (ne *NATSExporter) initializeCollectors() error {
 		ne.createCollector("routez")
 	}
 	if opts.GetStreamingChannelz {
-		ne.createStreamingCollector("channelsz")
+		ne.createCollector("channelsz")
 	}
 	if opts.GetStreamingServerz {
-		ne.createStreamingCollector("serverz")
+		ne.createCollector("serverz")
 	}
 	return nil
 }
