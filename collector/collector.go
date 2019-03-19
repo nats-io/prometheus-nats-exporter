@@ -70,11 +70,7 @@ func getMetricURL(httpClient *http.Client, URL string, response interface{}) err
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
