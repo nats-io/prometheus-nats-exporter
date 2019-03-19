@@ -71,7 +71,8 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 		opts.LogType = collector.RemoteSysLogType
 	}
 
-	if !opts.GetConnz && !opts.GetVarz && !opts.GetSubz && !opts.GetRoutez && !opts.GetChannelz {
+	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetRoutez || opts.GetStreamingChannelz || opts.GetStreamingServerz
+	if !metricsSpecified {
 		// Mo logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
 		opts.GetVarz = true
@@ -104,7 +105,8 @@ func main() {
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
 	flag.BoolVar(&opts.GetRoutez, "routez", false, "Get route metrics.")
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
-	flag.BoolVar(&opts.GetChannelz, "channelz", false, "Get channel metrics.")
+	flag.BoolVar(&opts.GetStreamingChannelz, "channelz", false, "Get channel metrics.")
+	flag.BoolVar(&opts.GetStreamingServerz, "serverz", false, "Get streaming server metrics.")
 	flag.BoolVar(&opts.GetVarz, "varz", false, "Get general metrics.")
 	flag.StringVar(&opts.CertFile, "tlscert", "", "Server certificate file (Enables HTTPS).")
 	flag.StringVar(&opts.KeyFile, "tlskey", "", "Private key for server certificate (used with HTTPS).")

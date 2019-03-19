@@ -35,22 +35,23 @@ import (
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
-	ListenAddress string
-	ListenPort    int
-	ScrapePath    string
-	GetConnz      bool
-	GetVarz       bool
-	GetSubz       bool
-	GetRoutez     bool
-	GetChannelz   bool
-	RetryInterval time.Duration
-	CertFile      string
-	KeyFile       string
-	CaFile        string
-	NATSServerURL string
-	NATSServerTag string
-	HTTPUser      string // User in metrics scrape by prometheus.
-	HTTPPassword  string
+	ListenAddress        string
+	ListenPort           int
+	ScrapePath           string
+	GetConnz             bool
+	GetVarz              bool
+	GetSubz              bool
+	GetRoutez            bool
+	GetStreamingChannelz bool
+	GetStreamingServerz  bool
+	RetryInterval        time.Duration
+	CertFile             string
+	KeyFile              string
+	CaFile               string
+	NATSServerURL        string
+	NATSServerTag        string
+	HTTPUser             string // User in metrics scrape by prometheus.
+	HTTPPassword         string
 }
 
 //NATSExporter collects NATS metrics
@@ -160,7 +161,7 @@ func (ne *NATSExporter) initializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz && !opts.GetChannelz {
+	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz && !opts.GetStreamingChannelz && !opts.GetStreamingServerz {
 		return fmt.Errorf("no collectors specfied")
 	}
 	if opts.GetSubz {
@@ -175,8 +176,11 @@ func (ne *NATSExporter) initializeCollectors() error {
 	if opts.GetRoutez {
 		ne.createCollector("routez")
 	}
-	if opts.GetChannelz {
+	if opts.GetStreamingChannelz {
 		ne.createStreamingCollector("channelsz")
+	}
+	if opts.GetStreamingServerz {
+		ne.createStreamingCollector("serverz")
 	}
 	return nil
 }
