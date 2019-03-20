@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/go-nats-streaming"
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -167,7 +168,7 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-func TestAllEndpionts(t *testing.T) {
+func TestAllEndpoints(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
@@ -197,4 +198,47 @@ func TestAllEndpionts(t *testing.T) {
 		"gnatsd_connz_total_connections": 1,
 	}
 	verifyCollector(url, "connz", cases, t)
+}
+
+const (
+	stanClusterName = "test-cluster"
+	stanClientName  = "sample"
+)
+
+func TestStreamingVarz(t *testing.T) {
+	s := pet.RunStreamingServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	sc, err := stan.Connect(stanClusterName, stanClientName,
+		stan.NatsURL(fmt.Sprintf("nats://localhost:%d", pet.ClientPort)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sc.Close()
+	sub, err := sc.Subscribe("foo", func(_ *stan.Msg) {})
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	}
+	defer sub.Unsubscribe()
+	totalMsgs := 10
+	msg := []byte("hello")
+	for i := 0; i < totalMsgs; i++ {
+		if err := sc.Publish("foo", msg); err != nil {
+			t.Fatalf("Unexpected error on publish: %v", err)
+		}
+	}
+
+	cases := map[string]float64{
+		"gnatsd_varz_total_connections": 4,
+		"gnatsd_varz_connections":       4,
+		"gnatsd_varz_in_msgs":           45,
+		"gnatsd_varz_out_msgs":          44,
+		"gnatsd_varz_in_bytes":          1644,
+		"gnatsd_varz_out_bytes":         1599,
+		"gnatsd_varz_subscriptions":     14,
+	}
+
+	verifyCollector(url, "varz", cases, t)
 }
