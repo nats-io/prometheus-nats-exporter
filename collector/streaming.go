@@ -8,8 +8,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NewStreamingCollector collects channelsz metrics
-func NewStreamingCollector(endpoint string, servers []*CollectedServer) prometheus.Collector {
+// newStreamingCollector collects channelsz and serversz metrics of
+// streaming servers.
+func newStreamingCollector(endpoint string, servers []*CollectedServer) prometheus.Collector {
 	switch endpoint {
 	case "channelsz":
 		return newChannelsCollector(servers)
@@ -17,6 +18,10 @@ func NewStreamingCollector(endpoint string, servers []*CollectedServer) promethe
 		return newServerzCollector(servers)
 	}
 	return nil
+}
+
+func isStreamingEndpoint(endpoint string) bool {
+	return endpoint == "channelsz" || endpoint == "serverz"
 }
 
 type serverzCollector struct {
@@ -86,6 +91,7 @@ func (nc *serverzCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.clients
 }
 
+// StreamingServerz represents the metrics from streaming/serverz.
 type StreamingServerz struct {
 	TotalBytes    int `json:"total_bytes"`
 	TotalMsgs     int `json:"total_msgs"`
@@ -94,6 +100,7 @@ type StreamingServerz struct {
 	Clients       int `json:"clients"`
 }
 
+// Collect gathers the streaming server serverz metrics.
 func (nc *serverzCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, server := range nc.servers {
 		var resp StreamingServerz

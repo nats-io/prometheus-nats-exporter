@@ -108,10 +108,6 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 }
 
 func (ne *NATSExporter) createCollector(endpoint string) {
-	if endpoint == "serverz" || endpoint == "channelsz" {
-		ne.registerCollector(endpoint, collector.NewStreamingCollector(endpoint, ne.servers))
-		return
-	}
 	ne.registerCollector(endpoint, collector.NewCollector(endpoint, ne.servers))
 }
 
