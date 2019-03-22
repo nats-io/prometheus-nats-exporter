@@ -35,21 +35,23 @@ import (
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
-	ListenAddress string
-	ListenPort    int
-	ScrapePath    string
-	GetConnz      bool
-	GetVarz       bool
-	GetSubz       bool
-	GetRoutez     bool
-	RetryInterval time.Duration
-	CertFile      string
-	KeyFile       string
-	CaFile        string
-	NATSServerURL string
-	NATSServerTag string
-	HTTPUser      string // User in metrics scrape by prometheus.
-	HTTPPassword  string
+	ListenAddress        string
+	ListenPort           int
+	ScrapePath           string
+	GetConnz             bool
+	GetVarz              bool
+	GetSubz              bool
+	GetRoutez            bool
+	GetStreamingChannelz bool
+	GetStreamingServerz  bool
+	RetryInterval        time.Duration
+	CertFile             string
+	KeyFile              string
+	CaFile               string
+	NATSServerURL        string
+	NATSServerTag        string
+	HTTPUser             string // User in metrics scrape by prometheus.
+	HTTPPassword         string
 }
 
 //NATSExporter collects NATS metrics
@@ -58,7 +60,7 @@ type NATSExporter struct {
 	opts       *NATSExporterOptions
 	doneWg     sync.WaitGroup
 	http       net.Listener
-	collectors []*collector.NATSCollector
+	collectors []prometheus.Collector
 	servers    []*collector.CollectedServer
 	running    bool
 }
@@ -105,26 +107,25 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	return ne
 }
 
-func (ne *NATSExporter) scheduleRetry(endpoint string) {
-	time.Sleep(ne.opts.RetryInterval)
-	ne.Lock()
-	ne.createCollector(endpoint)
-	ne.Unlock()
+func (ne *NATSExporter) createCollector(endpoint string) {
+	ne.registerCollector(endpoint, collector.NewCollector(endpoint, ne.servers))
 }
 
-// Caller must lock.
-func (ne *NATSExporter) createCollector(endpoint string) {
-	collector.Debugf("Creating a collector for endpoint: %s.", endpoint)
-	nc := collector.NewCollector(endpoint, ne.servers)
+func (ne *NATSExporter) registerCollector(endpoint string, nc prometheus.Collector) {
 	if err := prometheus.Register(nc); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
 			collector.Errorf("A collector for this server's metrics has already been registered.")
 		} else {
 			collector.Debugf("Unable to register collector %s (%v), Retrying.", endpoint, err)
-			go ne.scheduleRetry(endpoint)
+			time.AfterFunc(ne.opts.RetryInterval, func() {
+				collector.Debugf("Creating a collector for endpoint: %s", endpoint)
+				ne.Lock()
+				ne.createCollector(endpoint)
+				ne.Unlock()
+			})
 		}
 	} else {
-		collector.Debugf("Registered collector for endppoint %s.", endpoint)
+		collector.Debugf("Registered collector for endpoint: %s", endpoint)
 		ne.collectors = append(ne.collectors, nc)
 	}
 }
@@ -156,7 +157,7 @@ func (ne *NATSExporter) initializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz {
+	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz && !opts.GetStreamingChannelz && !opts.GetStreamingServerz {
 		return fmt.Errorf("no collectors specfied")
 	}
 	if opts.GetSubz {
@@ -170,6 +171,12 @@ func (ne *NATSExporter) initializeCollectors() error {
 	}
 	if opts.GetRoutez {
 		ne.createCollector("routez")
+	}
+	if opts.GetStreamingChannelz {
+		ne.createCollector("channelsz")
+	}
+	if opts.GetStreamingServerz {
+		ne.createCollector("serverz")
 	}
 	return nil
 }

@@ -26,6 +26,7 @@ type Logger struct {
 	debug      bool
 	trace      bool
 	infoLabel  string
+	warnLabel  string
 	errorLabel string
 	fatalLabel string
 	debugLabel string
@@ -89,6 +90,22 @@ func NewFileLogger(filename string, time, debug, trace, pid bool) *Logger {
 	return l
 }
 
+// NewTestLogger creates a logger with output directed to Stderr with a prefix.
+// Useful for tracing in tests when multiple servers are in the same pid
+func NewTestLogger(prefix string, time bool) *Logger {
+	flags := 0
+	if time {
+		flags = log.LstdFlags | log.Lmicroseconds
+	}
+	l := &Logger{
+		logger: log.New(os.Stderr, prefix, flags),
+		debug:  true,
+		trace:  true,
+	}
+	setColoredLabelFormats(l)
+	return l
+}
+
 // Close implements the io.Closer interface to clean up
 // resources in the server's logger implementation.
 // Caller must ensure threadsafety.
@@ -108,23 +125,30 @@ func pidPrefix() string {
 func setPlainLabelFormats(l *Logger) {
 	l.infoLabel = "[INF] "
 	l.debugLabel = "[DBG] "
+	l.warnLabel = "[WRN] "
 	l.errorLabel = "[ERR] "
 	l.fatalLabel = "[FTL] "
 	l.traceLabel = "[TRC] "
 }
 
 func setColoredLabelFormats(l *Logger) {
-	colorFormat := "[\x1b[%dm%s\x1b[0m] "
-	l.infoLabel = fmt.Sprintf(colorFormat, 32, "INF")
-	l.debugLabel = fmt.Sprintf(colorFormat, 36, "DBG")
-	l.errorLabel = fmt.Sprintf(colorFormat, 31, "ERR")
-	l.fatalLabel = fmt.Sprintf(colorFormat, 31, "FTL")
-	l.traceLabel = fmt.Sprintf(colorFormat, 33, "TRC")
+	colorFormat := "[\x1b[%sm%s\x1b[0m] "
+	l.infoLabel = fmt.Sprintf(colorFormat, "32", "INF")
+	l.debugLabel = fmt.Sprintf(colorFormat, "36", "DBG")
+	l.warnLabel = fmt.Sprintf(colorFormat, "0;93", "WRN")
+	l.errorLabel = fmt.Sprintf(colorFormat, "31", "ERR")
+	l.fatalLabel = fmt.Sprintf(colorFormat, "31", "FTL")
+	l.traceLabel = fmt.Sprintf(colorFormat, "33", "TRC")
 }
 
 // Noticef logs a notice statement
 func (l *Logger) Noticef(format string, v ...interface{}) {
 	l.logger.Printf(l.infoLabel+format, v...)
+}
+
+// Warnf logs a notice statement
+func (l *Logger) Warnf(format string, v ...interface{}) {
+	l.logger.Printf(l.warnLabel+format, v...)
 }
 
 // Errorf logs an error statement

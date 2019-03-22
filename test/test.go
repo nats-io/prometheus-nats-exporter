@@ -23,6 +23,7 @@ import (
 	"github.com/nats-io/gnatsd/logger"
 	"github.com/nats-io/gnatsd/server"
 	"github.com/nats-io/go-nats"
+	nss "github.com/nats-io/nats-streaming-server/server"
 )
 
 // ClientPort is the default port for clients to connect
@@ -34,6 +35,25 @@ const MonitorPort = 11424
 // RunServer runs the NATS server in a go routine
 func RunServer() *server.Server {
 	return RunServerWithPorts(ClientPort, MonitorPort)
+}
+
+// RunStreamingServer runs the STAN server in a go routine.
+func RunStreamingServer() *nss.StanServer {
+	resetPreviousHTTPConnections()
+
+	sopts := nss.GetDefaultOptions()
+	nopts := nss.DefaultNatsServerOptions
+	nopts.NoLog = true
+	nopts.NoSigs = true
+	nopts.Host = "localhost"
+	nopts.Port = ClientPort
+	nopts.HTTPHost = "localhost"
+	nopts.HTTPPort = MonitorPort
+	s, err := nss.RunServerWithOpts(sopts, &nopts)
+	if err != nil {
+		panic(err)
+	}
+	return s
 }
 
 // RunServerWithPorts runs the NATS server with a monitor port in a go routine
