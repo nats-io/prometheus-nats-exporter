@@ -105,7 +105,7 @@ func main() {
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
 	flag.BoolVar(&opts.GetRoutez, "routez", false, "Get route metrics.")
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
-	flag.BoolVar(&opts.GetStreamingChannelz, "channelz", false, "Get channel metrics.")
+	flag.BoolVar(&opts.GetStreamingChannelz, "channelz", false, "Get streaming channel metrics.")
 	flag.BoolVar(&opts.GetStreamingServerz, "serverz", false, "Get streaming server metrics.")
 	flag.BoolVar(&opts.GetVarz, "varz", false, "Get general metrics.")
 	flag.StringVar(&opts.CertFile, "tlscert", "", "Server certificate file (Enables HTTPS).")
