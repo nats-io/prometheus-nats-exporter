@@ -49,6 +49,7 @@ nfpm:
   bindir: /usr/local/bin
   description: A Prometheus exporter for NATS
   vendor: nats.io
+  maintainer: Colin Sullivan <colin@nats.io>
   homepage: https://nats.io
   license: Apache 2.0
 
