@@ -52,6 +52,7 @@ type NATSExporterOptions struct {
 	NATSServerTag        string
 	HTTPUser             string // User in metrics scrape by prometheus.
 	HTTPPassword         string
+	Prefix               string
 }
 
 //NATSExporter collects NATS metrics
@@ -108,7 +109,7 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 }
 
 func (ne *NATSExporter) createCollector(endpoint string) {
-	ne.registerCollector(endpoint, collector.NewCollector(endpoint, ne.servers))
+	ne.registerCollector(endpoint, collector.NewCollector(endpoint, ne.servers, ne.opts.Prefix))
 }
 
 func (ne *NATSExporter) registerCollector(endpoint string, nc prometheus.Collector) {

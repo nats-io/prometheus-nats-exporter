@@ -42,6 +42,8 @@ Usage of prometheus-nats-exporter:
     	Prometheus port to listen on. (default 7777)
   -port int
     	Prometheus port to listen on. (default 7777)
+  -prefix
+    	Set the prefix for all the metrics.
   -r string
     	Remote syslog address to write log statements.
   -remote_syslog string
