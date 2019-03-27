@@ -33,6 +33,10 @@ nss_server_msgs_total
 nss_server_subscriptions
 ```
 
+And example dashboard can be found [here](grafana-nss-dash.json):
+
+<img width="2155" alt="Example" src="https://user-images.githubusercontent.com/26195/54957961-78215700-4f11-11e9-8b0b-ae013d0b066d.png">
+
 ## Monitoring msgs/sec from a channel 
 
 ```
