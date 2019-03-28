@@ -155,19 +155,19 @@ func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
 		subsLastSent: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "subs_last_sent"),
 			"Last message sent",
-			[]string{"server", "channel", "client_id"},
+			[]string{"server", "channel", "client_id", "inbox"},
 			nil,
 		),
 		subsPendingCount: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "subs_pending_count"),
 			"Pending message count",
-			[]string{"server", "channel", "client_id"},
+			[]string{"server", "channel", "client_id", "inbox"},
 			nil,
 		),
 		subsMaxInFlight: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "subs_max_inflight"),
 			"Max in flight message count",
-			[]string{"server", "channel", "client_id"},
+			[]string{"server", "channel", "client_id", "inbox"},
 			nil,
 		),
 	}
@@ -208,9 +208,9 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue, float64(channel.LastSeq), server.ID, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
-				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), server.ID, channel.Name, sub.ClientID)
-				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), server.ID, channel.Name, sub.ClientID)
-				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), server.ID, channel.Name, sub.ClientID)
+				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), server.ID, channel.Name, sub.ClientID, sub.Inbox)
+				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), server.ID, channel.Name, sub.ClientID, sub.Inbox)
+				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), server.ID, channel.Name, sub.ClientID, sub.Inbox)
 			}
 		}
 	}
