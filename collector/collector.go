@@ -208,7 +208,7 @@ func NewCollector(endpoint string, servers []*CollectedServer) prometheus.Collec
 	if isStreamingEndpoint(endpoint) {
 		return newStreamingCollector(endpoint, servers)
 	}
-	
+
 	// TODO:  Potentially add TLS config in the transport.
 	tr := &http.Transport{}
 	hc := &http.Client{Transport: tr}

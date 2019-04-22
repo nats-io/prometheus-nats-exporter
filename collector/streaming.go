@@ -35,6 +35,7 @@ type serverzCollector struct {
 	channels   *prometheus.Desc
 	subs       *prometheus.Desc
 	clients    *prometheus.Desc
+	info       *prometheus.Desc
 }
 
 func newServerzCollector(servers []*CollectedServer) prometheus.Collector {
@@ -70,6 +71,12 @@ func newServerzCollector(servers []*CollectedServer) prometheus.Collector {
 			[]string{"server"},
 			nil,
 		),
+		info: prometheus.NewDesc(
+			prometheus.BuildFQName("nss", "server", "info"),
+			"Info",
+			[]string{"server", "cluster_id", "server_id", "version", "go_version", "state", "role", "start_time"},
+			nil,
+		),
 	}
 
 	nc.servers = make([]*CollectedServer, len(servers))
@@ -89,15 +96,23 @@ func (nc *serverzCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.channels
 	ch <- nc.subs
 	ch <- nc.clients
+	ch <- nc.info
 }
 
 // StreamingServerz represents the metrics from streaming/serverz.
 type StreamingServerz struct {
-	TotalBytes    int `json:"total_bytes"`
-	TotalMsgs     int `json:"total_msgs"`
-	Channels      int `json:"channels"`
-	Subscriptions int `json:"subscriptions"`
-	Clients       int `json:"clients"`
+	TotalBytes    int    `json:"total_bytes"`
+	TotalMsgs     int    `json:"total_msgs"`
+	Channels      int    `json:"channels"`
+	Subscriptions int    `json:"subscriptions"`
+	Clients       int    `json:"clients"`
+	ClusterID     string `json:"cluster_id"`
+	ServerID      string `json:"server_id"`
+	Version       string `json:"version"`
+	GoVersion     string `json:"go"`
+	State         string `json:"state"`
+	Role          string `json:"role"`
+	StartTime     string `json:"start_time"`
 }
 
 // Collect gathers the streaming server serverz metrics.
@@ -114,6 +129,8 @@ func (nc *serverzCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(nc.channels, prometheus.CounterValue, float64(resp.Channels), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.subs, prometheus.CounterValue, float64(resp.Subscriptions), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.clients, prometheus.CounterValue, float64(resp.Clients), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.info, prometheus.GaugeValue, 1, server.ID, resp.ClusterID, resp.ServerID,
+			resp.Version, resp.GoVersion, resp.State, resp.Role, resp.StartTime)
 	}
 }
 
