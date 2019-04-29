@@ -4,6 +4,7 @@ The Prometheus NATS Exporter consists of both a package and an application that 
 
 # Build
 ``` bash
+export GO111MODULE=on
 go build
 ```
 
@@ -20,52 +21,60 @@ prometheus-nats-exporter <flags> url
 
 Flags must include at least one of: -varz, -connz, -routez, -subz
 
-Usage of prometheus-nats-exporter:
+Usage of ./prometheus-nats-exporter:
   -D	Enable debug log level.
-  -DV   Enable debug and trace log levels.
+  -DV
+    	Enable debug and trace log levels.
   -V	Enable trace log level.
   -a string
     	Network host to listen on. (default "0.0.0.0")
   -addr string
     	Network host to listen on. (default "0.0.0.0")
+  -channelz
+    	Get streaming channel metrics.
   -connz
-    	Get connection metrics.    
+    	Get connection metrics.
   -http_pass string
     	Set the password for HTTP scrapes. NATS bcrypt supported.
   -http_user string
-    	Enable basic auth and set user name for HTTP scrapes.		    
+    	Enable basic auth and set user name for HTTP scrapes.
   -l string
     	Log file name.
   -log string
     	Log file name.
   -p int
-    	Prometheus port to listen on. (default 7777)
+    	Port to listen on. (default 7777)
+  -path string
+    	URL path from which to serve scrapes. (default "/metrics")
   -port int
-    	Prometheus port to listen on. (default 7777)
+    	Port to listen on. (default 7777)
   -r string
     	Remote syslog address to write log statements.
   -remote_syslog string
     	Write log statements to a remote syslog.
   -ri int
-    	Interval in seconds to retry NATS Server monitor URLS. (default 30)
-  -routez 
-        Get route metrics.        
-  -s	  Write log statements to the syslog.
-  -subz 
-        Get subscription metrics.
-  -syslog 
-        Write log statements to the syslog.
+    	Interval in seconds to retry NATS Server monitor URL. (default 30)
+  -routez
+    	Get route metrics.
+  -s	Write log statements to the syslog.
+  -serverz
+    	Get streaming server metrics.
+  -subz
+    	Get subscription metrics.
+  -syslog
+    	Write log statements to the syslog.
   -tlscacert string
     	Client certificate CA for verification (used with HTTPS).
   -tlscert string
     	Server certificate file (Enables HTTPS).
   -tlskey string
-    	Private key for server certificate (used with HTTPS).  
+    	Private key for server certificate (used with HTTPS).
   -varz
-        Get general metrics. 
+    	Get general metrics.
 ```
 
 ###  The URL parameter
+
 The url parameter is a standard url.  Both `http` and `https` (when TLS is configured) is supported.
 
 e.g.
@@ -96,18 +105,22 @@ gnatsd_varz_max_connections{server_id="http://localhost:8222"} 65536
 ```
 
 # The NATS Prometheus Exporter API
+
 The NATS prometheus exporter also provides a simple and easy to use API that allows it to run embedded in your code.  
 
 ## Import the exporter package
+
 ```go
     // import the API like this
-	import (
-	  "github.com/nats-io/prometheus-nats-exporter/exporter"
-	)
+    import (
+      "github.com/nats-io/prometheus-nats-exporter/exporter"
+    )
 ```
 
 ## API Usage
+
 In just a few lines of code, configure and launch an instance of the exporter.
+
 ```go 
 	// Get the default options, and set what you need to.  The listen address and port
 	// is how prometheus can poll for collected data.
