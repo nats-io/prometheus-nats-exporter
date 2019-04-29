@@ -14,6 +14,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -36,7 +37,7 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 	servers := make([]*CollectedServer, 1)
 	servers[0] = &CollectedServer{
 		ID:  "id",
-		URL: fmt.Sprintf("http://localhost:%d", pet.MonitorPort),
+		URL: url,
 	}
 	coll := NewCollector(endpoint, servers)
 
@@ -62,6 +63,37 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 			}
 		case <-time.After(10 * time.Millisecond):
 			return
+		}
+	}
+}
+
+func getLabelPairs(url string, endpoint string, metricName string) ([]*dto.LabelPair, error) {
+	// create a new collector.
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "id",
+		URL: url,
+	}
+	coll := NewCollector(endpoint, servers)
+
+	// now collect the metrics
+	c := make(chan prometheus.Metric)
+	go coll.Collect(c)
+	for {
+		select {
+		case metric := <-c:
+			name := parseDesc(metric.Desc().String())
+			if name == metricName {
+
+				pb := &dto.Metric{}
+				if err := metric.Write(pb); err != nil {
+					return nil, err
+				}
+				return pb.GetLabel(), nil
+			}
+
+		case <-time.After(10 * time.Millisecond):
+			return nil, errors.New("timeout")
 		}
 	}
 }
@@ -284,7 +316,44 @@ func TestStreamingMetrics(t *testing.T) {
 		"nss_server_channels":      0,
 		"nss_server_subscriptions": 0,
 		"nss_server_clients":       0,
+		"nss_server_info":          1,
 	}
 
 	verifyCollector(url, "serverz", cases, t)
+}
+
+func TestStreamingServerInfoMetricLabels(t *testing.T) {
+	s := pet.RunStreamingServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	labelPairs, err := getLabelPairs(url, "serverz", "nss_server_info")
+	if err != nil {
+		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
+	}
+
+	labelsFoundMap := map[string]bool{
+		"cluster_id": false,
+		"server_id":  false,
+		"version":    false,
+		"go_version": false,
+		"state":      false,
+		"role":       false,
+		"start_time": false,
+	}
+	for _, labelPair := range labelPairs {
+		labelsFoundMap[*labelPair.Name] = true
+	}
+
+	labelsMissingList := make([]string, 0)
+	for label, found := range labelsFoundMap {
+		if !found {
+			labelsMissingList = append(labelsMissingList, label)
+		}
+	}
+
+	if len(labelsMissingList) > 0 {
+		t.Fatalf("The following labels were missing: %v", labelsMissingList)
+	}
 }
