@@ -2,6 +2,7 @@ package collector
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -149,6 +150,7 @@ type channelsCollector struct {
 }
 
 func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
+	subsVariableLabels := []string{"server", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
 		chanBytesTotal: prometheus.NewDesc(
@@ -172,19 +174,19 @@ func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
 		subsLastSent: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "subs_last_sent"),
 			"Last message sent",
-			[]string{"server", "channel", "client_id", "inbox"},
+			subsVariableLabels,
 			nil,
 		),
 		subsPendingCount: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "subs_pending_count"),
 			"Pending message count",
-			[]string{"server", "channel", "client_id", "inbox"},
+			subsVariableLabels,
 			nil,
 		),
 		subsMaxInFlight: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "subs_max_inflight"),
 			"Max in flight message count",
-			[]string{"server", "channel", "client_id", "inbox"},
+			subsVariableLabels,
 			nil,
 		),
 	}
@@ -225,9 +227,11 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue, float64(channel.LastSeq), server.ID, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
-				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), server.ID, channel.Name, sub.ClientID, sub.Inbox)
-				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), server.ID, channel.Name, sub.ClientID, sub.Inbox)
-				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), server.ID, channel.Name, sub.ClientID, sub.Inbox)
+				labelValues := []string{server.ID, channel.Name, sub.ClientID, sub.Inbox,
+					sub.QueueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline)}
+				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), labelValues...)
+				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), labelValues...)
+				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), labelValues...)
 			}
 		}
 	}

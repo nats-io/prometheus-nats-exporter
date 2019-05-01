@@ -14,7 +14,6 @@
 package collector
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -67,34 +66,66 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 	}
 }
 
-func getLabelPairs(url string, endpoint string, metricName string) ([]*dto.LabelPair, error) {
-	// create a new collector.
+// To account for the metrics that share the same descriptor but differ in their variable label values,
+// return a list of lists of label pairs for each of the supplied metric names.
+func getLabelValues(url string, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
+	labelValues := make(map[string][]map[string]string)
+	namesMap := make(map[string]bool)
+	for _, metricName := range metricNames {
+		namesMap[metricName] = true
+	}
+
+	metrics := make(chan prometheus.Metric)
+	done := make(chan bool)
+	errs := make(chan error)
+
+	// kick off the processing goroutine
+	go func() {
+		for {
+			metric, more := <-metrics
+			if more {
+				metricName := parseDesc(metric.Desc().String())
+				if _, ok := namesMap[metricName]; ok {
+					pb := &dto.Metric{}
+					if err := metric.Write(pb); err != nil {
+						errs <- err
+						return
+					}
+
+					labelMaps := labelValues[metricName]
+
+					// build a map[string]string out of the []*dto.LabelPair
+					labelMap := make(map[string]string)
+					for _, labelPair := range pb.GetLabel() {
+						labelMap[labelPair.GetName()] = labelPair.GetValue()
+					}
+
+					labelMaps = append(labelMaps, labelMap)
+					labelValues[metricName] = labelMaps
+				}
+			} else {
+				done <- true
+				return
+			}
+		}
+	}()
+
+	// create a new collector and collect
 	servers := make([]*CollectedServer, 1)
 	servers[0] = &CollectedServer{
 		ID:  "id",
 		URL: url,
 	}
 	coll := NewCollector(endpoint, servers)
+	coll.Collect(metrics)
+	close(metrics)
 
-	// now collect the metrics
-	c := make(chan prometheus.Metric)
-	go coll.Collect(c)
-	for {
-		select {
-		case metric := <-c:
-			name := parseDesc(metric.Desc().String())
-			if name == metricName {
-
-				pb := &dto.Metric{}
-				if err := metric.Write(pb); err != nil {
-					return nil, err
-				}
-				return pb.GetLabel(), nil
-			}
-
-		case <-time.After(10 * time.Millisecond):
-			return nil, errors.New("timeout")
-		}
+	//return after the processing goroutine is done
+	select {
+	case err := <-errs:
+		return nil, err
+	case <-done:
+		return labelValues, nil
 	}
 }
 
@@ -286,7 +317,8 @@ func TestStreamingMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sc.Close()
-	sc.Subscribe("foo", func(_ *stan.Msg) {})
+
+	_, err = sc.Subscribe("foo", func(_ *stan.Msg) {})
 	if err != nil {
 		t.Fatalf("Unexpected error on subscribe: %v", err)
 	}
@@ -328,32 +360,113 @@ func TestStreamingServerInfoMetricLabels(t *testing.T) {
 
 	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
 
-	labelPairs, err := getLabelPairs(url, "serverz", "nss_server_info")
+	serverInfoMetric := "nss_server_info"
+	labelValues, err := getLabelValues(url, "serverz", []string{serverInfoMetric})
 	if err != nil {
 		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
 	}
 
-	labelsFoundMap := map[string]bool{
-		"cluster_id": false,
-		"server_id":  false,
-		"version":    false,
-		"go_version": false,
-		"state":      false,
-		"role":       false,
-		"start_time": false,
+	labelMaps, found := labelValues[serverInfoMetric]
+	if !found || len(labelMaps) != 1 {
+		t.Fatalf("No info found for metric: %v", serverInfoMetric)
 	}
-	for _, labelPair := range labelPairs {
-		labelsFoundMap[*labelPair.Name] = true
-	}
+	labelMap := labelMaps[0]
 
-	labelsMissingList := make([]string, 0)
-	for label, found := range labelsFoundMap {
-		if !found {
-			labelsMissingList = append(labelsMissingList, label)
+	expectedLabelNames := []string{"cluster_id", "server_id", "version", "go_version", "state", "role", "start_time"}
+	expectedLabelsNotFound := make([]string, 0)
+	for _, labelName := range expectedLabelNames {
+		if _, found := labelMap[labelName]; !found {
+			expectedLabelsNotFound = append(expectedLabelsNotFound, labelName)
 		}
 	}
 
-	if len(labelsMissingList) > 0 {
-		t.Fatalf("The following labels were missing: %v", labelsMissingList)
+	if len(expectedLabelsNotFound) > 0 {
+		t.Fatalf("The following expected labels were missing: %v", expectedLabelsNotFound)
+	}
+}
+
+func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
+	s := pet.RunStreamingServer()
+	defer s.Shutdown()
+
+	queueName := "some-queue-name"
+	durableSubscriptionName := "some-durable-name"
+
+	sc, err := stan.Connect(stanClusterName, stanClientName,
+		stan.NatsURL(fmt.Sprintf("nats://localhost:%d", pet.ClientPort)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err = sc.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	subscriptions := make([]stan.Subscription, 0)
+
+	subscription, err := sc.Subscribe("foo", func(_ *stan.Msg) {})
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	} else {
+		subscriptions = append(subscriptions, subscription)
+	}
+	subscription, err = sc.QueueSubscribe("bar", queueName, func(_ *stan.Msg) {},
+		stan.DurableName(durableSubscriptionName))
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	} else {
+		subscriptions = append(subscriptions, subscription)
+	}
+	defer func() {
+		for _, subscription := range subscriptions {
+			err = subscription.Unsubscribe()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	streamingSunscriptionMetrics := []string{"nss_chan_subs_last_sent",
+		"nss_chan_subs_pending_count", "nss_chan_subs_max_inflight"}
+	labelValues, err := getLabelValues(url, "channelsz", streamingSunscriptionMetrics)
+	if err != nil {
+		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
+	}
+
+	for _, streamingSunscriptionMetric := range streamingSunscriptionMetrics {
+		labelMaps, found := labelValues[streamingSunscriptionMetric]
+		if !found || len(labelMaps) != len(subscriptions) {
+			t.Fatalf("No sufficient info found for metric: %v", streamingSunscriptionMetric)
+		}
+
+		foundQueuedDurableLabels := false
+		expectedLabelNames := []string{"server", "channel", "client_id", "inbox",
+			"queue_name", "is_durable", "is_offline"}
+		for subscriptionIndex := range subscriptions {
+			expectedLabelsNotFound := make([]string, 0)
+			for _, labelName := range expectedLabelNames {
+				if _, found := labelMaps[subscriptionIndex][labelName]; !found {
+					expectedLabelsNotFound = append(expectedLabelsNotFound, labelName)
+				}
+			}
+
+			if len(expectedLabelsNotFound) > 0 {
+				t.Fatalf("Streaming subscription metric %v for channel %v was missing the following expected labels %v",
+					streamingSunscriptionMetric, labelMaps[subscriptionIndex]["channel"], expectedLabelsNotFound)
+			}
+
+			if labelMaps[subscriptionIndex]["queue_name"] == fmt.Sprintf("%v:%v", durableSubscriptionName, queueName) &&
+				labelMaps[subscriptionIndex]["is_durable"] == "true" {
+				foundQueuedDurableLabels = true
+			}
+		}
+		if !foundQueuedDurableLabels {
+			t.Fatalf("Streaming subscription metric %v is missing expected label values "+
+				"for a queued durable subscription", streamingSunscriptionMetric)
+		}
 	}
 }
