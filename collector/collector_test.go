@@ -334,8 +334,8 @@ func TestStreamingMetrics(t *testing.T) {
 	}
 
 	cases := map[string]float64{
-		"nss_chan_bytes_total":        0,
-		"nss_chan_msgs_total":         0,
+		"nss_chan_bytes_total":        240,
+		"nss_chan_msgs_total":         10,
 		"nss_chan_last_seq":           10,
 		"nss_chan_subs_last_sent":     10,
 		"nss_chan_subs_pending_count": 0,
