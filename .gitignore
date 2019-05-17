@@ -23,3 +23,5 @@ _testmain.go
 *.test
 *.prof
 travis_wait*.log
+
+dist/
