@@ -149,25 +149,25 @@ type channelsCollector struct {
 }
 
 func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
-	subsVariableLabels := []string{"server", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
+	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
 		chanBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "bytes_total"),
 			"Total of bytes",
-			[]string{"server", "channel"},
+			[]string{"server_id", "channel"},
 			nil,
 		),
 		chanMsgsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "msgs_total"),
 			"Total of messages",
-			[]string{"server", "channel"},
+			[]string{"server_id", "channel"},
 			nil,
 		),
 		chanLastSeq: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "last_seq"),
 			"Last seq",
-			[]string{"server", "channel"},
+			[]string{"server_id", "channel"},
 			nil,
 		),
 		subsLastSent: prometheus.NewDesc(
