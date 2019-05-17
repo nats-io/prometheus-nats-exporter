@@ -45,37 +45,37 @@ func newServerzCollector(servers []*CollectedServer) prometheus.Collector {
 		bytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "server", "bytes_total"),
 			"Total of bytes",
-			[]string{"server"},
+			[]string{"server_id"},
 			nil,
 		),
 		msgsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "server", "msgs_total"),
 			"Total of messages",
-			[]string{"server"},
+			[]string{"server_id"},
 			nil,
 		),
 		channels: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "server", "channels"),
 			"Total channels",
-			[]string{"server"},
+			[]string{"server_id"},
 			nil,
 		),
 		subs: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "server", "subscriptions"),
 			"Total subscriptions",
-			[]string{"server"},
+			[]string{"server_id"},
 			nil,
 		),
 		clients: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "server", "clients"),
 			"Total clients",
-			[]string{"server"},
+			[]string{"server_id"},
 			nil,
 		),
 		info: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "server", "info"),
 			"Info",
-			[]string{"server", "cluster_id", "server_id", "version", "go_version", "state", "role", "start_time"},
+			[]string{"server_id", "cluster_id", "version", "go_version", "state", "role", "start_time"},
 			nil,
 		),
 	}
@@ -130,8 +130,7 @@ func (nc *serverzCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(nc.channels, prometheus.CounterValue, float64(resp.Channels), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.subs, prometheus.CounterValue, float64(resp.Subscriptions), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.clients, prometheus.CounterValue, float64(resp.Clients), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.info, prometheus.GaugeValue, 1, server.ID, resp.ClusterID, resp.ServerID,
-			resp.Version, resp.GoVersion, resp.State, resp.Role, resp.StartTime)
+		ch <- prometheus.MustNewConstMetric(nc.info, prometheus.GaugeValue, 1, server.ID, resp.ClusterID, resp.Version, resp.GoVersion, resp.State, resp.Role, resp.StartTime)
 	}
 }
 
@@ -150,25 +149,25 @@ type channelsCollector struct {
 }
 
 func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
-	subsVariableLabels := []string{"server", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
+	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
 		chanBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "bytes_total"),
 			"Total of bytes",
-			[]string{"server", "channel"},
+			[]string{"server_id", "channel"},
 			nil,
 		),
 		chanMsgsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "msgs_total"),
 			"Total of messages",
-			[]string{"server", "channel"},
+			[]string{"server_id", "channel"},
 			nil,
 		),
 		chanLastSeq: prometheus.NewDesc(
 			prometheus.BuildFQName("nss", "chan", "last_seq"),
 			"Last seq",
-			[]string{"server", "channel"},
+			[]string{"server_id", "channel"},
 			nil,
 		),
 		subsLastSent: prometheus.NewDesc(
@@ -240,7 +239,6 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 // Channelsz lists the name of all NATS Streaming Channelsz
 type Channelsz struct {
 	ClusterID string      `json:"cluster_id"`
-	ServerID  string      `json:"server_id"`
 	Now       time.Time   `json:"now"`
 	Offset    int         `json:"offset"`
 	Limit     int         `json:"limit"`

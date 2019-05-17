@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/go-nats-streaming"
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -164,6 +164,7 @@ func TestConnz(t *testing.T) {
 
 	cases := map[string]float64{
 		"gnatsd_connz_total_connections": 0,
+		"gnatsd_connz_pending_bytes":     0,
 		"gnatsd_varz_connections":        0,
 	}
 
@@ -173,6 +174,7 @@ func TestConnz(t *testing.T) {
 
 	cases = map[string]float64{
 		"gnatsd_connz_total_connections": 1,
+		"gnatsd_connz_pending_bytes":     0,
 		"gnatsd_varz_connections":        1,
 	}
 	nc := pet.CreateClientConnSubscribeAndPublish(t)
@@ -444,7 +446,7 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 		}
 
 		foundQueuedDurableLabels := false
-		expectedLabelNames := []string{"server", "channel", "client_id", "inbox",
+		expectedLabelNames := []string{"server_id", "channel", "client_id", "inbox",
 			"queue_name", "is_durable", "is_offline"}
 		for subscriptionIndex := range subscriptions {
 			expectedLabelsNotFound := make([]string, 0)
