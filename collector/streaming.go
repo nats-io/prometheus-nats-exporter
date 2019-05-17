@@ -221,8 +221,8 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		for _, channel := range resp.Channels {
-			ch <- prometheus.MustNewConstMetric(nc.chanBytesTotal, prometheus.CounterValue, float64(channel.Bytes), server.ID, channel.Name)
-			ch <- prometheus.MustNewConstMetric(nc.chanMsgsTotal, prometheus.CounterValue, float64(channel.Msgs), server.ID, channel.Name)
+			ch <- prometheus.MustNewConstMetric(nc.chanBytesTotal, prometheus.GaugeValue, float64(channel.Bytes), server.ID, channel.Name)
+			ch <- prometheus.MustNewConstMetric(nc.chanMsgsTotal, prometheus.GaugeValue, float64(channel.Msgs), server.ID, channel.Name)
 			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue, float64(channel.LastSeq), server.ID, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
