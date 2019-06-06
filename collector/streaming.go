@@ -3,6 +3,7 @@ package collector
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -149,7 +150,7 @@ type channelsCollector struct {
 }
 
 func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
-	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
+	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline", "durable_name"}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
 		chanBytesTotal: prometheus.NewDesc(
@@ -226,8 +227,16 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue, float64(channel.LastSeq), server.ID, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
+
+				// If this is a durable queue group subscription then split the durable name from the queue name
+				durableName := sub.DurableName
+				queueName := sub.QueueName
+				if sub.IsDurable && queueName != "" {
+					subStrings := strings.Split(queueName, ":")
+					durableName, queueName = subStrings[0], subStrings[1]
+				}
 				labelValues := []string{server.ID, channel.Name, sub.ClientID, sub.Inbox,
-					sub.QueueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline)}
+					queueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline), durableName}
 				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), labelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), labelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), labelValues...)

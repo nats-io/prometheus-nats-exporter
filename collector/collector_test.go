@@ -393,6 +393,7 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 
 	queueName := "some-queue-name"
 	durableSubscriptionName := "some-durable-name"
+	durableGroupSubscriptionName := "some-group-durable-name"
 
 	sc, err := stan.Connect(stanClusterName, stanClientName,
 		stan.NatsURL(fmt.Sprintf("nats://localhost:%d", pet.ClientPort)))
@@ -415,6 +416,13 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 		subscriptions = append(subscriptions, subscription)
 	}
 	subscription, err = sc.QueueSubscribe("bar", queueName, func(_ *stan.Msg) {},
+		stan.DurableName(durableGroupSubscriptionName))
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	} else {
+		subscriptions = append(subscriptions, subscription)
+	}
+	subscription, err = sc.Subscribe("baz", func(_ *stan.Msg) {},
 		stan.DurableName(durableSubscriptionName))
 	if err != nil {
 		t.Fatalf("Unexpected error on subscribe: %v", err)
@@ -445,9 +453,9 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 			t.Fatalf("No sufficient info found for metric: %v", streamingSunscriptionMetric)
 		}
 
-		foundQueuedDurableLabels := false
+		foundQueuedDurableLabels, foundDurableLabels := false, false
 		expectedLabelNames := []string{"server_id", "channel", "client_id", "inbox",
-			"queue_name", "is_durable", "is_offline"}
+			"queue_name", "is_durable", "is_offline", "durable_name"}
 		for subscriptionIndex := range subscriptions {
 			expectedLabelsNotFound := make([]string, 0)
 			for _, labelName := range expectedLabelNames {
@@ -461,14 +469,24 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 					streamingSunscriptionMetric, labelMaps[subscriptionIndex]["channel"], expectedLabelsNotFound)
 			}
 
-			if labelMaps[subscriptionIndex]["queue_name"] == fmt.Sprintf("%v:%v", durableSubscriptionName, queueName) &&
+			if labelMaps[subscriptionIndex]["queue_name"] == queueName &&
+				labelMaps[subscriptionIndex]["durable_name"] == durableGroupSubscriptionName &&
 				labelMaps[subscriptionIndex]["is_durable"] == "true" {
 				foundQueuedDurableLabels = true
+			}
+
+			if labelMaps[subscriptionIndex]["durable_name"] == durableSubscriptionName &&
+				labelMaps[subscriptionIndex]["is_durable"] == "true" {
+				foundDurableLabels = true
 			}
 		}
 		if !foundQueuedDurableLabels {
 			t.Fatalf("Streaming subscription metric %v is missing expected label values "+
 				"for a queued durable subscription", streamingSunscriptionMetric)
+		}
+		if !foundDurableLabels {
+			t.Fatalf("Streaming subscription metric %v is missing expected label values "+
+				"for a durable subscription", streamingSunscriptionMetric)
 		}
 	}
 }
