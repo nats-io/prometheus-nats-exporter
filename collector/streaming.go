@@ -149,7 +149,7 @@ type channelsCollector struct {
 }
 
 func newChannelsCollector(servers []*CollectedServer) prometheus.Collector {
-	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline"}
+	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline", "durable_name"}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
 		chanBytesTotal: prometheus.NewDesc(
@@ -227,7 +227,7 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 
 			for _, sub := range channel.Subscriptions {
 				labelValues := []string{server.ID, channel.Name, sub.ClientID, sub.Inbox,
-					sub.QueueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline)}
+					sub.QueueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline), sub.DurableName}
 				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), labelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), labelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), labelValues...)
