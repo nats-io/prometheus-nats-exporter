@@ -392,7 +392,7 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 	defer s.Shutdown()
 
 	queueName := "some-queue-name"
-	durableSubscriptionName := "some-druable-name"
+	durableSubscriptionName := "some-durable-name"
 	durableGroupSubscriptionName := "some-group-durable-name"
 
 	sc, err := stan.Connect(stanClusterName, stanClientName,
@@ -469,7 +469,8 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 					streamingSunscriptionMetric, labelMaps[subscriptionIndex]["channel"], expectedLabelsNotFound)
 			}
 
-			if labelMaps[subscriptionIndex]["queue_name"] == fmt.Sprintf("%v:%v", durableGroupSubscriptionName, queueName) &&
+			if labelMaps[subscriptionIndex]["queue_name"] == queueName &&
+				labelMaps[subscriptionIndex]["durable_name"] == durableGroupSubscriptionName &&
 				labelMaps[subscriptionIndex]["is_durable"] == "true" {
 				foundQueuedDurableLabels = true
 			}
