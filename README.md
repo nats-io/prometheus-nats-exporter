@@ -11,8 +11,15 @@ go build
 # Run
 Start the prometheus-nats-exporter executable, and poll the `varz` metrics endpoints of the NATS server
 located on `localhost` configured with a monitor port of `5555`.
+
 ``` bash
 prometheus-nats-exporter -varz "http://localhost:5555"
+```
+
+To run with docker, you can use the following image:
+
+```sh
+docker run synadia/prometheus-nats-exporter:0.3.0
 ```
 
 ## Usage
