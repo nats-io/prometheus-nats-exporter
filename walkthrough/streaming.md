@@ -5,7 +5,7 @@ have the exporter poll metrics from the NATS Streaming Server
 monitoring port:
 
 ```sh
-$ docker run synadia/prometheus-nats-exporter:0.2.0 -h
+$ docker run synadia/prometheus-nats-exporter:0.3.0 -h
 ...
   -channelz
     	Get streaming channel metrics.
