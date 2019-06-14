@@ -151,7 +151,7 @@ In just a few lines of code, configure and launch an instance of the exporter.
 ```
 
 # Monitoring Walkthrough
-For further information, refer to the [walkthrough](walkthrough/README.md) of monitoring NATS with Prometheus and Grafana.
+For additional information, refer to the [walkthrough](walkthrough/README.md) of monitoring NATS with Prometheus and Grafana. The NATS Prometheus Exporter can be used to monitor NATS Streaming as well. Refer to the [walkthrough/streaming](walkthrough/streaming.md) documentation.
 
 [License-Url]: https://www.apache.org/licenses/LICENSE-2.0
 [License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg
