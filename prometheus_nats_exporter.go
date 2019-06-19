@@ -27,6 +27,8 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
+var version = "dev"
+
 // parseServerIDAndURL parses the url argument the optional id for the server ID.
 func parseServerIDAndURL(urlArg string) (string, string, error) {
 	var id string
@@ -83,10 +85,12 @@ func main() {
 	var useSysLog bool
 	var debugAndTrace bool
 	var retryInterval int
+	var printVersion bool
 
 	opts := exporter.GetDefaultExporterOptions()
 
 	// Parse flags
+	flag.BoolVar(&printVersion, "version", false, "Show exporter version and exit.")
 	flag.IntVar(&opts.ListenPort, "port", exporter.DefaultListenPort, "Port to listen on.")
 	flag.IntVar(&opts.ListenPort, "p", exporter.DefaultListenPort, "Port to listen on.")
 	flag.StringVar(&opts.ListenAddress, "addr", exporter.DefaultListenAddress, "Network host to listen on.")
@@ -116,6 +120,11 @@ func main() {
 	flag.Parse()
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second
+
+	if printVersion {
+		fmt.Println("prometheus-nats-exporter version", version)
+		os.Exit(0)
+	}
 
 	args := flag.Args()
 	if len(args) < 1 {
