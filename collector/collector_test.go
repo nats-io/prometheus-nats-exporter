@@ -351,6 +351,7 @@ func TestStreamingMetrics(t *testing.T) {
 		"nss_server_subscriptions": 0,
 		"nss_server_clients":       0,
 		"nss_server_info":          1,
+		"nss_server_active":        0,
 	}
 
 	verifyCollector(url, "serverz", cases, t)
