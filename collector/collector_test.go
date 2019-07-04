@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nats-io/go-nats-streaming"
+	stan "github.com/nats-io/go-nats-streaming"
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -36,7 +36,7 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 	servers := make([]*CollectedServer, 1)
 	servers[0] = &CollectedServer{
 		ID:  "id",
-		URL: fmt.Sprintf("http://localhost:%d", pet.MonitorPort),
+		URL: url,
 	}
 	coll := NewCollector(endpoint, servers, "test")
 
@@ -63,6 +63,69 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 		case <-time.After(10 * time.Millisecond):
 			return
 		}
+	}
+}
+
+// To account for the metrics that share the same descriptor but differ in their variable label values,
+// return a list of lists of label pairs for each of the supplied metric names.
+func getLabelValues(url string, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
+	labelValues := make(map[string][]map[string]string)
+	namesMap := make(map[string]bool)
+	for _, metricName := range metricNames {
+		namesMap[metricName] = true
+	}
+
+	metrics := make(chan prometheus.Metric)
+	done := make(chan bool)
+	errs := make(chan error)
+
+	// kick off the processing goroutine
+	go func() {
+		for {
+			metric, more := <-metrics
+			if more {
+				metricName := parseDesc(metric.Desc().String())
+				if _, ok := namesMap[metricName]; ok {
+					pb := &dto.Metric{}
+					if err := metric.Write(pb); err != nil {
+						errs <- err
+						return
+					}
+
+					labelMaps := labelValues[metricName]
+
+					// build a map[string]string out of the []*dto.LabelPair
+					labelMap := make(map[string]string)
+					for _, labelPair := range pb.GetLabel() {
+						labelMap[labelPair.GetName()] = labelPair.GetValue()
+					}
+
+					labelMaps = append(labelMaps, labelMap)
+					labelValues[metricName] = labelMaps
+				}
+			} else {
+				done <- true
+				return
+			}
+		}
+	}()
+
+	// create a new collector and collect
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "id",
+		URL: url,
+	}
+	coll := NewCollector(endpoint, servers)
+	coll.Collect(metrics)
+	close(metrics)
+
+	//return after the processing goroutine is done
+	select {
+	case err := <-errs:
+		return nil, err
+	case <-done:
+		return labelValues, nil
 	}
 }
 
@@ -101,6 +164,7 @@ func TestConnz(t *testing.T) {
 
 	cases := map[string]float64{
 		"gnatsd_connz_total_connections": 0,
+		"gnatsd_connz_pending_bytes":     0,
 		"gnatsd_varz_connections":        0,
 	}
 
@@ -110,6 +174,7 @@ func TestConnz(t *testing.T) {
 
 	cases = map[string]float64{
 		"gnatsd_connz_total_connections": 1,
+		"gnatsd_connz_pending_bytes":     0,
 		"gnatsd_varz_connections":        1,
 	}
 	nc := pet.CreateClientConnSubscribeAndPublish(t)
@@ -254,7 +319,8 @@ func TestStreamingMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sc.Close()
-	sc.Subscribe("foo", func(_ *stan.Msg) {})
+
+	_, err = sc.Subscribe("foo", func(_ *stan.Msg) {})
 	if err != nil {
 		t.Fatalf("Unexpected error on subscribe: %v", err)
 	}
@@ -268,8 +334,8 @@ func TestStreamingMetrics(t *testing.T) {
 	}
 
 	cases := map[string]float64{
-		"nss_chan_bytes_total":        0,
-		"nss_chan_msgs_total":         0,
+		"nss_chan_bytes_total":        240,
+		"nss_chan_msgs_total":         10,
 		"nss_chan_last_seq":           10,
 		"nss_chan_subs_last_sent":     10,
 		"nss_chan_subs_pending_count": 0,
@@ -284,7 +350,144 @@ func TestStreamingMetrics(t *testing.T) {
 		"nss_server_channels":      0,
 		"nss_server_subscriptions": 0,
 		"nss_server_clients":       0,
+		"nss_server_info":          1,
+		"nss_server_active":        0,
 	}
 
 	verifyCollector(url, "serverz", cases, t)
+}
+
+func TestStreamingServerInfoMetricLabels(t *testing.T) {
+	s := pet.RunStreamingServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	serverInfoMetric := "nss_server_info"
+	labelValues, err := getLabelValues(url, "serverz", []string{serverInfoMetric})
+	if err != nil {
+		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
+	}
+
+	labelMaps, found := labelValues[serverInfoMetric]
+	if !found || len(labelMaps) != 1 {
+		t.Fatalf("No info found for metric: %v", serverInfoMetric)
+	}
+	labelMap := labelMaps[0]
+
+	expectedLabelNames := []string{"cluster_id", "server_id", "version", "go_version", "state", "role", "start_time"}
+	expectedLabelsNotFound := make([]string, 0)
+	for _, labelName := range expectedLabelNames {
+		if _, found := labelMap[labelName]; !found {
+			expectedLabelsNotFound = append(expectedLabelsNotFound, labelName)
+		}
+	}
+
+	if len(expectedLabelsNotFound) > 0 {
+		t.Fatalf("The following expected labels were missing: %v", expectedLabelsNotFound)
+	}
+}
+
+func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
+	s := pet.RunStreamingServer()
+	defer s.Shutdown()
+
+	queueName := "some-queue-name"
+	durableSubscriptionName := "some-durable-name"
+	durableGroupSubscriptionName := "some-group-durable-name"
+
+	sc, err := stan.Connect(stanClusterName, stanClientName,
+		stan.NatsURL(fmt.Sprintf("nats://localhost:%d", pet.ClientPort)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err = sc.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	subscriptions := make([]stan.Subscription, 0)
+
+	subscription, err := sc.Subscribe("foo", func(_ *stan.Msg) {})
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	} else {
+		subscriptions = append(subscriptions, subscription)
+	}
+	subscription, err = sc.QueueSubscribe("bar", queueName, func(_ *stan.Msg) {},
+		stan.DurableName(durableGroupSubscriptionName))
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	} else {
+		subscriptions = append(subscriptions, subscription)
+	}
+	subscription, err = sc.Subscribe("baz", func(_ *stan.Msg) {},
+		stan.DurableName(durableSubscriptionName))
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	} else {
+		subscriptions = append(subscriptions, subscription)
+	}
+	defer func() {
+		for _, subscription := range subscriptions {
+			err = subscription.Unsubscribe()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	streamingSunscriptionMetrics := []string{"nss_chan_subs_last_sent",
+		"nss_chan_subs_pending_count", "nss_chan_subs_max_inflight"}
+	labelValues, err := getLabelValues(url, "channelsz", streamingSunscriptionMetrics)
+	if err != nil {
+		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
+	}
+
+	for _, streamingSunscriptionMetric := range streamingSunscriptionMetrics {
+		labelMaps, found := labelValues[streamingSunscriptionMetric]
+		if !found || len(labelMaps) != len(subscriptions) {
+			t.Fatalf("No sufficient info found for metric: %v", streamingSunscriptionMetric)
+		}
+
+		foundQueuedDurableLabels, foundDurableLabels := false, false
+		expectedLabelNames := []string{"server_id", "channel", "client_id", "inbox",
+			"queue_name", "is_durable", "is_offline", "durable_name"}
+		for subscriptionIndex := range subscriptions {
+			expectedLabelsNotFound := make([]string, 0)
+			for _, labelName := range expectedLabelNames {
+				if _, found := labelMaps[subscriptionIndex][labelName]; !found {
+					expectedLabelsNotFound = append(expectedLabelsNotFound, labelName)
+				}
+			}
+
+			if len(expectedLabelsNotFound) > 0 {
+				t.Fatalf("Streaming subscription metric %v for channel %v was missing the following expected labels %v",
+					streamingSunscriptionMetric, labelMaps[subscriptionIndex]["channel"], expectedLabelsNotFound)
+			}
+
+			if labelMaps[subscriptionIndex]["queue_name"] == queueName &&
+				labelMaps[subscriptionIndex]["durable_name"] == durableGroupSubscriptionName &&
+				labelMaps[subscriptionIndex]["is_durable"] == "true" {
+				foundQueuedDurableLabels = true
+			}
+
+			if labelMaps[subscriptionIndex]["durable_name"] == durableSubscriptionName &&
+				labelMaps[subscriptionIndex]["is_durable"] == "true" {
+				foundDurableLabels = true
+			}
+		}
+		if !foundQueuedDurableLabels {
+			t.Fatalf("Streaming subscription metric %v is missing expected label values "+
+				"for a queued durable subscription", streamingSunscriptionMetric)
+		}
+		if !foundDurableLabels {
+			t.Fatalf("Streaming subscription metric %v is missing expected label values "+
+				"for a durable subscription", streamingSunscriptionMetric)
+		}
+	}
 }

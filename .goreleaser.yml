@@ -27,7 +27,6 @@ builds:
       goarch: 386
 
   main: .
-  ldflags: -s -w
   binary: prometheus-nats-exporter
 
   lang: go

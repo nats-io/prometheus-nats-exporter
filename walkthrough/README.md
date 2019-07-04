@@ -1,15 +1,15 @@
 
-# A Walkthough of Monitoring NATS with Prometheus and Grafana
+# A Walkthrough of Monitoring NATS with Prometheus and Grafana
 
 This walkthrough covers the basic setup and configuration for monitoring a
 NATS server using the NATS Prometheus exporter, Prometheus, and Grafana.
 
 ## Prerequisites
-For this walkthrough, you'll need to install the NATS Prometheus Exporter, [NATS Server](https://github.com/nats-io/gnatsd), [Prometheus](https://prometheus.io/), and [Grafana](https://grafana.com/)
+For this walkthrough, you'll need to install the NATS Prometheus Exporter, [NATS Server](https://github.com/nats-io/nats-server), [Prometheus](https://prometheus.io/), and [Grafana](https://grafana.com/)
 
 ### NATS Server
 ```bash
-go get github.com/nats-io/gnatsd
+go get github.com/nats-io/nats-server
 ```
 
 ### Prometheus
@@ -31,7 +31,7 @@ It is helpful to start four console windows, one for each component.
 ### 1) Start the NATS server and NATS Prometheus Exporter
 Be sure to include the a monitoring port:
 ```sh
-gnatsd -m 8222
+nats-server -m 8222
 ```
 
 Next, launch the NATS prometheus exporter.  Here we configure the same monitor port we specified when launching the NATS server.  If a NATS server is not running, the exporter will retry to connect to the NATS server indefinitely.

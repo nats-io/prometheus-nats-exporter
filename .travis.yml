@@ -1,13 +1,8 @@
 language: go
 go:
 - 1.11.x
-- 1.12.x  
+- 1.12.x
 
-addons:
-  apt:
-    packages:
-    # needed for the nfpm pipe:
-    - rpm
 install:
 - go get github.com/nats-io/go-nats
 - go get github.com/nats-io/gnatsd
@@ -26,7 +21,7 @@ script:
 - go test -i -race $EXCLUDE_VENDOR -p 1
 - go test -v -race $EXCLUDE_VENDOR -p 1
 after_success:
-- if [[ "$TRAVIS_GO_VERSION" == 1.9.* ]]; then ./scripts/cov.sh TRAVIS; fi
+- if [[ "$TRAVIS_GO_VERSION" == 1.12.* ]]; then ./scripts/cov.sh TRAVIS; fi
 
 # calls goreleaser
 deploy:
