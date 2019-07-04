@@ -116,7 +116,7 @@ func getLabelValues(url string, endpoint string, metricNames []string) (map[stri
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(endpoint, servers)
+	coll := NewCollector(endpoint, servers, "test")
 	coll.Collect(metrics)
 	close(metrics)
 
