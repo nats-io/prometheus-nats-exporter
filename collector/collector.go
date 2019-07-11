@@ -23,9 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	namespace = "gnatsd"
-)
+var namespace = "gnatsd"
 
 // CollectedServer is a NATS server polled by this collector
 type CollectedServer struct {
@@ -46,9 +44,12 @@ type NATSCollector struct {
 // Based on our current integration, we're going to treat all metrics as gauges.
 // We are going to call the set message on the gauge when we receive an updated
 // metrics pull.
-func newPrometheusGaugeVec(subsystem string, name string, help string) (metric *prometheus.GaugeVec) {
+func newPrometheusGaugeVec(subsystem string, name string, help string, prefix string) (metric *prometheus.GaugeVec) {
 	if help == "" {
 		help = name
+	}
+	if prefix != "" {
+		namespace = prefix
 	}
 	opts := prometheus.GaugeOpts{
 		Namespace: namespace,
@@ -162,7 +163,7 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 // For each NATS Metrics endpoint (/*z) get the first URL
 // to determine the list of possible metrics.
 // TODO: flatten embedded maps.
-func (nc *NATSCollector) initMetricsFromServers() {
+func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 	var response map[string]interface{}
 
 	nc.Stats = make(map[string]interface{})
@@ -191,7 +192,7 @@ func (nc *NATSCollector) initMetricsFromServers() {
 			i := response[k]
 			switch v := i.(type) {
 			case float64: // all json numbers are handled here.
-				nc.Stats[k] = newPrometheusGaugeVec(nc.endpoint, k, "")
+				nc.Stats[k] = newPrometheusGaugeVec(nc.endpoint, k, "", namespace)
 			case string:
 				// do nothing
 			default:
@@ -204,7 +205,7 @@ func (nc *NATSCollector) initMetricsFromServers() {
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
-func NewCollector(endpoint string, servers []*CollectedServer) prometheus.Collector {
+func NewCollector(endpoint string, servers []*CollectedServer, namespace string) prometheus.Collector {
 	if isStreamingEndpoint(endpoint) {
 		return newStreamingCollector(endpoint, servers)
 	}
@@ -230,7 +231,7 @@ func NewCollector(endpoint string, servers []*CollectedServer) prometheus.Collec
 		}
 	}
 
-	nc.initMetricsFromServers()
+	nc.initMetricsFromServers(namespace)
 
 	return nc
 }

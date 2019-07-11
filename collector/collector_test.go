@@ -38,7 +38,7 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(endpoint, servers)
+	coll := NewCollector(endpoint, servers, "test")
 
 	// now collect the metrics
 	c := make(chan prometheus.Metric)
@@ -116,7 +116,7 @@ func getLabelValues(url string, endpoint string, metricNames []string) (map[stri
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(endpoint, servers)
+	coll := NewCollector(endpoint, servers, "test")
 	coll.Collect(metrics)
 	close(metrics)
 
@@ -202,10 +202,10 @@ func TestRegister(t *testing.T) {
 	// check duplicates do not panic
 	servers = append(servers, cs)
 
-	NewCollector("varz", servers)
+	NewCollector("varz", servers, "test")
 
 	// test idenpotency.
-	nc := NewCollector("varz", servers)
+	nc := NewCollector("varz", servers, "test")
 
 	// test without a server (no error).
 	if err := prometheus.Register(nc); err == nil {
@@ -218,14 +218,14 @@ func TestRegister(t *testing.T) {
 	defer s.Shutdown()
 
 	// test collect with a server
-	nc = NewCollector("varz", servers)
+	nc = NewCollector("varz", servers, "test")
 	if err := prometheus.Register(nc); err != nil {
 		t.Fatalf("Got unexpected error: %v", err)
 	}
 	prometheus.Unregister(nc)
 
 	// test collect with an invalid endpoint
-	nc = NewCollector("GARBAGE", servers)
+	nc = NewCollector("GARBAGE", servers, "test")
 	if err := prometheus.Register(nc); err == nil {
 		t.Fatalf("Did not get expected error.")
 		defer prometheus.Unregister(nc)

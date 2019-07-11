@@ -55,6 +55,8 @@ Usage of ./prometheus-nats-exporter:
     	URL path from which to serve scrapes. (default "/metrics")
   -port int
     	Port to listen on. (default 7777)
+  -prefix
+    	Set the prefix for all the metrics.
   -r string
     	Remote syslog address to write log statements.
   -remote_syslog string
