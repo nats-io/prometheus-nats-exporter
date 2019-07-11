@@ -28,31 +28,31 @@ func newConnzCollector(servers []*CollectedServer) prometheus.Collector {
 	nc := &connzCollector{
 		httpClient: http.DefaultClient,
 		numConnections: prometheus.NewDesc(
-			prometheus.BuildFQName("gnatsd", "connz", "num_connections"),
+			prometheus.BuildFQName(namespace, "connz", "num_connections"),
 			"num_connections",
 			[]string{"server_id"},
 			nil,
 		),
 		offset: prometheus.NewDesc(
-			prometheus.BuildFQName("gnatsd", "connz", "offset"),
+			prometheus.BuildFQName(namespace, "connz", "offset"),
 			"offset",
 			[]string{"server_id"},
 			nil,
 		),
 		total: prometheus.NewDesc(
-			prometheus.BuildFQName("gnatsd", "connz", "total"),
+			prometheus.BuildFQName(namespace, "connz", "total"),
 			"total",
 			[]string{"server_id"},
 			nil,
 		),
 		limit: prometheus.NewDesc(
-			prometheus.BuildFQName("gnatsd", "connz", "limit"),
+			prometheus.BuildFQName(namespace, "connz", "limit"),
 			"limit",
 			[]string{"server_id"},
 			nil,
 		),
 		pendingBytes: prometheus.NewDesc(
-			prometheus.BuildFQName("gnatsd", "connz", "pending_bytes"),
+			prometheus.BuildFQName(namespace, "connz", "pending_bytes"),
 			"pending_bytes",
 			[]string{"server_id"},
 			nil,
