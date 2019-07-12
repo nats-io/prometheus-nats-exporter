@@ -27,7 +27,7 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
-var version = "0.4.0"
+var version = "0.5.0"
 
 // parseServerIDAndURL parses the url argument the optional id for the server ID.
 func parseServerIDAndURL(urlArg string) (string, string, error) {
@@ -118,6 +118,7 @@ func main() {
 	flag.StringVar(&opts.HTTPUser, "http_user", "", "Enable basic auth and set user name for HTTP scrapes.")
 	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes. NATS bcrypt supported.")
 	flag.StringVar(&opts.Prefix, "prefix", "", "Set the prefix for all the metrics.")
+	flag.BoolVar(&opts.UseOldServerID, "use_old_server_id", false, "Disables using ServerID from /varz")
 	flag.Parse()
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second
@@ -146,14 +147,25 @@ necessary.`)
 	// Create an instance of the NATS exporter.
 	exp := exporter.NewExporter(opts)
 
-	// For each URL specified, add the NATS server with the optional ID.
-	for _, arg := range flag.Args() {
-		id, url, err := parseServerIDAndURL(arg)
-		if err != nil {
-			collector.Fatalf("Unable to parse URL %q: %v", arg, err)
-		}
+	if len(args) == 1 && !opts.UseOldServerID {
+		// Pick the server id from the /varz endpoint info.
+		url := flag.Args()[0]
+		id := collector.GetServerIDFromVarz(url, opts.RetryInterval)
 		if err := exp.AddServer(id, url); err != nil {
 			collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", id, url, err)
+		}
+	} else {
+		// For each URL specified, add the NATS server with the optional ID.
+		for _, arg := range args {
+			// This should make the http request to get the server id
+			// that is returned from /varz.
+			id, url, err := parseServerIDAndURL(arg)
+			if err != nil {
+				collector.Fatalf("Unable to parse URL %q: %v", arg, err)
+			}
+			if err := exp.AddServer(id, url); err != nil {
+				collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", id, url, err)
+			}
 		}
 	}
 

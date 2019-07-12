@@ -53,6 +53,7 @@ type NATSExporterOptions struct {
 	HTTPUser             string // User in metrics scrape by prometheus.
 	HTTPPassword         string
 	Prefix               string
+	UseOldServerID       bool
 }
 
 //NATSExporter collects NATS metrics
