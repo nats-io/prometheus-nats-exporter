@@ -118,7 +118,7 @@ func main() {
 	flag.StringVar(&opts.HTTPUser, "http_user", "", "Enable basic auth and set user name for HTTP scrapes.")
 	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes. NATS bcrypt supported.")
 	flag.StringVar(&opts.Prefix, "prefix", "", "Set the prefix for all the metrics.")
-	flag.BoolVar(&opts.UseOldServerID, "use_old_server_id", false, "Disables using ServerID from /varz")
+	flag.BoolVar(&opts.UseInternalServerID, "use_internal_server_id", false, "Enables using ServerID from /varz")
 	flag.Parse()
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second
@@ -147,7 +147,7 @@ necessary.`)
 	// Create an instance of the NATS exporter.
 	exp := exporter.NewExporter(opts)
 
-	if len(args) == 1 && !opts.UseOldServerID {
+	if len(args) == 1 && opts.UseInternalServerID {
 		// Pick the server id from the /varz endpoint info.
 		url := flag.Args()[0]
 		id := collector.GetServerIDFromVarz(url, opts.RetryInterval)
