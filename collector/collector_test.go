@@ -129,6 +129,17 @@ func getLabelValues(url string, endpoint string, metricNames []string) (map[stri
 	}
 }
 
+func TestServerIDFromVarz(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+	result := GetServerIDFromVarz(url, 2*time.Second)
+	if len(result) < 1 || result[0] != 'N' {
+		t.Fatalf("Unexpected server id: %v", result)
+	}
+}
+
 func TestVarz(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()

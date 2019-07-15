@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -78,6 +79,57 @@ func getMetricURL(httpClient *http.Client, URL string, response interface{}) err
 	}
 
 	return json.Unmarshal(body, &response)
+}
+
+// GetServerIDFromVarz gets the server ID from the server.
+func GetServerIDFromVarz(endpoint string, retryInterval time.Duration) string {
+	getServerID := func() (string, error) {
+		resp, err := http.DefaultClient.Get(endpoint + "/varz")
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		var response map[string]interface{}
+		err = json.Unmarshal(body, &response)
+		if err != nil {
+			return "", err
+		}
+		serverID, ok := response["server_id"]
+		if !ok {
+			Fatalf("Could not find server id in /varz")
+		}
+		id, ok := serverID.(string)
+		if !ok {
+			Fatalf("Invalid server_id type in /varz: %+v", serverID)
+		}
+
+		return id, nil
+	}
+
+	var id string
+	var err error
+	id, err = getServerID()
+	if err == nil {
+		return id
+	}
+
+	// Retry periodically until available, in case it never starts
+	// then a liveness check against the NATS Server itself should
+	// detect that an restart the server, in terms of the exporter
+	// we just wait for it to eventually be available.
+	for range time.NewTicker(retryInterval).C {
+		id, err = getServerID()
+		if err != nil {
+			Errorf("Could not find server id: %s", err)
+			continue
+		}
+		break
+	}
+	return id
 }
 
 // Describe the metric to the Prometheus server.
