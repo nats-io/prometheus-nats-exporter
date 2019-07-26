@@ -3,7 +3,7 @@ FROM golang:1.12
 
 # download the source
 WORKDIR /go/src/github.com/nats-io/prometheus-nats-exporter
-RUN git clone --branch v0.4.0 https://github.com/nats-io/prometheus-nats-exporter.git .
+RUN git clone --branch v0.5.0 https://github.com/nats-io/prometheus-nats-exporter.git .
 
 # build 
 RUN go build -v -a -tags netgo -installsuffix netgo
