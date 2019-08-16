@@ -257,9 +257,9 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
-func NewCollector(endpoint string, servers []*CollectedServer, namespace string) prometheus.Collector {
+func NewCollector(endpoint string, servers []*CollectedServer, prefix string) prometheus.Collector {
 	if isStreamingEndpoint(endpoint) {
-		return newStreamingCollector(endpoint, servers)
+		return newStreamingCollector(endpoint, servers, prefix)
 	}
 	if isConnzEndpoint(endpoint) {
 		return newConnzCollector(servers)

@@ -66,6 +66,41 @@ func verifyCollector(url string, endpoint string, cases map[string]float64, t *t
 	}
 }
 
+func verifyStreamingCollector(url string, endpoint string, prefix string, cases map[string]float64, t *testing.T) {
+	// create a new collector.
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "id",
+		URL: url,
+	}
+	coll := NewCollector(endpoint, servers, prefix)
+
+	// now collect the metrics
+	c := make(chan prometheus.Metric)
+	go coll.Collect(c)
+	for {
+		select {
+		case metric := <-c:
+			pb := &dto.Metric{}
+			if err := metric.Write(pb); err != nil {
+				t.Fatalf("Unable to write metric: %v", err)
+			}
+			gauge := pb.GetGauge()
+			val := gauge.GetValue()
+
+			name := parseDesc(metric.Desc().String())
+			expected, ok := cases[name]
+			if ok {
+				if val != expected {
+					t.Fatalf("Expected %s=%v, got %v", name, expected, val)
+				}
+			}
+		case <-time.After(10 * time.Millisecond):
+			return
+		}
+	}
+}
+
 // To account for the metrics that share the same descriptor but differ in their variable label values,
 // return a list of lists of label pairs for each of the supplied metric names.
 func getLabelValues(url string, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
@@ -345,6 +380,56 @@ func TestStreamingMetrics(t *testing.T) {
 	}
 
 	cases := map[string]float64{
+		"test_chan_bytes_total":        240,
+		"test_chan_msgs_total":         10,
+		"test_chan_last_seq":           10,
+		"test_chan_subs_last_sent":     10,
+		"test_chan_subs_pending_count": 0,
+		"test_chan_subs_max_inflight":  1024,
+	}
+
+	verifyCollector(url, "channelsz", cases, t)
+
+	cases = map[string]float64{
+		"test_server_bytes_total":   0,
+		"test_server_msgs_total":    0,
+		"test_server_channels":      0,
+		"test_server_subscriptions": 0,
+		"test_server_clients":       0,
+		"test_server_info":          1,
+		"test_server_active":        0,
+	}
+
+	verifyCollector(url, "serverz", cases, t)
+}
+
+func TestStreamingMetricsCustomPrefix(t *testing.T) {
+	s := pet.RunStreamingServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	sc, err := stan.Connect(stanClusterName, stanClientName,
+		stan.NatsURL(fmt.Sprintf("nats://localhost:%d", pet.ClientPort)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sc.Close()
+
+	_, err = sc.Subscribe("foo", func(_ *stan.Msg) {})
+	if err != nil {
+		t.Fatalf("Unexpected error on subscribe: %v", err)
+	}
+
+	totalMsgs := 10
+	msg := []byte("hello")
+	for i := 0; i < totalMsgs; i++ {
+		if err := sc.Publish("foo", msg); err != nil {
+			t.Fatalf("Unexpected error on publish: %v", err)
+		}
+	}
+
+	cases := map[string]float64{
 		"nss_chan_bytes_total":        240,
 		"nss_chan_msgs_total":         10,
 		"nss_chan_last_seq":           10,
@@ -353,7 +438,7 @@ func TestStreamingMetrics(t *testing.T) {
 		"nss_chan_subs_max_inflight":  1024,
 	}
 
-	verifyCollector(url, "channelsz", cases, t)
+	verifyStreamingCollector(url, "channelsz", "", cases, t)
 
 	cases = map[string]float64{
 		"nss_server_bytes_total":   0,
@@ -365,7 +450,7 @@ func TestStreamingMetrics(t *testing.T) {
 		"nss_server_active":        0,
 	}
 
-	verifyCollector(url, "serverz", cases, t)
+	verifyStreamingCollector(url, "serverz", "", cases, t)
 }
 
 func TestStreamingServerInfoMetricLabels(t *testing.T) {
@@ -374,7 +459,7 @@ func TestStreamingServerInfoMetricLabels(t *testing.T) {
 
 	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
 
-	serverInfoMetric := "nss_server_info"
+	serverInfoMetric := "test_server_info"
 	labelValues, err := getLabelValues(url, "serverz", []string{serverInfoMetric})
 	if err != nil {
 		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
@@ -452,8 +537,8 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 
 	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
 
-	streamingSunscriptionMetrics := []string{"nss_chan_subs_last_sent",
-		"nss_chan_subs_pending_count", "nss_chan_subs_max_inflight"}
+	streamingSunscriptionMetrics := []string{"test_chan_subs_last_sent",
+		"test_chan_subs_pending_count", "test_chan_subs_max_inflight"}
 	labelValues, err := getLabelValues(url, "channelsz", streamingSunscriptionMetrics)
 	if err != nil {
 		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
