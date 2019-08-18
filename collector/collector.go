@@ -24,7 +24,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var namespace = "gnatsd"
+// System Name Varibles
+var (
+	// use gnatsd for backward compatiblity.  Changing would require users to
+	// change their dashboards or other applications that rely on the
+	// prometheus metric names.
+	CoreSystem       = "gnatsd"
+	StreamingSystem  = "nss"
+	ReplicatorSystem = "replicator"
+)
 
 // CollectedServer is a NATS server polled by this collector
 type CollectedServer struct {
@@ -38,6 +46,7 @@ type NATSCollector struct {
 	Stats      map[string]interface{}
 	httpClient *http.Client
 	endpoint   string
+	system     string
 	servers    []*CollectedServer
 }
 
@@ -45,10 +54,11 @@ type NATSCollector struct {
 // Based on our current integration, we're going to treat all metrics as gauges.
 // We are going to call the set message on the gauge when we receive an updated
 // metrics pull.
-func newPrometheusGaugeVec(subsystem string, name string, help string, prefix string) (metric *prometheus.GaugeVec) {
+func newPrometheusGaugeVec(system, subsystem, name, help, prefix string) (metric *prometheus.GaugeVec) {
 	if help == "" {
 		help = name
 	}
+	namespace := system
 	if prefix != "" {
 		namespace = prefix
 	}
@@ -77,7 +87,7 @@ func getMetricURL(httpClient *http.Client, URL string, response interface{}) err
 	if err != nil {
 		return err
 	}
-
+	Tracef("Retrieved metric result:\n%s\n", string(body))
 	return json.Unmarshal(body, &response)
 }
 
@@ -244,7 +254,7 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 			i := response[k]
 			switch v := i.(type) {
 			case float64: // all json numbers are handled here.
-				nc.Stats[k] = newPrometheusGaugeVec(nc.endpoint, k, "", namespace)
+				nc.Stats[k] = newPrometheusGaugeVec(nc.system, nc.endpoint, k, "", namespace)
 			case string:
 				// do nothing
 			default:
@@ -255,21 +265,13 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 	}
 }
 
-// NewCollector creates a new NATS Collector from a list of monitoring URLs.
-// Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
-func NewCollector(endpoint string, servers []*CollectedServer, prefix string) prometheus.Collector {
-	if isStreamingEndpoint(endpoint) {
-		return newStreamingCollector(endpoint, servers, prefix)
-	}
-	if isConnzEndpoint(endpoint) {
-		return newConnzCollector(servers)
-	}
-
+func newNatsCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
 	// TODO:  Potentially add TLS config in the transport.
 	tr := &http.Transport{}
 	hc := &http.Client{Transport: tr}
 	nc := &NATSCollector{
 		httpClient: hc,
+		system:     system,
 		endpoint:   endpoint,
 	}
 
@@ -283,7 +285,29 @@ func NewCollector(endpoint string, servers []*CollectedServer, prefix string) pr
 		}
 	}
 
-	nc.initMetricsFromServers(namespace)
+	nc.initMetricsFromServers(system)
 
 	return nc
+}
+
+func getSystem(system, prefix string) string {
+	if prefix == "" {
+		return system
+	}
+	return prefix
+}
+
+// NewCollector creates a new NATS Collector from a list of monitoring URLs.
+// Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
+func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
+	if isStreamingEndpoint(system, endpoint) {
+		return newStreamingCollector(getSystem(system, prefix), endpoint, servers)
+	}
+	if isConnzEndpoint(system, endpoint) {
+		return newConnzCollector(getSystem(system, prefix), endpoint, servers)
+	}
+	if isReplicatorEndpoint(system, endpoint) {
+		return newReplicatorCollector(getSystem(system, prefix), "varz", servers)
+	}
+	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
 }

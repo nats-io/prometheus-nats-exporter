@@ -73,7 +73,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 		opts.LogType = collector.RemoteSysLogType
 	}
 
-	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetRoutez || opts.GetStreamingChannelz || opts.GetStreamingServerz
+	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetRoutez || opts.GetStreamingChannelz || opts.GetStreamingServerz || opts.GetReplicatorVarz
 	if !metricsSpecified {
 		// Mo logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
@@ -107,6 +107,7 @@ func main() {
 	flag.BoolVar(&opts.Trace, "V", false, "Enable trace log level.")
 	flag.BoolVar(&debugAndTrace, "DV", false, "Enable debug and trace log levels.")
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
+	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetRoutez, "routez", false, "Get route metrics.")
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
 	flag.BoolVar(&opts.GetStreamingChannelz, "channelz", false, "Get streaming channel metrics.")
@@ -117,7 +118,7 @@ func main() {
 	flag.StringVar(&opts.CaFile, "tlscacert", "", "Client certificate CA for verification (used with HTTPS).")
 	flag.StringVar(&opts.HTTPUser, "http_user", "", "Enable basic auth and set user name for HTTP scrapes.")
 	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes. NATS bcrypt supported.")
-	flag.StringVar(&opts.Prefix, "prefix", "", "Set the prefix for all the metrics.")
+	flag.StringVar(&opts.Prefix, "prefix", "", "Replace the default prefix for all the metrics.")
 	flag.BoolVar(&opts.UseInternalServerID, "use_internal_server_id", false, "Enables using ServerID from /varz")
 	flag.Parse()
 

@@ -82,7 +82,7 @@ func buildExporterURL(user, pass, addr string, path string, secure bool) string 
 	return fmt.Sprintf("%s://%s%s", proto, addr, path)
 }
 
-func checkExporterFull(t *testing.T, user, pass, addr string, path string, secure bool, expectedRc int) error {
+func checkExporterFull(t *testing.T, user, pass, addr, result, path string, secure bool, expectedRc int) error {
 	var resp *http.Response
 	var err error
 	url := buildExporterURL(user, pass, addr, path, secure)
@@ -109,14 +109,19 @@ func checkExporterFull(t *testing.T, user, pass, addr string, path string, secur
 	if err != nil {
 		return fmt.Errorf("got an error reading the body: %v", err)
 	}
-	if !strings.Contains(string(body), "gnatsd_varz_connections") {
+	results := string(body)
+	if !strings.Contains(results, result) {
 		return fmt.Errorf("response did not have NATS data")
 	}
 	return nil
 }
 
 func checkExporter(t *testing.T, addr string, secure bool) error {
-	return checkExporterFull(t, "", "", addr, "/metrics", secure, http.StatusOK)
+	return checkExporterFull(t, "", "", addr, "gnatsd_varz_connections", "/metrics", secure, http.StatusOK)
+}
+
+func checkExporterForResult(t *testing.T, addr, result string, secure bool) error {
+	return checkExporterFull(t, "", "", addr, result, "/metrics", secure, http.StatusOK)
 }
 
 func TestExporter(t *testing.T) {
@@ -260,7 +265,7 @@ func TestExporterScrapePathOption(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/some/other/path/to/metrics", false, http.StatusOK); err != nil {
+	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "gnatsd_varz_connections", "/some/other/path/to/metrics", false, http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -281,7 +286,7 @@ func TestExporterScrapePathOptionAddsSlash(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/elsewhere", false, http.StatusOK); err != nil {
+	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "gnatsd_varz_connections", "/elsewhere", false, http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -515,7 +520,7 @@ func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass s
 	}
 	defer exp.Stop()
 
-	return checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), "/metrics", false, expectedRc)
+	return checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), "gnatsd_varz_connections", "/metrics", false, expectedRc)
 }
 
 func TestExporterBasicAuth(t *testing.T) {
@@ -560,6 +565,59 @@ func TestExporterBasicAuth(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterPrefix(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetVarz = true
+	opts.Prefix = "test"
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if err := checkExporterForResult(t, exp.http.Addr().String(), "test_varz_connections", false); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterReplicator(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetReplicatorVarz = true
+	opts.NATSServerURL = "http://localhost:9222"
+
+	s1 := pet.RunServerWithPorts(pet.ClientPort, pet.MonitorPort)
+	defer s1.Shutdown()
+
+	s2 := pet.RunServerWithPorts(pet.ClientPort+1, pet.MonitorPort+1)
+	defer s2.Shutdown()
+
+	// Just test with NATS for this, getting protobuf errors with multiple
+	// streaming servers in the same process.
+	r, err := pet.RunTestReplicator(9922, pet.ClientPort, pet.ClientPort+1)
+	if err != nil {
+	   t.Fatalf("couldn't start replicator, %s", err)
+	}
+	defer r.Stop()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if err := checkExporterForResult(t, exp.http.Addr().String(), "replicator_server_start_time", false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }

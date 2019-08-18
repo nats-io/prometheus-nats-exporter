@@ -31,14 +31,14 @@ func parseDesc(desc string) string {
 	return strings.Split(desc, "\"")[1]
 }
 
-func verifyCollector(url string, endpoint string, cases map[string]float64, t *testing.T) {
+func verifyCollector(system, url string, endpoint string, cases map[string]float64, t *testing.T) {
 	// create a new collector.
 	servers := make([]*CollectedServer, 1)
 	servers[0] = &CollectedServer{
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(endpoint, servers, "test")
+	coll := NewCollector(system, endpoint, "", servers)
 
 	// now collect the metrics
 	c := make(chan prometheus.Metric)
@@ -73,7 +73,7 @@ func verifyStreamingCollector(url string, endpoint string, prefix string, cases 
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(endpoint, servers, prefix)
+	coll := NewCollector(StreamingSystem, endpoint, "", servers)
 
 	// now collect the metrics
 	c := make(chan prometheus.Metric)
@@ -103,7 +103,7 @@ func verifyStreamingCollector(url string, endpoint string, prefix string, cases 
 
 // To account for the metrics that share the same descriptor but differ in their variable label values,
 // return a list of lists of label pairs for each of the supplied metric names.
-func getLabelValues(url string, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
+func getLabelValues(system, url, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
 	labelValues := make(map[string][]map[string]string)
 	namesMap := make(map[string]bool)
 	for _, metricName := range metricNames {
@@ -151,7 +151,7 @@ func getLabelValues(url string, endpoint string, metricNames []string) (map[stri
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(endpoint, servers, "test")
+	coll := NewCollector(system, endpoint, "", servers)
 	coll.Collect(metrics)
 	close(metrics)
 
@@ -197,7 +197,7 @@ func TestVarz(t *testing.T) {
 		"gnatsd_varz_subscriptions":     1,
 	}
 
-	verifyCollector(url, "varz", cases, t)
+	verifyCollector(CoreSystem, url, "varz", cases, t)
 }
 
 func TestConnz(t *testing.T) {
@@ -214,7 +214,7 @@ func TestConnz(t *testing.T) {
 		"gnatsd_varz_connections":        0,
 	}
 
-	verifyCollector(url, "connz", cases, t)
+	verifyCollector(CoreSystem, url, "connz", cases, t)
 
 	// Test with connections.
 
@@ -226,7 +226,7 @@ func TestConnz(t *testing.T) {
 	nc := pet.CreateClientConnSubscribeAndPublish(t)
 	defer nc.Close()
 
-	verifyCollector(url, "connz", cases, t)
+	verifyCollector(CoreSystem, url, "connz", cases, t)
 }
 
 func TestNoServer(t *testing.T) {
@@ -237,7 +237,7 @@ func TestNoServer(t *testing.T) {
 		"gnatsd_varz_connections":        0,
 	}
 
-	verifyCollector(url, "varz", cases, t)
+	verifyCollector(CoreSystem, url, "varz", cases, t)
 }
 
 func TestRegister(t *testing.T) {
@@ -248,10 +248,10 @@ func TestRegister(t *testing.T) {
 	// check duplicates do not panic
 	servers = append(servers, cs)
 
-	NewCollector("varz", servers, "test")
+	NewCollector("test", "varz", "", servers)
 
 	// test idenpotency.
-	nc := NewCollector("varz", servers, "test")
+	nc := NewCollector("test", "varz", "", servers)
 
 	// test without a server (no error).
 	if err := prometheus.Register(nc); err == nil {
@@ -264,14 +264,14 @@ func TestRegister(t *testing.T) {
 	defer s.Shutdown()
 
 	// test collect with a server
-	nc = NewCollector("varz", servers, "test")
+	nc = NewCollector("test", "varz", "", servers)
 	if err := prometheus.Register(nc); err != nil {
 		t.Fatalf("Got unexpected error: %v", err)
 	}
 	prometheus.Unregister(nc)
 
 	// test collect with an invalid endpoint
-	nc = NewCollector("GARBAGE", servers, "test")
+	nc = NewCollector("test", "GARBAGE", "", servers)
 	if err := prometheus.Register(nc); err == nil {
 		t.Fatalf("Did not get expected error.")
 		defer prometheus.Unregister(nc)
@@ -292,22 +292,22 @@ func TestAllEndpoints(t *testing.T) {
 	cases := map[string]float64{
 		"gnatsd_varz_connections": 1,
 	}
-	verifyCollector(url, "varz", cases, t)
+	verifyCollector(CoreSystem, url, "varz", cases, t)
 
 	cases = map[string]float64{
 		"gnatsd_routez_num_routes": 0,
 	}
-	verifyCollector(url, "routez", cases, t)
+	verifyCollector(CoreSystem, url, "routez", cases, t)
 
 	cases = map[string]float64{
 		"gnatsd_subsz_num_subscriptions": 1,
 	}
-	verifyCollector(url, "subsz", cases, t)
+	verifyCollector(CoreSystem, url, "subsz", cases, t)
 
 	cases = map[string]float64{
 		"gnatsd_connz_total_connections": 1,
 	}
-	verifyCollector(url, "connz", cases, t)
+	verifyCollector(CoreSystem, url, "connz", cases, t)
 }
 
 const (
@@ -350,7 +350,7 @@ func TestStreamingVarz(t *testing.T) {
 		"gnatsd_varz_subscriptions":     14,
 	}
 
-	verifyCollector(url, "varz", cases, t)
+	verifyCollector(CoreSystem, url, "varz", cases, t)
 }
 
 func TestStreamingMetrics(t *testing.T) {
@@ -388,7 +388,7 @@ func TestStreamingMetrics(t *testing.T) {
 		"test_chan_subs_max_inflight":  1024,
 	}
 
-	verifyCollector(url, "channelsz", cases, t)
+	verifyCollector(StreamingSystem, url, "channelsz", cases, t)
 
 	cases = map[string]float64{
 		"test_server_bytes_total":   0,
@@ -400,7 +400,7 @@ func TestStreamingMetrics(t *testing.T) {
 		"test_server_active":        0,
 	}
 
-	verifyCollector(url, "serverz", cases, t)
+	verifyCollector(StreamingSystem, url, "serverz", cases, t)
 }
 
 func TestStreamingMetricsCustomPrefix(t *testing.T) {
@@ -459,8 +459,8 @@ func TestStreamingServerInfoMetricLabels(t *testing.T) {
 
 	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
 
-	serverInfoMetric := "test_server_info"
-	labelValues, err := getLabelValues(url, "serverz", []string{serverInfoMetric})
+	serverInfoMetric := "nss_server_info"
+	labelValues, err := getLabelValues(StreamingSystem, url, "serverz", []string{serverInfoMetric})
 	if err != nil {
 		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
 	}
@@ -537,9 +537,9 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 
 	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
 
-	streamingSunscriptionMetrics := []string{"test_chan_subs_last_sent",
-		"test_chan_subs_pending_count", "test_chan_subs_max_inflight"}
-	labelValues, err := getLabelValues(url, "channelsz", streamingSunscriptionMetrics)
+	streamingSunscriptionMetrics := []string{"nss_chan_subs_last_sent",
+		"nss_chan_subs_pending_count", "nss_chan_subs_max_inflight"}
+	labelValues, err := getLabelValues(StreamingSystem, url, "channelsz", streamingSunscriptionMetrics)
 	if err != nil {
 		t.Fatalf("Unexpected error getting labels for nss_server_info metric: %v", err)
 	}
@@ -586,4 +586,39 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 				"for a durable subscription", streamingSunscriptionMetric)
 		}
 	}
+}
+
+func TestReplicatorMetrics(t *testing.T) {
+	s1 := pet.RunServerWithPorts(pet.ClientPort, pet.MonitorPort)
+	defer s1.Shutdown()
+
+	s2 := pet.RunServerWithPorts(pet.ClientPort+1, pet.MonitorPort+1)
+	defer s2.Shutdown()
+
+	// Just test with NATS for this, getting protobuf errors with multiple
+	// streaming servers in the same process.
+	r, err := pet.RunTestReplicator(9922, pet.ClientPort, pet.ClientPort+1)
+	if err != nil {
+	   t.Fatalf("couldn't start replicator, %s", err)
+	}
+	defer r.Stop()
+
+	cases := map[string]float64{
+		"replicator_connector_bytes_in": 0,
+		"replicator_connector_bytes_out": 0,
+		"replicator_connector_connected": 1,
+		"replicator_connector_connects": 1,
+		"replicator_connector_disconnects": 0,
+		"replicator_connector_messages_in": 0,
+		"replicator_connector_messages_out": 0,
+		"replicator_connector_moving_average": 0,
+		"replicator_connector_quintile_50": -1,
+		"replicator_connector_quintile_75": -1,
+		"replicator_connector_quintile_90": -1,
+		"replicator_connector_quintile_95": -1,
+		"replicator_connector_request_count": 0,
+	}
+
+	url := "http://127.0.0.1:9922"
+	verifyCollector(ReplicatorSystem, url, "varz", cases, t)
 }

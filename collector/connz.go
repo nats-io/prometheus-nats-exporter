@@ -7,8 +7,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func isConnzEndpoint(endpoint string) bool {
-	return endpoint == "connz"
+func isConnzEndpoint(system, endpoint string) bool {
+	return system == CoreSystem && endpoint == "connz"
 }
 
 type connzCollector struct {
@@ -24,35 +24,35 @@ type connzCollector struct {
 	pendingBytes   *prometheus.Desc
 }
 
-func newConnzCollector(servers []*CollectedServer) prometheus.Collector {
+func newConnzCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
 	nc := &connzCollector{
 		httpClient: http.DefaultClient,
 		numConnections: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "connz", "num_connections"),
+			prometheus.BuildFQName(system, endpoint, "num_connections"),
 			"num_connections",
 			[]string{"server_id"},
 			nil,
 		),
 		offset: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "connz", "offset"),
+			prometheus.BuildFQName(system, endpoint, "offset"),
 			"offset",
 			[]string{"server_id"},
 			nil,
 		),
 		total: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "connz", "total"),
+			prometheus.BuildFQName(system, endpoint, "total"),
 			"total",
 			[]string{"server_id"},
 			nil,
 		),
 		limit: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "connz", "limit"),
+			prometheus.BuildFQName(system, endpoint, "limit"),
 			"limit",
 			[]string{"server_id"},
 			nil,
 		),
 		pendingBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "connz", "pending_bytes"),
+			prometheus.BuildFQName(system, endpoint, "pending_bytes"),
 			"pending_bytes",
 			[]string{"server_id"},
 			nil,

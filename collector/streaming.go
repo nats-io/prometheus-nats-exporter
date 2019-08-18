@@ -1,3 +1,15 @@
+// Copyright 2019 The NATS Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package collector
 
 import (
@@ -12,21 +24,18 @@ import (
 
 // newStreamingCollector collects channelsz and serversz metrics of
 // streaming servers.
-func newStreamingCollector(endpoint string, servers []*CollectedServer, prefix string) prometheus.Collector {
-	if prefix == "" {
-		prefix = "nss"
-	}
+func newStreamingCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
 	switch endpoint {
 	case "channelsz":
-		return newChannelsCollector(servers, prefix)
+		return newChannelsCollector(system, servers)
 	case "serverz":
-		return newServerzCollector(servers, prefix)
+		return newServerzCollector(system, servers)
 	}
 	return nil
 }
 
-func isStreamingEndpoint(endpoint string) bool {
-	return endpoint == "channelsz" || endpoint == "serverz"
+func isStreamingEndpoint(system, endpoint string) bool {
+	return system == StreamingSystem && (endpoint == "channelsz" || endpoint == "serverz")
 }
 
 type serverzCollector struct {
@@ -34,6 +43,7 @@ type serverzCollector struct {
 
 	httpClient *http.Client
 	servers    []*CollectedServer
+	system     string
 
 	bytesTotal *prometheus.Desc
 	msgsTotal  *prometheus.Desc
@@ -44,47 +54,48 @@ type serverzCollector struct {
 	info       *prometheus.Desc
 }
 
-func newServerzCollector(servers []*CollectedServer, prefix string) prometheus.Collector {
+func newServerzCollector(system string, servers []*CollectedServer) prometheus.Collector {
 	nc := &serverzCollector{
 		httpClient: http.DefaultClient,
+		system:     system,
 		bytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "bytes_total"),
+			prometheus.BuildFQName(system, "server", "bytes_total"),
 			"Total of bytes",
 			[]string{"server_id"},
 			nil,
 		),
 		msgsTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "msgs_total"),
+			prometheus.BuildFQName(system, "server", "msgs_total"),
 			"Total of messages",
 			[]string{"server_id"},
 			nil,
 		),
 		channels: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "channels"),
+			prometheus.BuildFQName(system, "server", "channels"),
 			"Total channels",
 			[]string{"server_id"},
 			nil,
 		),
 		subs: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "subscriptions"),
+			prometheus.BuildFQName(system, "server", "subscriptions"),
 			"Total subscriptions",
 			[]string{"server_id"},
 			nil,
 		),
 		clients: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "clients"),
+			prometheus.BuildFQName(system, "server", "clients"),
 			"Total clients",
 			[]string{"server_id"},
 			nil,
 		),
 		active: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "active"),
+			prometheus.BuildFQName(system, "server", "active"),
 			"Active server",
 			[]string{"server_id"},
 			nil,
 		),
 		info: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "server", "info"),
+			prometheus.BuildFQName(system, "server", "info"),
 			"Info",
 			[]string{"server_id", "cluster_id", "version", "go_version", "state", "role", "start_time"},
 			nil,
@@ -159,6 +170,7 @@ type channelsCollector struct {
 
 	httpClient *http.Client
 	servers    []*CollectedServer
+	system     string
 
 	chanBytesTotal   *prometheus.Desc
 	chanMsgsTotal    *prometheus.Desc
@@ -168,42 +180,43 @@ type channelsCollector struct {
 	subsMaxInFlight  *prometheus.Desc
 }
 
-func newChannelsCollector(servers []*CollectedServer, prefix string) prometheus.Collector {
+func newChannelsCollector(system string, servers []*CollectedServer) prometheus.Collector {
 	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline", "durable_name"}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
+		system:     system,
 		chanBytesTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "chan", "bytes_total"),
+			prometheus.BuildFQName(system, "chan", "bytes_total"),
 			"Total of bytes",
 			[]string{"server_id", "channel"},
 			nil,
 		),
 		chanMsgsTotal: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "chan", "msgs_total"),
+			prometheus.BuildFQName(system, "chan", "msgs_total"),
 			"Total of messages",
 			[]string{"server_id", "channel"},
 			nil,
 		),
 		chanLastSeq: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "chan", "last_seq"),
+			prometheus.BuildFQName(system, "chan", "last_seq"),
 			"Last seq",
 			[]string{"server_id", "channel"},
 			nil,
 		),
 		subsLastSent: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "chan", "subs_last_sent"),
+			prometheus.BuildFQName(system, "chan", "subs_last_sent"),
 			"Last message sent",
 			subsVariableLabels,
 			nil,
 		),
 		subsPendingCount: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "chan", "subs_pending_count"),
+			prometheus.BuildFQName(system, "chan", "subs_pending_count"),
 			"Pending message count",
 			subsVariableLabels,
 			nil,
 		),
 		subsMaxInFlight: prometheus.NewDesc(
-			prometheus.BuildFQName(prefix, "chan", "subs_max_inflight"),
+			prometheus.BuildFQName(system, "chan", "subs_max_inflight"),
 			"Max in flight message count",
 			subsVariableLabels,
 			nil,

@@ -42,6 +42,7 @@ type NATSExporterOptions struct {
 	GetVarz              bool
 	GetSubz              bool
 	GetRoutez            bool
+	GetReplicatorVarz    bool
 	GetStreamingChannelz bool
 	GetStreamingServerz  bool
 	RetryInterval        time.Duration
@@ -109,11 +110,14 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 	return ne
 }
 
-func (ne *NATSExporter) createCollector(endpoint string) {
-	ne.registerCollector(endpoint, collector.NewCollector(endpoint, ne.servers, ne.opts.Prefix))
+func (ne *NATSExporter) createCollector(system, endpoint string) {
+	ne.registerCollector(system, endpoint,
+		collector.NewCollector(system, endpoint,
+			ne.opts.Prefix,
+			ne.servers))
 }
 
-func (ne *NATSExporter) registerCollector(endpoint string, nc prometheus.Collector) {
+func (ne *NATSExporter) registerCollector(system, endpoint string, nc prometheus.Collector) {
 	if err := prometheus.Register(nc); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
 			collector.Errorf("A collector for this server's metrics has already been registered.")
@@ -122,12 +126,12 @@ func (ne *NATSExporter) registerCollector(endpoint string, nc prometheus.Collect
 			time.AfterFunc(ne.opts.RetryInterval, func() {
 				collector.Debugf("Creating a collector for endpoint: %s", endpoint)
 				ne.Lock()
-				ne.createCollector(endpoint)
+				ne.createCollector(system, endpoint)
 				ne.Unlock()
 			})
 		}
 	} else {
-		collector.Debugf("Registered collector for endpoint: %s", endpoint)
+		collector.Debugf("Registered collector for system %s, endpoint: %s", system, endpoint)
 		ne.collectors = append(ne.collectors, nc)
 	}
 }
@@ -159,26 +163,33 @@ func (ne *NATSExporter) initializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz && !opts.GetStreamingChannelz && !opts.GetStreamingServerz {
+	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
+		!opts.GetStreamingChannelz && !opts.GetStreamingServerz && !opts.GetReplicatorVarz {
 		return fmt.Errorf("no collectors specfied")
 	}
+	if opts.GetReplicatorVarz && opts.GetVarz {
+		return fmt.Errorf("replicatorVarz cannot be used with varz")
+	}
 	if opts.GetSubz {
-		ne.createCollector("subsz")
+		ne.createCollector(collector.CoreSystem, "subsz")
 	}
 	if opts.GetVarz {
-		ne.createCollector("varz")
+		ne.createCollector(collector.CoreSystem, "varz")
 	}
 	if opts.GetConnz {
-		ne.createCollector("connz")
+		ne.createCollector(collector.CoreSystem, "connz")
 	}
 	if opts.GetRoutez {
-		ne.createCollector("routez")
+		ne.createCollector(collector.CoreSystem, "routez")
 	}
 	if opts.GetStreamingChannelz {
-		ne.createCollector("channelsz")
+		ne.createCollector(collector.StreamingSystem, "channelsz")
 	}
 	if opts.GetStreamingServerz {
-		ne.createCollector("serverz")
+		ne.createCollector(collector.StreamingSystem, "serverz")
+	}
+	if opts.GetReplicatorVarz {
+		ne.createCollector(collector.ReplicatorSystem, "varz")
 	}
 	return nil
 }

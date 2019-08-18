@@ -3,6 +3,12 @@
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "XFNEvZSSAOs7BiP5PbLlqKLGM/Q=",
+			"path": "github.com/nats-io/nats-replicator",
+			"revision": "e53d5735ff2be6a58b8c019cf76c167a67dd0ab0",
+			"revisionTime": "2019-08-17T00:48:55Z"
+		},
+		{
 			"checksumSHA1": "oaVDN97dJBiBHjHWDrsKIfOF92c=",
 			"path": "golang.org/x/crypto/bcrypt",
 			"revision": "d94f6bc902c2970500950e88ab1a54a0c26bec48",
