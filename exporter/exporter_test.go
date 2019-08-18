@@ -611,6 +611,9 @@ func TestExporterReplicator(t *testing.T) {
 	}
 	defer r.Stop()
 
+	// Give the replicator time to setup and connect.
+	time.Sleep(2 * time.Second)
+
 	exp := NewExporter(opts)
 	if err := exp.Start(); err != nil {
 		t.Fatalf("%v", err)

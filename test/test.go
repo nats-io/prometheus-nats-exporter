@@ -78,7 +78,7 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 	// enableLogging = true
 
 	opts := &server.Options{
-		Host:     "localhost",
+		Host:     "127.0.0.1",
 		Port:     cport,
 		HTTPHost: "127.0.0.1",
 		HTTPPort: mport,
