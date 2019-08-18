@@ -168,14 +168,14 @@ func RunTestReplicator(monitorPort, natsServerPort1, natsServerPort2 int) (*rcor
 	config.NATS = []rconf.NATSConfig{
 		rconf.NATSConfig{
 			Name:           "nats",
-			Servers:        []string{fmt.Sprintf("127.0.01:%d", natsServerPort1)},
+			Servers:        []string{fmt.Sprintf("127.0.0.1:%d", natsServerPort1)},
 			ConnectTimeout: 2000,
 			ReconnectWait:  2000,
 			MaxReconnects:  5,
 		},
 		rconf.NATSConfig{
 			Name:           "nats2",
-			Servers:        []string{fmt.Sprintf("127.0.01:%d", natsServerPort2)},
+			Servers:        []string{fmt.Sprintf("127.0.0.1:%d", natsServerPort2)},
 			ConnectTimeout: 2000,
 			ReconnectWait:  2000,
 			MaxReconnects:  5,
