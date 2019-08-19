@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2019 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,6 +23,9 @@ import (
 	"github.com/nats-io/gnatsd/logger"
 	"github.com/nats-io/gnatsd/server"
 	"github.com/nats-io/go-nats"
+
+	rconf "github.com/nats-io/nats-replicator/server/conf"
+	rcore "github.com/nats-io/nats-replicator/server/core"
 	nss "github.com/nats-io/nats-streaming-server/server"
 )
 
@@ -39,16 +42,24 @@ func RunServer() *server.Server {
 
 // RunStreamingServer runs the STAN server in a go routine.
 func RunStreamingServer() *nss.StanServer {
+	return RunStreamingServerWithPorts(nss.DefaultClusterID, ClientPort, MonitorPort)
+}
+
+// RunStreamingServerWithPorts runs the STAN server in a go routine allowing
+// the clusterID and ports to be specified..
+func RunStreamingServerWithPorts(clusterID string, port, monitorPort int) *nss.StanServer {
 	resetPreviousHTTPConnections()
 
 	sopts := nss.GetDefaultOptions()
+	sopts.ID = clusterID
+
 	nopts := nss.DefaultNatsServerOptions
 	nopts.NoLog = true
 	nopts.NoSigs = true
-	nopts.Host = "localhost"
-	nopts.Port = ClientPort
-	nopts.HTTPHost = "localhost"
-	nopts.HTTPPort = MonitorPort
+	nopts.Host = "127.0.0.1"
+	nopts.Port = port
+	nopts.HTTPHost = "127.0.0.1"
+	nopts.HTTPPort = monitorPort
 	s, err := nss.RunServerWithOpts(sopts, &nopts)
 	if err != nil {
 		panic(err)
@@ -67,7 +78,7 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 	// enableLogging = true
 
 	opts := &server.Options{
-		Host:     "localhost",
+		Host:     "127.0.0.1",
 		Port:     cport,
 		HTTPHost: "127.0.0.1",
 		HTTPPort: mport,
@@ -142,4 +153,56 @@ func CreateClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
 	// Wait for message
 	<-ch
 	return nc
+}
+
+// RunTestReplicator starts an instance of the replicator
+func RunTestReplicator(monitorPort, natsServerPort1, natsServerPort2 int) (*rcore.NATSReplicator, error) {
+	config := rconf.DefaultConfig()
+	config.Logging.Debug = false
+	config.Logging.Trace = false
+	config.Logging.Colors = false
+	config.Monitoring = rconf.HTTPConfig{
+		HTTPPort: monitorPort,
+	}
+
+	config.NATS = []rconf.NATSConfig{
+		rconf.NATSConfig{
+			Name:           "nats",
+			Servers:        []string{fmt.Sprintf("127.0.0.1:%d", natsServerPort1)},
+			ConnectTimeout: 2000,
+			ReconnectWait:  2000,
+			MaxReconnects:  5,
+		},
+		rconf.NATSConfig{
+			Name:           "nats2",
+			Servers:        []string{fmt.Sprintf("127.0.0.1:%d", natsServerPort2)},
+			ConnectTimeout: 2000,
+			ReconnectWait:  2000,
+			MaxReconnects:  5,
+		},
+	}
+
+	config.Connect = []rconf.ConnectorConfig{
+		rconf.ConnectorConfig{
+			Type:               "NatsToNats",
+			IncomingConnection: "nats",
+			OutgoingConnection: "nats2",
+			IncomingSubject:    "bar",
+			OutgoingSubject:    "bar.out",
+		},
+	}
+
+	rep := rcore.NewNATSReplicator()
+	err := rep.InitializeFromConfig(config)
+	if err != nil {
+		rep.Stop()
+		return nil, err
+	}
+	err = rep.Start()
+	if err != nil {
+		rep.Stop()
+		return nil, err
+	}
+
+	return rep, nil
 }

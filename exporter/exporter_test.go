@@ -82,7 +82,7 @@ func buildExporterURL(user, pass, addr string, path string, secure bool) string 
 	return fmt.Sprintf("%s://%s%s", proto, addr, path)
 }
 
-func checkExporterFull(t *testing.T, user, pass, addr string, path string, secure bool, expectedRc int) error {
+func checkExporterFull(t *testing.T, user, pass, addr, result, path string, secure bool, expectedRc int) (string, error) {
 	var resp *http.Response
 	var err error
 	url := buildExporterURL(user, pass, addr, path, secure)
@@ -93,30 +93,36 @@ func checkExporterFull(t *testing.T, user, pass, addr string, path string, secur
 		resp, err = httpGet(url)
 	}
 	if err != nil {
-		return fmt.Errorf("error from get: %v", err)
+		return "", fmt.Errorf("error from get: %v", err)
 	}
 	defer resp.Body.Close()
 
 	rc := resp.StatusCode
 	if rc != expectedRc {
-		return fmt.Errorf("expected a %d response, got %d", expectedRc, rc)
+		return "", fmt.Errorf("expected a %d response, got %d", expectedRc, rc)
 	}
 	if rc != 200 {
-		return nil
+		return "", nil
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("got an error reading the body: %v", err)
+		return "", fmt.Errorf("got an error reading the body: %v", err)
 	}
-	if !strings.Contains(string(body), "gnatsd_varz_connections") {
-		return fmt.Errorf("response did not have NATS data")
+	results := string(body)
+	if !strings.Contains(results, result) {
+		return results, fmt.Errorf("response did not have NATS data")
 	}
-	return nil
+	return results, nil
 }
 
 func checkExporter(t *testing.T, addr string, secure bool) error {
-	return checkExporterFull(t, "", "", addr, "/metrics", secure, http.StatusOK)
+	_, err := checkExporterFull(t, "", "", addr, "gnatsd_varz_connections", "/metrics", secure, http.StatusOK)
+	return err
+}
+
+func checkExporterForResult(t *testing.T, addr, result string, secure bool) (string, error) {
+	return checkExporterFull(t, "", "", addr, result, "/metrics", secure, http.StatusOK)
 }
 
 func TestExporter(t *testing.T) {
@@ -260,7 +266,7 @@ func TestExporterScrapePathOption(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/some/other/path/to/metrics", false, http.StatusOK); err != nil {
+	if _, err := checkExporterFull(t, "", "", exp.http.Addr().String(), "gnatsd_varz_connections", "/some/other/path/to/metrics", false, http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -281,7 +287,7 @@ func TestExporterScrapePathOptionAddsSlash(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporterFull(t, "", "", exp.http.Addr().String(), "/elsewhere", false, http.StatusOK); err != nil {
+	if _, err := checkExporterFull(t, "", "", exp.http.Addr().String(), "gnatsd_varz_connections", "/elsewhere", false, http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -515,7 +521,8 @@ func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass s
 	}
 	defer exp.Stop()
 
-	return checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), "/metrics", false, expectedRc)
+	_, err := checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), "gnatsd_varz_connections", "/metrics", false, expectedRc)
+	return err
 }
 
 func TestExporterBasicAuth(t *testing.T) {
@@ -561,5 +568,61 @@ func TestExporterBasicAuth(t *testing.T) {
 	}
 	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterPrefix(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetVarz = true
+	opts.Prefix = "test"
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if _, err := checkExporterForResult(t, exp.http.Addr().String(), "test_varz_connections", false); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterReplicator(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetReplicatorVarz = true
+	opts.NATSServerURL = "http://127.0.0.1:9999"
+
+	s1 := pet.RunServerWithPorts(pet.ClientPort, pet.MonitorPort)
+	defer s1.Shutdown()
+
+	s2 := pet.RunServerWithPorts(pet.ClientPort+1, pet.MonitorPort+1)
+	defer s2.Shutdown()
+
+	// Just test with NATS for this, getting protobuf errors with multiple
+	// streaming servers in the same process.
+	r, err := pet.RunTestReplicator(9999, pet.ClientPort, pet.ClientPort+1)
+	if err != nil {
+	   t.Fatalf("couldn't start replicator, %s", err)
+	}
+	defer r.Stop()
+
+	// Give the replicator time to setup and connect.
+	time.Sleep(2 * time.Second)
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if resp, err := checkExporterForResult(t, exp.http.Addr().String(), "replicator_server_start_time", false); err != nil {
+		t.Fatalf("%v:\n%s", err, resp)
 	}
 }
