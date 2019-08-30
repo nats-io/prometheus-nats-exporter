@@ -609,7 +609,7 @@ func TestExporterReplicator(t *testing.T) {
 	// streaming servers in the same process.
 	r, err := pet.RunTestReplicator(9999, pet.ClientPort, pet.ClientPort+1)
 	if err != nil {
-	   t.Fatalf("couldn't start replicator, %s", err)
+		t.Fatalf("couldn't start replicator, %s", err)
 	}
 	defer r.Stop()
 

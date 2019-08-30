@@ -599,24 +599,24 @@ func TestReplicatorMetrics(t *testing.T) {
 	// streaming servers in the same process.
 	r, err := pet.RunTestReplicator(9922, pet.ClientPort, pet.ClientPort+1)
 	if err != nil {
-	   t.Fatalf("couldn't start replicator, %s", err)
+		t.Fatalf("couldn't start replicator, %s", err)
 	}
 	defer r.Stop()
 
 	cases := map[string]float64{
-		"replicator_connector_bytes_in": 0,
-		"replicator_connector_bytes_out": 0,
-		"replicator_connector_connected": 1,
-		"replicator_connector_connects": 1,
-		"replicator_connector_disconnects": 0,
-		"replicator_connector_messages_in": 0,
-		"replicator_connector_messages_out": 0,
+		"replicator_connector_bytes_in":       0,
+		"replicator_connector_bytes_out":      0,
+		"replicator_connector_connected":      1,
+		"replicator_connector_connects":       1,
+		"replicator_connector_disconnects":    0,
+		"replicator_connector_messages_in":    0,
+		"replicator_connector_messages_out":   0,
 		"replicator_connector_moving_average": 0,
-		"replicator_connector_quintile_50": -1,
-		"replicator_connector_quintile_75": -1,
-		"replicator_connector_quintile_90": -1,
-		"replicator_connector_quintile_95": -1,
-		"replicator_connector_request_count": 0,
+		"replicator_connector_quintile_50":    -1,
+		"replicator_connector_quintile_75":    -1,
+		"replicator_connector_quintile_90":    -1,
+		"replicator_connector_quintile_95":    -1,
+		"replicator_connector_request_count":  0,
 	}
 
 	url := "http://127.0.0.1:9922"
