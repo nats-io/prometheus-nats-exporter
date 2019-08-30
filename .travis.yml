@@ -4,22 +4,22 @@ go:
 - 1.12.x
 
 install:
-- go get github.com/nats-io/go-nats
-- go get github.com/nats-io/nats-server
-- go get github.com/nats-io/nats-replicator
-- go get github.com/mattn/goveralls
-- go get github.com/wadey/gocovmerge
-- go get github.com/alecthomas/gometalinter
+- go get -v github.com/nats-io/go-nats
+- go get -v github.com/nats-io/nats-server
+- go get -v github.com/nats-io/nats-replicator
+- go get -v github.com/mattn/goveralls
+- go get -v github.com/wadey/gocovmerge
+- go get -v github.com/alecthomas/gometalinter
 - gometalinter --install
 before_script:
 - EXCLUDE_VENDOR=$(go list ./... | grep -v "/vendor/")
-- go fmt ./...
-- go build
-- go install
+- test -z "$(gofmt -l . | grep -v "vendor/")"
+- go build -v
+- go install -v
 - go vet $EXCLUDE_VENDOR
 - travis_wait 20 gometalinter ./... --vendor --disable=gocyclo --fast --deadline 20m
 script:
-- go test -i -race $EXCLUDE_VENDOR -p 1
+- go test -v -i -race $EXCLUDE_VENDOR -p 1
 - go test -v -race $EXCLUDE_VENDOR -p 1
 after_success:
 - if [[ "$TRAVIS_GO_VERSION" == 1.12.* ]]; then ./scripts/cov.sh TRAVIS; fi
