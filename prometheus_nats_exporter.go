@@ -73,7 +73,9 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 		opts.LogType = collector.RemoteSysLogType
 	}
 
-	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetRoutez || opts.GetStreamingChannelz || opts.GetStreamingServerz || opts.GetReplicatorVarz
+	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz ||
+		opts.GetRoutez || opts.GetStreamingChannelz || opts.GetStreamingServerz ||
+		opts.GetReplicatorVarz
 	if !metricsSpecified {
 		// Mo logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
@@ -96,7 +98,8 @@ func main() {
 	flag.StringVar(&opts.ListenAddress, "addr", exporter.DefaultListenAddress, "Network host to listen on.")
 	flag.StringVar(&opts.ListenAddress, "a", exporter.DefaultListenAddress, "Network host to listen on.")
 	flag.StringVar(&opts.ScrapePath, "path", exporter.DefaultScrapePath, "URL path from which to serve scrapes.")
-	flag.IntVar(&retryInterval, "ri", exporter.DefaultRetryIntervalSecs, "Interval in seconds to retry NATS Server monitor URL.")
+	flag.IntVar(&retryInterval, "ri", exporter.DefaultRetryIntervalSecs,
+		"Interval in seconds to retry NATS Server monitor URL.")
 	flag.StringVar(&opts.LogFile, "l", "", "Log file name.")
 	flag.StringVar(&opts.LogFile, "log", "", "Log file name.")
 	flag.BoolVar(&useSysLog, "s", false, "Write log statements to the syslog.")
@@ -165,7 +168,8 @@ necessary.`)
 				collector.Fatalf("Unable to parse URL %q: %v", arg, err)
 			}
 			if err := exp.AddServer(id, url); err != nil {
-				collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", id, url, err)
+				collector.Fatalf("Unable to setup server in exporter: %s, %s: %v",
+					id, url, err)
 			}
 		}
 	}

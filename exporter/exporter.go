@@ -217,9 +217,9 @@ func (ne *NATSExporter) Start() error {
 		return err
 	}
 
-	if err := ne.startHTTP(ne.opts.ListenAddress, ne.opts.ListenPort); err != nil {
+	if err := ne.startHTTP(); err != nil {
 		ne.clearCollectors()
-		return fmt.Errorf("Error serving http:  %v", err)
+		return fmt.Errorf("error serving http:  %v", err)
 	}
 
 	ne.doneWg.Add(1)
@@ -319,7 +319,7 @@ func (ne *NATSExporter) getScrapeHandler() http.Handler {
 // startHTTP configures and starts the HTTP server for applications to poll data from
 // exporter.
 // caller must lock
-func (ne *NATSExporter) startHTTP(listenAddress string, listenPort int) error {
+func (ne *NATSExporter) startHTTP() error {
 	var hp string
 	var path string
 	var err error

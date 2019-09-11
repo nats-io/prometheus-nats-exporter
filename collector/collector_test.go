@@ -66,7 +66,7 @@ func verifyCollector(system, url string, endpoint string, cases map[string]float
 	}
 }
 
-func verifyStreamingCollector(url string, endpoint string, prefix string, cases map[string]float64, t *testing.T) {
+func verifyStreamingCollector(url string, endpoint string, cases map[string]float64, t *testing.T) {
 	// create a new collector.
 	servers := make([]*CollectedServer, 1)
 	servers[0] = &CollectedServer{
@@ -438,7 +438,7 @@ func TestStreamingMetricsCustomPrefix(t *testing.T) {
 		"nss_chan_subs_max_inflight":  1024,
 	}
 
-	verifyStreamingCollector(url, "channelsz", "", cases, t)
+	verifyStreamingCollector(url, "channelsz", cases, t)
 
 	cases = map[string]float64{
 		"nss_server_bytes_total":   0,
@@ -450,7 +450,7 @@ func TestStreamingMetricsCustomPrefix(t *testing.T) {
 		"nss_server_active":        0,
 	}
 
-	verifyStreamingCollector(url, "serverz", "", cases, t)
+	verifyStreamingCollector(url, "serverz", cases, t)
 }
 
 func TestStreamingServerInfoMetricLabels(t *testing.T) {
