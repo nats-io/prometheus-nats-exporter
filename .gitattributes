@@ -1,0 +1,5 @@
+# Default line endings is \n everywhere, even Windows.
+* text eol=lf
+
+# Don't touch these files.
+*.jpg binary
