@@ -25,3 +25,4 @@ _testmain.go
 travis_wait*.log
 
 dist/
+prometheus-nats-exporter
