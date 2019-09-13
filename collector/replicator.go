@@ -80,7 +80,7 @@ func isReplicatorEndpoint(system, endpoint string) bool {
 	return system == ReplicatorSystem && endpoint == "varz"
 }
 
-func newReplicatorCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
+func newReplicatorCollector(system string, servers []*CollectedServer) prometheus.Collector {
 	nc := &replicatorCollector{
 		httpClient: http.DefaultClient,
 		startTime: prometheus.NewDesc(
@@ -236,7 +236,7 @@ func (nc *replicatorCollector) Collect(ch chan<- prometheus.Metric) {
 			labelValues := []string{server.ID, c.ID, c.Name}
 
 			connected := float64(0)
-			if c.Connected == true {
+			if c.Connected {
 				connected = float64(1)
 			}
 			ch <- prometheus.MustNewConstMetric(nc.connected, prometheus.GaugeValue, connected, labelValues...)
@@ -247,11 +247,11 @@ func (nc *replicatorCollector) Collect(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(nc.messagesIn, prometheus.GaugeValue, float64(c.MessagesIn), labelValues...)
 			ch <- prometheus.MustNewConstMetric(nc.messagesOut, prometheus.GaugeValue, float64(c.MessagesOut), labelValues...)
 			ch <- prometheus.MustNewConstMetric(nc.count, prometheus.GaugeValue, float64(c.RequestCount), labelValues...)
-			ch <- prometheus.MustNewConstMetric(nc.movingAverage, prometheus.GaugeValue, float64(c.MovingAverage), labelValues...)
-			ch <- prometheus.MustNewConstMetric(nc.quintile50, prometheus.GaugeValue, float64(c.Quintile50), labelValues...)
-			ch <- prometheus.MustNewConstMetric(nc.quintile75, prometheus.GaugeValue, float64(c.Quintile75), labelValues...)
-			ch <- prometheus.MustNewConstMetric(nc.quintile90, prometheus.GaugeValue, float64(c.Quintile90), labelValues...)
-			ch <- prometheus.MustNewConstMetric(nc.quintile95, prometheus.GaugeValue, float64(c.Quintile95), labelValues...)
+			ch <- prometheus.MustNewConstMetric(nc.movingAverage, prometheus.GaugeValue, c.MovingAverage, labelValues...)
+			ch <- prometheus.MustNewConstMetric(nc.quintile50, prometheus.GaugeValue, c.Quintile50, labelValues...)
+			ch <- prometheus.MustNewConstMetric(nc.quintile75, prometheus.GaugeValue, c.Quintile75, labelValues...)
+			ch <- prometheus.MustNewConstMetric(nc.quintile90, prometheus.GaugeValue, c.Quintile90, labelValues...)
+			ch <- prometheus.MustNewConstMetric(nc.quintile95, prometheus.GaugeValue, c.Quintile95, labelValues...)
 		}
 	}
 }

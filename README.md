@@ -1,16 +1,21 @@
 [![License][License-Image]][License-Url] [![Build][Build-Status-Image]][Build-Status-Url] [![Coverage][Coverage-Image]][Coverage-Url]
 # The Prometheus NATS Exporter
-The Prometheus NATS Exporter consists of both a package and an application that exports [NATS server](http://nats.io/documentation/server/gnatsd-intro/) metrics to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates metrics from the server monitoring endpoints you choose (varz, connz, subsz, routez) from a NATS server into a single Prometheus exporter endpoint.
+The Prometheus NATS Exporter consists of both a package and an application that
+exports [NATS server](http://nats.io/documentation/server/gnatsd-intro) metrics
+to [Prometheus](https://prometheus.io/) for monitoring.  The exporter aggregates
+metrics from the server monitoring endpoints you choose (varz, connz, subsz,
+routez) from a NATS server into a single Prometheus exporter endpoint.
 
 # Build
 ``` bash
-export GO111MODULE=on
+export GO111MODULE=off
 go build
 ```
 
 # Run
-Start the prometheus-nats-exporter executable, and poll the `varz` metrics endpoints of the NATS server
-located on `localhost` configured with a monitor port of `5555`.
+Start the prometheus-nats-exporter executable, and poll the `varz` metrics
+endpoints of the NATS server located on `localhost` configured with a monitor
+port of `5555`.
 
 ``` bash
 prometheus-nats-exporter -varz "http://localhost:5555"
@@ -84,21 +89,24 @@ Usage of ./prometheus-nats-exporter:
 
 ###  The URL parameter
 
-The url parameter is a standard url.  Both `http` and `https` (when TLS is configured) is supported.
+The url parameter is a standard url.  Both `http` and `https` (when TLS is
+configured) is supported.
 
 e.g.
 `http://denver1.foobar.com:8222`
 
 # Monitoring
 
-The NATS Prometheus exporter exposes metrics through an HTTP interface, and will default to:
+The NATS Prometheus exporter exposes metrics through an HTTP interface, and will
+default to:
 `http://0.0.0.0:7777/metrics`.
 
-When `--http_user` and `--http_pass` is used, you will need to set the username password
-in prometheus.  See `basic_auth` in the prometheus configuration documentation.  If using 
-a bcrypted password use **a very low cost** as scrapes occur frequently.
+When `--http_user` and `--http_pass` is used, you will need to set the username
+password in prometheus.  See `basic_auth` in the prometheus configuration
+documentation.  If using a bcrypted password use **a very low cost** as scrapes
+occur frequently.
 
-It will return output that is readable by Prometheus.  
+It will return output that is readable by Prometheus.
 
 The returned data looks like this:
 ```text
@@ -115,7 +123,8 @@ gnatsd_varz_max_connections{server_id="http://localhost:8222"} 65536
 
 # The NATS Prometheus Exporter API
 
-The NATS prometheus exporter also provides a simple and easy to use API that allows it to run embedded in your code.  
+The NATS prometheus exporter also provides a simple and easy to use API that
+allows it to run embedded in your code.
 
 ## Import the exporter package
 
@@ -130,7 +139,7 @@ The NATS prometheus exporter also provides a simple and easy to use API that all
 
 In just a few lines of code, configure and launch an instance of the exporter.
 
-```go 
+```go
 	// Get the default options, and set what you need to.  The listen address and port
 	// is how prometheus can poll for collected data.
 	opts := exporter.GetDefaultExporterOptions()
@@ -153,11 +162,14 @@ In just a few lines of code, configure and launch an instance of the exporter.
 ```
 
 # Monitoring Walkthrough
-For additional information, refer to the [walkthrough](walkthrough/README.md) of monitoring NATS with Prometheus and Grafana. The NATS Prometheus Exporter can be used to monitor NATS Streaming as well. Refer to the [walkthrough/streaming](walkthrough/streaming.md) documentation.
+For additional information, refer to the [walkthrough](walkthrough/README.md) of
+monitoring NATS with Prometheus and Grafana. The NATS Prometheus Exporter can be
+used to monitor NATS Streaming as well. Refer to the
+[walkthrough/streaming](walkthrough/streaming.md) documentation.
 
 [License-Url]: https://www.apache.org/licenses/LICENSE-2.0
 [License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg
 [Build-Status-Url]: http://travis-ci.org/nats-io/prometheus-nats-exporter
 [Build-Status-Image]: https://travis-ci.org/nats-io/prometheus-nats-exporter.svg?branch=master
-[Coverage-Url]: https://coveralls.io/r/nats-io/prometheus-nats-exporter?branch=master
-[Coverage-image]: https://coveralls.io/repos/github/nats-io/prometheus-nats-exporter/badge.svg?branch=master
+[Coverage-Url]: https://codecov.io/gh/nats-io/prometheus-nats-exporter
+[Coverage-image]: https://codecov.io/gh/nats-io/prometheus-nats-exporter/branch/master/graph/badge.svg

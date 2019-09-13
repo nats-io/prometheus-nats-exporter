@@ -27,7 +27,7 @@ import (
 
 // System Name Varibles
 var (
-	// use gnatsd for backward compatiblity.  Changing would require users to
+	// use gnatsd for backward compatibility. Changing would require users to
 	// change their dashboards or other applications that rely on the
 	// prometheus metric names.
 	CoreSystem       = "gnatsd"
@@ -78,8 +78,8 @@ func newPrometheusGaugeVec(system, subsystem, name, help, prefix string) (metric
 // GetMetricURL retrieves a NATS Metrics JSON.
 // This can be called against any monitoring URL for NATS.
 // On any this function will error, warn and return nil.
-func getMetricURL(httpClient *http.Client, URL string, response interface{}) error {
-	resp, err := httpClient.Get(URL)
+func getMetricURL(httpClient *http.Client, url string, response interface{}) error {
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,8 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 
 // collectStatsFromRequests collects the statistics from a set of responses
 // returned by a NATS server.
-func (nc *NATSCollector) collectStatsFromRequests(key string, stat interface{}, resps map[string]map[string]interface{}, ch chan<- prometheus.Metric) {
+func (nc *NATSCollector) collectStatsFromRequests(
+	key string, stat interface{}, resps map[string]map[string]interface{}, ch chan<- prometheus.Metric) {
 	switch m := stat.(type) {
 	case *prometheus.GaugeVec:
 		for id, response := range resps {
@@ -308,7 +309,7 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 		return newConnzCollector(getSystem(system, prefix), endpoint, servers)
 	}
 	if isReplicatorEndpoint(system, endpoint) {
-		return newReplicatorCollector(getSystem(system, prefix), "varz", servers)
+		return newReplicatorCollector(getSystem(system, prefix), servers)
 	}
 	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
 }

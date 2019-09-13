@@ -82,7 +82,7 @@ func buildExporterURL(user, pass, addr string, path string, secure bool) string 
 	return fmt.Sprintf("%s://%s%s", proto, addr, path)
 }
 
-func checkExporterFull(t *testing.T, user, pass, addr, result, path string, secure bool, expectedRc int) (string, error) {
+func checkExporterFull(user, pass, addr, result, path string, secure bool, expectedRc int) (string, error) {
 	var resp *http.Response
 	var err error
 	url := buildExporterURL(user, pass, addr, path, secure)
@@ -116,13 +116,13 @@ func checkExporterFull(t *testing.T, user, pass, addr, result, path string, secu
 	return results, nil
 }
 
-func checkExporter(t *testing.T, addr string, secure bool) error {
-	_, err := checkExporterFull(t, "", "", addr, "gnatsd_varz_connections", "/metrics", secure, http.StatusOK)
+func checkExporter(addr string, secure bool) error {
+	_, err := checkExporterFull("", "", addr, "gnatsd_varz_connections", "/metrics", secure, http.StatusOK)
 	return err
 }
 
-func checkExporterForResult(t *testing.T, addr, result string, secure bool) (string, error) {
-	return checkExporterFull(t, "", "", addr, result, "/metrics", secure, http.StatusOK)
+func checkExporterForResult(addr, result string, secure bool) (string, error) {
+	return checkExporterFull("", "", addr, result, "/metrics", secure, http.StatusOK)
 }
 
 func TestExporter(t *testing.T) {
@@ -145,7 +145,7 @@ func TestExporter(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -169,11 +169,11 @@ func TestExporterHTTPS(t *testing.T) {
 	defer exp.Stop()
 
 	// Check that we CANNOT connect with http
-	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err == nil {
 		t.Fatalf("Did not receive expected error.")
 	}
 	// Check that we CAN connect with https
-	if err := checkExporter(t, exp.http.Addr().String(), true); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), true); err != nil {
 		t.Fatalf("Received TLS error:  %v", err)
 	}
 }
@@ -225,7 +225,7 @@ func TestExporterDefaultOptions(t *testing.T) {
 
 	// test without a server configured
 	if err := exp.Start(); err == nil {
-		t.Fatalf("Did not recieve expected error.")
+		t.Fatalf("Did not receive expected error.")
 	}
 
 	opts := GetDefaultExporterOptions()
@@ -242,7 +242,7 @@ func TestExporterDefaultOptions(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -266,7 +266,9 @@ func TestExporterScrapePathOption(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if _, err := checkExporterFull(t, "", "", exp.http.Addr().String(), "gnatsd_varz_connections", "/some/other/path/to/metrics", false, http.StatusOK); err != nil {
+	_, err := checkExporterFull("", "", exp.http.Addr().String(),
+		"gnatsd_varz_connections", "/some/other/path/to/metrics", false, http.StatusOK)
+	if err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -287,7 +289,9 @@ func TestExporterScrapePathOptionAddsSlash(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if _, err := checkExporterFull(t, "", "", exp.http.Addr().String(), "gnatsd_varz_connections", "/elsewhere", false, http.StatusOK); err != nil {
+	_, err := checkExporterFull("", "", exp.http.Addr().String(),
+		"gnatsd_varz_connections", "/elsewhere", false, http.StatusOK)
+	if err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -306,7 +310,7 @@ func TestExporterWait(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 
@@ -335,7 +339,7 @@ func TestExporterNoNATSServer(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err == nil {
 		t.Fatalf("Expected an error, received none.")
 	}
 	time.Sleep(2 * opts.RetryInterval)
@@ -346,7 +350,7 @@ func TestExporterNoNATSServer(t *testing.T) {
 
 	time.Sleep(opts.RetryInterval + (500 * time.Millisecond))
 
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -417,7 +421,7 @@ func TestPortReuse(t *testing.T) {
 	// attempt to start another exporter on the same port
 	exp2 := NewExporter(opts)
 	if err := exp2.Start(); err == nil {
-		t.Fatalf("Did not recieve expected error.")
+		t.Fatalf("Did not receive expected error.")
 		exp2.Stop()
 	}
 }
@@ -438,12 +442,12 @@ func TestExporterBounce(t *testing.T) {
 	if err := exp.Start(); err != nil {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 	// test stop
 	exp.Stop()
-	if err := checkExporter(t, exp.http.Addr().String(), false); err == nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err == nil {
 		t.Fatalf("Did not received expected error")
 	}
 
@@ -454,7 +458,7 @@ func TestExporterBounce(t *testing.T) {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 	defer exp.Stop()
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -485,7 +489,7 @@ func TestExporterStartNoServersConfigured(t *testing.T) {
 		t.Fatalf("Got an error starting the exporter: %v\n", err)
 	}
 	defer exp.Stop()
-	if err := checkExporter(t, exp.http.Addr().String(), false); err != nil {
+	if err := checkExporter(exp.http.Addr().String(), false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -513,7 +517,7 @@ func TestExporterStartNoMetricsSelected(t *testing.T) {
 	}
 }
 
-func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass string, expectedRc int) error {
+func testBasicAuth(opts *NATSExporterOptions, testuser, testpass string, expectedRc int) error {
 	http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 	exp := NewExporter(opts)
 	if err := exp.Start(); err != nil {
@@ -521,7 +525,8 @@ func testBasicAuth(t *testing.T, opts *NATSExporterOptions, testuser, testpass s
 	}
 	defer exp.Stop()
 
-	_, err := checkExporterFull(t, testuser, testpass, exp.http.Addr().String(), "gnatsd_varz_connections", "/metrics", false, expectedRc)
+	_, err := checkExporterFull(testuser, testpass, exp.http.Addr().String(),
+		"gnatsd_varz_connections", "/metrics", false, expectedRc)
 	return err
 }
 
@@ -538,35 +543,35 @@ func TestExporterBasicAuth(t *testing.T) {
 	defer s.Shutdown()
 
 	// first try user/pass with no auth.
-	testBasicAuth(t, opts, "colin", "password", http.StatusOK)
+	testBasicAuth(opts, "colin", "password", http.StatusOK)
 
 	// now try user/pass
 	opts.HTTPUser = "colin"
 	opts.HTTPPassword = "password"
-	if err := testBasicAuth(t, opts, "colin", "password", http.StatusOK); err != nil {
+	if err := testBasicAuth(opts, "colin", "password", http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// now failures...
-	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
+	if err := testBasicAuth(opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}
-	if err := testBasicAuth(t, opts, "garbage", "password", http.StatusUnauthorized); err != nil {
+	if err := testBasicAuth(opts, "garbage", "password", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}
-	if err := testBasicAuth(t, opts, "", "password", http.StatusUnauthorized); err != nil {
+	if err := testBasicAuth(opts, "", "password", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}
-	if err := testBasicAuth(t, opts, "colin", "", http.StatusUnauthorized); err != nil {
+	if err := testBasicAuth(opts, "colin", "", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}
 
 	// test bcrypt with a cost of 2 (use a low cost!).  Resolves to "password"
 	opts.HTTPPassword = "$2a$10$H753p./UP9XNoEmbXDSWrOw7/XGIdVCM80SFAbBIQJeqICAJypJqa"
-	if err := testBasicAuth(t, opts, "colin", "password", http.StatusOK); err != nil {
+	if err := testBasicAuth(opts, "colin", "password", http.StatusOK); err != nil {
 		t.Fatalf("%v", err)
 	}
-	if err := testBasicAuth(t, opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
+	if err := testBasicAuth(opts, "colin", "garbage", http.StatusUnauthorized); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -587,7 +592,7 @@ func TestExporterPrefix(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if _, err := checkExporterForResult(t, exp.http.Addr().String(), "test_varz_connections", false); err != nil {
+	if _, err := checkExporterForResult(exp.http.Addr().String(), "test_varz_connections", false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -622,7 +627,8 @@ func TestExporterReplicator(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if resp, err := checkExporterForResult(t, exp.http.Addr().String(), "replicator_server_start_time", false); err != nil {
+	resp, err := checkExporterForResult(exp.http.Addr().String(), "replicator_server_start_time", false)
+	if err != nil {
 		t.Fatalf("%v:\n%s", err, resp)
 	}
 }

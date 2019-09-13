@@ -150,13 +150,20 @@ func (nc *serverzCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 
-		ch <- prometheus.MustNewConstMetric(nc.bytesTotal, prometheus.CounterValue, float64(resp.TotalBytes), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.msgsTotal, prometheus.CounterValue, float64(resp.TotalMsgs), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.channels, prometheus.CounterValue, float64(resp.Channels), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.subs, prometheus.CounterValue, float64(resp.Subscriptions), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.clients, prometheus.CounterValue, float64(resp.Clients), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.active, prometheus.GaugeValue, boolToFloat(resp.State == "FT_ACTIVE"), server.ID)
-		ch <- prometheus.MustNewConstMetric(nc.info, prometheus.GaugeValue, 1, server.ID, resp.ClusterID, resp.Version, resp.GoVersion, resp.State, resp.Role, resp.StartTime)
+		ch <- prometheus.MustNewConstMetric(nc.bytesTotal, prometheus.CounterValue,
+			float64(resp.TotalBytes), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.msgsTotal, prometheus.CounterValue,
+			float64(resp.TotalMsgs), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.channels, prometheus.CounterValue,
+			float64(resp.Channels), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.subs, prometheus.CounterValue,
+			float64(resp.Subscriptions), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.clients, prometheus.CounterValue,
+			float64(resp.Clients), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.active, prometheus.GaugeValue,
+			boolToFloat(resp.State == "FT_ACTIVE"), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.info, prometheus.GaugeValue,
+			1, server.ID, resp.ClusterID, resp.Version, resp.GoVersion, resp.State, resp.Role, resp.StartTime)
 	}
 }
 
@@ -183,7 +190,10 @@ type channelsCollector struct {
 }
 
 func newChannelsCollector(system string, servers []*CollectedServer) prometheus.Collector {
-	subsVariableLabels := []string{"server_id", "channel", "client_id", "inbox", "queue_name", "is_durable", "is_offline", "durable_name"}
+	subsVariableLabels := []string{
+		"server_id", "channel", "client_id", "inbox", "queue_name",
+		"is_durable", "is_offline", "durable_name",
+	}
 	nc := &channelsCollector{
 		httpClient: http.DefaultClient,
 		system:     system,
@@ -256,13 +266,17 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		for _, channel := range resp.Channels {
-			ch <- prometheus.MustNewConstMetric(nc.chanBytesTotal, prometheus.GaugeValue, float64(channel.Bytes), server.ID, channel.Name)
-			ch <- prometheus.MustNewConstMetric(nc.chanMsgsTotal, prometheus.GaugeValue, float64(channel.Msgs), server.ID, channel.Name)
-			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue, float64(channel.LastSeq), server.ID, channel.Name)
+			ch <- prometheus.MustNewConstMetric(nc.chanBytesTotal, prometheus.GaugeValue,
+				float64(channel.Bytes), server.ID, channel.Name)
+			ch <- prometheus.MustNewConstMetric(nc.chanMsgsTotal, prometheus.GaugeValue,
+				float64(channel.Msgs), server.ID, channel.Name)
+			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue,
+				float64(channel.LastSeq), server.ID, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
 
-				// If this is a durable queue group subscription then split the durable name from the queue name
+				// If this is a durable queue group subscription then split the
+				// durable name from the queue name
 				durableName := sub.DurableName
 				queueName := sub.QueueName
 				if sub.IsDurable && queueName != "" {
@@ -271,9 +285,13 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 				labelValues := []string{server.ID, channel.Name, sub.ClientID, sub.Inbox,
 					queueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline), durableName}
-				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue, float64(sub.LastSent), labelValues...)
-				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue, float64(sub.PendingCount), labelValues...)
-				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue, float64(sub.MaxInflight), labelValues...)
+
+				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue,
+					float64(sub.LastSent), labelValues...)
+				ch <- prometheus.MustNewConstMetric(nc.subsPendingCount, prometheus.GaugeValue,
+					float64(sub.PendingCount), labelValues...)
+				ch <- prometheus.MustNewConstMetric(nc.subsMaxInFlight, prometheus.GaugeValue,
+					float64(sub.MaxInflight), labelValues...)
 			}
 		}
 	}
