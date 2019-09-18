@@ -24,16 +24,13 @@ prometheus-nats-exporter -varz "http://localhost:5555"
 To run with docker, you can use the following image:
 
 ```sh
-docker run synadia/prometheus-nats-exporter:0.3.0
+docker run synadia/prometheus-nats-exporter:latest
 ```
 
 ## Usage
+
 ```bash
 prometheus-nats-exporter <flags> url
-
-Flags must include at least one of: -varz, -connz, -routez, -subz
-
-Usage of ./prometheus-nats-exporter:
   -D	Enable debug log level.
   -DV
     	Enable debug and trace log levels.
@@ -60,12 +57,14 @@ Usage of ./prometheus-nats-exporter:
     	URL path from which to serve scrapes. (default "/metrics")
   -port int
     	Port to listen on. (default 7777)
-  -prefix
-    	Set the prefix for all the metrics.
+  -prefix string
+    	Replace the default prefix for all the metrics.
   -r string
     	Remote syslog address to write log statements.
   -remote_syslog string
     	Write log statements to a remote syslog.
+  -replicatorVarz
+    	Get replicator general metrics.
   -ri int
     	Interval in seconds to retry NATS Server monitor URL. (default 30)
   -routez
@@ -83,8 +82,12 @@ Usage of ./prometheus-nats-exporter:
     	Server certificate file (Enables HTTPS).
   -tlskey string
     	Private key for server certificate (used with HTTPS).
+  -use_internal_server_id
+    	Enables using ServerID from /varz
   -varz
     	Get general metrics.
+  -version
+    	Show exporter version and exit.
 ```
 
 ###  The URL parameter
