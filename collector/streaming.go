@@ -241,7 +241,7 @@ func newChannelsCollector(system string, servers []*CollectedServer) prometheus.
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + "/streaming/channelsz?subs=1",
+			URL: s.URL + "/streaming/channelsz?limit=30000&subs=1",
 		}
 	}
 
