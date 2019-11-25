@@ -382,8 +382,6 @@ func TestStreamingMetrics(t *testing.T) {
 	cases := map[string]float64{
 		"test_chan_bytes_total":        240,
 		"test_chan_msgs_total":         10,
-		"test_chan_msgs_in":            10,
-		"test_chan_msgs_out":           10,
 		"test_chan_last_seq":           10,
 		"test_chan_subs_last_sent":     10,
 		"test_chan_subs_pending_count": 0,
@@ -394,6 +392,8 @@ func TestStreamingMetrics(t *testing.T) {
 
 	cases = map[string]float64{
 		"test_server_bytes_total":   0,
+		"test_server_bytes_in":      0,
+		"test_server_bytes_out":     0,
 		"test_server_msgs_total":    0,
 		"test_chan_msgs_in":         0,
 		"test_chan_msgs_out":        0,
@@ -436,8 +436,6 @@ func TestStreamingMetricsCustomPrefix(t *testing.T) {
 	cases := map[string]float64{
 		"nss_chan_bytes_total":        240,
 		"nss_chan_msgs_total":         10,
-		"nss_chan_msgs_in":            10,
-		"nss_chan_msgs_out":           10,
 		"nss_chan_last_seq":           10,
 		"nss_chan_subs_last_sent":     10,
 		"nss_chan_subs_pending_count": 0,
@@ -448,6 +446,8 @@ func TestStreamingMetricsCustomPrefix(t *testing.T) {
 
 	cases = map[string]float64{
 		"nss_server_bytes_total":   0,
+		"nss_server_bytes_in":      0,
+		"nss_server_bytes_out":     0,
 		"nss_server_msgs_total":    0,
 		"nss_chan_msgs_in":         0,
 		"nss_chan_msgs_out":        0,
