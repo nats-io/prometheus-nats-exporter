@@ -48,7 +48,11 @@ type serverzCollector struct {
 	system     string
 
 	bytesTotal *prometheus.Desc
+	bytesIn    *prometheus.Desc
+	bytesOut   *prometheus.Desc
 	msgsTotal  *prometheus.Desc
+	msgsIn     *prometheus.Desc
+	msgsOut    *prometheus.Desc
 	channels   *prometheus.Desc
 	subs       *prometheus.Desc
 	clients    *prometheus.Desc
@@ -66,9 +70,33 @@ func newServerzCollector(system string, servers []*CollectedServer) prometheus.C
 			[]string{"server_id"},
 			nil,
 		),
+		bytesIn: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "server", "bytes_in"),
+			"Incoming bytes",
+			[]string{"server_id"},
+			nil,
+		),
+		bytesOut: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "server", "bytes_out"),
+			"Outgoing bytes",
+			[]string{"server_id"},
+			nil,
+		),
 		msgsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "server", "msgs_total"),
 			"Total of messages",
+			[]string{"server_id"},
+			nil,
+		),
+		msgsIn: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "server", "msgs_in"),
+			"Incoming messages",
+			[]string{"server_id"},
+			nil,
+		),
+		msgsOut: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "server", "msgs_out"),
+			"Outgoing messages",
 			[]string{"server_id"},
 			nil,
 		),
@@ -117,7 +145,11 @@ func newServerzCollector(system string, servers []*CollectedServer) prometheus.C
 
 func (nc *serverzCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.bytesTotal
+	ch <- nc.bytesIn
+	ch <- nc.bytesOut
 	ch <- nc.msgsTotal
+	ch <- nc.msgsIn
+	ch <- nc.msgsOut
 	ch <- nc.channels
 	ch <- nc.subs
 	ch <- nc.clients
@@ -128,7 +160,11 @@ func (nc *serverzCollector) Describe(ch chan<- *prometheus.Desc) {
 // StreamingServerz represents the metrics from streaming/serverz.
 type StreamingServerz struct {
 	TotalBytes    int    `json:"total_bytes"`
+	InBytes       int    `json:"in_bytes"`
+	OutBytes      int    `json:"out_bytes"`
 	TotalMsgs     int    `json:"total_msgs"`
+	InMsgs        int    `json:"in_msgs"`
+	OutMsgs       int    `json:"out_msgs"`
 	Channels      int    `json:"channels"`
 	Subscriptions int    `json:"subscriptions"`
 	Clients       int    `json:"clients"`
@@ -152,8 +188,16 @@ func (nc *serverzCollector) Collect(ch chan<- prometheus.Metric) {
 
 		ch <- prometheus.MustNewConstMetric(nc.bytesTotal, prometheus.CounterValue,
 			float64(resp.TotalBytes), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.bytesIn, prometheus.CounterValue,
+			float64(resp.InBytes), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.bytesOut, prometheus.CounterValue,
+			float64(resp.OutBytes), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.msgsTotal, prometheus.CounterValue,
 			float64(resp.TotalMsgs), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.msgsIn, prometheus.CounterValue,
+			float64(resp.InMsgs), server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.msgsOut, prometheus.CounterValue,
+			float64(resp.OutMsgs), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.channels, prometheus.CounterValue,
 			float64(resp.Channels), server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.subs, prometheus.CounterValue,

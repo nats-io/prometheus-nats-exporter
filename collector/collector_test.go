@@ -392,7 +392,11 @@ func TestStreamingMetrics(t *testing.T) {
 
 	cases = map[string]float64{
 		"test_server_bytes_total":   0,
+		"test_server_bytes_in":      0,
+		"test_server_bytes_out":     0,
 		"test_server_msgs_total":    0,
+		"test_chan_msgs_in":         0,
+		"test_chan_msgs_out":        0,
 		"test_server_channels":      0,
 		"test_server_subscriptions": 0,
 		"test_server_clients":       0,
@@ -442,7 +446,11 @@ func TestStreamingMetricsCustomPrefix(t *testing.T) {
 
 	cases = map[string]float64{
 		"nss_server_bytes_total":   0,
+		"nss_server_bytes_in":      0,
+		"nss_server_bytes_out":     0,
 		"nss_server_msgs_total":    0,
+		"nss_chan_msgs_in":         0,
+		"nss_chan_msgs_out":        0,
 		"nss_server_channels":      0,
 		"nss_server_subscriptions": 0,
 		"nss_server_clients":       0,
