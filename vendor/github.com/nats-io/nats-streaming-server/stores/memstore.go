@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nats-io/go-nats-streaming/pb"
+	"github.com/nats-io/stan.go/pb"
 	"github.com/nats-io/nats-streaming-server/logger"
 	"github.com/nats-io/nats-streaming-server/util"
 )

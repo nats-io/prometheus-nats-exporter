@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	stan "github.com/nats-io/go-nats-streaming"
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
+	"github.com/nats-io/stan.go"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
