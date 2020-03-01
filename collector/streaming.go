@@ -211,13 +211,6 @@ func (nc *serverzCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func boolToFloat(b bool) float64 {
-	if b {
-		return 1.0
-	}
-	return 0.0
-}
-
 type channelsCollector struct {
 	sync.Mutex
 

@@ -132,6 +132,7 @@ func TestExporter(t *testing.T) {
 	opts.GetVarz = true
 	opts.GetConnz = true
 	opts.GetSubz = true
+	opts.GetGatewayz = true
 	opts.GetRoutez = true
 	opts.GetStreamingChannelz = true
 	opts.GetStreamingServerz = true

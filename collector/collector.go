@@ -223,7 +223,7 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-// loadMetricConfigFromResponse builds the configuration
+// initMetricsFromServers builds the configuration
 // For each NATS Metrics endpoint (/*z) get the first URL
 // to determine the list of possible metrics.
 // TODO: flatten embedded maps.
@@ -299,6 +299,13 @@ func getSystem(system, prefix string) string {
 	return prefix
 }
 
+func boolToFloat(b bool) float64 {
+	if b {
+		return 1.0
+	}
+	return 0.0
+}
+
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
 func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
@@ -308,6 +315,10 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isConnzEndpoint(system, endpoint) {
 		return newConnzCollector(getSystem(system, prefix), endpoint, servers)
 	}
+	if isGatewayzEndpoint(system, endpoint) {
+		return newGatewayzCollector(getSystem(system, prefix), endpoint, servers)
+	}
+
 	if isReplicatorEndpoint(system, endpoint) {
 		return newReplicatorCollector(getSystem(system, prefix), servers)
 	}

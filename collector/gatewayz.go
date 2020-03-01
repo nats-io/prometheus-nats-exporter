@@ -1,0 +1,222 @@
+// Copyright 2017-2019 The NATS Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package collector has various collector utilities and implementations.
+package collector
+
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+)
+
+func isGatewayzEndpoint(system, endpoint string) bool {
+	return system == CoreSystem && endpoint == "gatewayz"
+}
+
+type gatewayzCollector struct {
+	sync.Mutex
+
+	httpClient       *http.Client
+	servers          []*CollectedServer
+	outboundGateways *gateway
+	inboundGateways  *gateway
+}
+
+func newGatewayzCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
+	nc := &gatewayzCollector{
+		httpClient:       http.DefaultClient,
+		outboundGateways: newGateway(system, endpoint, "outbound_gateway"),
+		inboundGateways:  newGateway(system, endpoint, "inbound_gateway"),
+	}
+	nc.servers = make([]*CollectedServer, len(servers))
+	for i, s := range servers {
+		nc.servers[i] = &CollectedServer{
+			ID:  s.ID,
+			URL: s.URL + "/gatewayz",
+		}
+	}
+	return nc
+}
+
+func (nc *gatewayzCollector) Describe(ch chan<- *prometheus.Desc) {
+	nc.outboundGateways.Describe(ch)
+	nc.inboundGateways.Describe(ch)
+}
+
+// Collect gathers the server gatewayz metrics.
+func (nc *gatewayzCollector) Collect(ch chan<- prometheus.Metric) {
+	for _, server := range nc.servers {
+		var resp Gatewayz
+		if err := getMetricURL(nc.httpClient, server.URL, &resp); err != nil {
+			Debugf("ignoring server %s: %v", server.ID, err)
+			continue
+		}
+		for obgwName, ogw := range resp.OutboundGateways {
+			nc.outboundGateways.Collect(server, resp.Name, obgwName, ogw, ch)
+		}
+		for ibgwName, ibgws := range resp.InboundGateways {
+			for _, ibgw := range ibgws {
+				nc.inboundGateways.Collect(server, resp.Name, ibgwName, ibgw, ch)
+			}
+		}
+	}
+}
+
+// gateway
+type gateway struct {
+	info              *prometheus.Desc
+	configured        *prometheus.Desc
+	connRtt           *prometheus.Desc
+	connPendingBytes  *prometheus.Desc
+	connInMsgs        *prometheus.Desc
+	connOutMsgs       *prometheus.Desc
+	connInBytes       *prometheus.Desc
+	connOutBytes      *prometheus.Desc
+	connSubscriptions *prometheus.Desc
+}
+
+func newGateway(system, endpoint, gwType string) *gateway {
+	gw := &gateway{
+		info: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_info"),
+			"info",
+			[]string{"gateway_name", "remote_gateway_name", "server_id", "start", "last_activity", "uptime", "idle"},
+			nil),
+		configured: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_configured"),
+			"configured",
+			[]string{"gateway_name", "remote_gateway_name", "server_id"},
+			nil),
+		connRtt: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_rtt"),
+			"rtt",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+		connPendingBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_pending_bytes"),
+			"pending_bytes",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+		connInMsgs: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_in_msgs"),
+			"in_msgs",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+		connOutMsgs: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_out_msgs"),
+			"out_msgs",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+		connInBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_in_bytes"),
+			"in_bytes",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+		connOutBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_out_bytes"),
+			"out_bytes",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+		connSubscriptions: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, gwType+"_conn_subscriptions"),
+			"subscriptions",
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			nil),
+	}
+
+	return gw
+}
+
+// Describe
+func (gw *gateway) Describe(ch chan<- *prometheus.Desc) {
+	ch <- gw.info
+	ch <- gw.configured
+	ch <- gw.connRtt
+	ch <- gw.connPendingBytes
+	ch <- gw.connInMsgs
+	ch <- gw.connOutMsgs
+	ch <- gw.connInBytes
+	ch <- gw.connOutBytes
+	ch <- gw.connSubscriptions
+}
+
+func (gw *gateway) Collect(server *CollectedServer, lgwName, rgwName string,
+	rgw *RemoteGatewayz, ch chan<- prometheus.Metric) {
+
+	cid := strconv.FormatUint(rgw.Connection.Cid, 10)
+	rtt, _ := time.ParseDuration(rgw.Connection.RTT)
+
+	ch <- prometheus.MustNewConstMetric(gw.info, prometheus.GaugeValue,
+		0.0, lgwName, rgwName, server.ID, rgw.Connection.Start.String(),
+		rgw.Connection.LastActivity.String(), rgw.Connection.Uptime, rgw.Connection.Idle)
+	ch <- prometheus.MustNewConstMetric(gw.configured, prometheus.GaugeValue,
+		boolToFloat(rgw.IsConfigured), lgwName, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connRtt, prometheus.GaugeValue,
+		rtt.Seconds(), lgwName, cid, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connPendingBytes, prometheus.GaugeValue,
+		float64(rgw.Connection.Pending), lgwName, cid, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connInMsgs, prometheus.GaugeValue,
+		float64(rgw.Connection.InMsgs), lgwName, cid, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connOutMsgs, prometheus.GaugeValue,
+		float64(rgw.Connection.OutMsgs), lgwName, cid, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connInBytes, prometheus.GaugeValue,
+		float64(rgw.Connection.InBytes), lgwName, cid, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connOutBytes, prometheus.GaugeValue,
+		float64(rgw.Connection.OutBytes), lgwName, cid, rgwName, server.ID)
+	ch <- prometheus.MustNewConstMetric(gw.connSubscriptions, prometheus.GaugeValue,
+		float64(rgw.Connection.NumSubs), lgwName, cid, rgwName, server.ID)
+}
+
+// Gatewayz output
+type Gatewayz struct {
+	Name             string                       `json:"name"`
+	OutboundGateways map[string]*RemoteGatewayz   `json:"outbound_gateways"`
+	InboundGateways  map[string][]*RemoteGatewayz `json:"inbound_gateways"`
+}
+
+// Gateway
+type RemoteGatewayz struct {
+	IsConfigured bool      `json:"configured"`
+	Connection   *ConnInfo `json:"connection,omitempty"`
+}
+
+// Gateway Connection
+type ConnInfo struct {
+	Cid            uint64     `json:"cid"`
+	IP             string     `json:"ip"`
+	Port           int        `json:"port"`
+	Start          time.Time  `json:"start"`
+	LastActivity   time.Time  `json:"last_activity"`
+	Stop           *time.Time `json:"stop,omitempty"`
+	Reason         string     `json:"reason,omitempty"`
+	RTT            string     `json:"rtt,omitempty"`
+	Uptime         string     `json:"uptime"`
+	Idle           string     `json:"idle"`
+	Pending        int        `json:"pending_bytes"`
+	InMsgs         int64      `json:"in_msgs"`
+	OutMsgs        int64      `json:"out_msgs"`
+	InBytes        int64      `json:"in_bytes"`
+	OutBytes       int64      `json:"out_bytes"`
+	NumSubs        uint32     `json:"subscriptions"`
+	Name           string     `json:"name,omitempty"`
+	Lang           string     `json:"lang,omitempty"`
+	Version        string     `json:"version,omitempty"`
+	TLSVersion     string     `json:"tls_version,omitempty"`
+	TLSCipher      string     `json:"tls_cipher_suite,omitempty"`
+	AuthorizedUser string     `json:"authorized_user,omitempty"`
+	Account        string     `json:"account,omitempty"`
+	Subs           []string   `json:"subscriptions_list,omitempty"`
+}
