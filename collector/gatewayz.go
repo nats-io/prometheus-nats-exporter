@@ -64,8 +64,8 @@ func (nc *gatewayzCollector) Collect(ch chan<- prometheus.Metric) {
 			Debugf("ignoring server %s: %v", server.ID, err)
 			continue
 		}
-		for obgwName, ogw := range resp.OutboundGateways {
-			nc.outboundGateways.Collect(server, resp.Name, obgwName, ogw, ch)
+		for obgwName, obgw := range resp.OutboundGateways {
+			nc.outboundGateways.Collect(server, resp.Name, obgwName, obgw, ch)
 		}
 		for ibgwName, ibgws := range resp.InboundGateways {
 			for _, ibgw := range ibgws {
@@ -189,34 +189,22 @@ type Gatewayz struct {
 
 // Gateway
 type RemoteGatewayz struct {
-	IsConfigured bool      `json:"configured"`
-	Connection   *ConnInfo `json:"connection,omitempty"`
+	IsConfigured bool     `json:"configured"`
+	Connection   ConnInfo `json:"connection,omitempty"`
 }
 
 // Gateway Connection
 type ConnInfo struct {
-	Cid            uint64     `json:"cid"`
-	IP             string     `json:"ip"`
-	Port           int        `json:"port"`
-	Start          time.Time  `json:"start"`
-	LastActivity   time.Time  `json:"last_activity"`
-	Stop           *time.Time `json:"stop,omitempty"`
-	Reason         string     `json:"reason,omitempty"`
-	RTT            string     `json:"rtt,omitempty"`
-	Uptime         string     `json:"uptime"`
-	Idle           string     `json:"idle"`
-	Pending        int        `json:"pending_bytes"`
-	InMsgs         int64      `json:"in_msgs"`
-	OutMsgs        int64      `json:"out_msgs"`
-	InBytes        int64      `json:"in_bytes"`
-	OutBytes       int64      `json:"out_bytes"`
-	NumSubs        uint32     `json:"subscriptions"`
-	Name           string     `json:"name,omitempty"`
-	Lang           string     `json:"lang,omitempty"`
-	Version        string     `json:"version,omitempty"`
-	TLSVersion     string     `json:"tls_version,omitempty"`
-	TLSCipher      string     `json:"tls_cipher_suite,omitempty"`
-	AuthorizedUser string     `json:"authorized_user,omitempty"`
-	Account        string     `json:"account,omitempty"`
-	Subs           []string   `json:"subscriptions_list,omitempty"`
+	Cid          uint64    `json:"cid"`
+	Start        time.Time `json:"start"`
+	LastActivity time.Time `json:"last_activity"`
+	RTT          string    `json:"rtt,omitempty"`
+	Uptime       string    `json:"uptime"`
+	Idle         string    `json:"idle"`
+	Pending      int       `json:"pending_bytes"`
+	InMsgs       int64     `json:"in_msgs"`
+	OutMsgs      int64     `json:"out_msgs"`
+	InBytes      int64     `json:"in_bytes"`
+	OutBytes     int64     `json:"out_bytes"`
+	NumSubs      uint32    `json:"subscriptions"`
 }

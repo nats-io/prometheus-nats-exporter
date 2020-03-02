@@ -43,6 +43,8 @@ prometheus-nats-exporter <flags> url
     	Get streaming channel metrics.
   -connz
     	Get connection metrics.
+  -gatewayz
+    	Get gateway metrics.
   -http_pass string
     	Set the password for HTTP scrapes. NATS bcrypt supported.
   -http_user string
