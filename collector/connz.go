@@ -88,7 +88,7 @@ func (nc *connzCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.limit
 }
 
-// Collect gathers the streaming server serverz metrics.
+// Collect gathers the server connz metrics.
 func (nc *connzCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, server := range nc.servers {
 		var resp Connz
