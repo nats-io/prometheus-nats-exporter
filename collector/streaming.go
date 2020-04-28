@@ -24,6 +24,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	ChannelszSuffix = "/streaming/channelsz?subs=1"
+	ServerzSuffix   = "/streaming/serverz"
+)
+
 // newStreamingCollector collects channelsz and serversz metrics of
 // streaming servers.
 func newStreamingCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
@@ -136,7 +141,7 @@ func newServerzCollector(system string, servers []*CollectedServer) prometheus.C
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + "/streaming/serverz",
+			URL: s.URL + ServerzSuffix,
 		}
 	}
 
@@ -228,7 +233,7 @@ type channelsCollector struct {
 
 func newChannelsCollector(system string, servers []*CollectedServer) prometheus.Collector {
 	subsVariableLabels := []string{
-		"server_id", "channel", "client_id", "inbox", "queue_name",
+		"server_id", "server_role", "channel", "client_id", "inbox", "queue_name",
 		"is_durable", "is_offline", "durable_name",
 	}
 	nc := &channelsCollector{
@@ -237,19 +242,19 @@ func newChannelsCollector(system string, servers []*CollectedServer) prometheus.
 		chanBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "chan", "bytes_total"),
 			"Total of bytes",
-			[]string{"server_id", "channel"},
+			[]string{"server_id", "server_role", "channel"},
 			nil,
 		),
 		chanMsgsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "chan", "msgs_total"),
 			"Total of messages",
-			[]string{"server_id", "channel"},
+			[]string{"server_id", "server_role", "channel"},
 			nil,
 		),
 		chanLastSeq: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "chan", "last_seq"),
 			"Last seq",
-			[]string{"server_id", "channel"},
+			[]string{"server_id", "server_role", "channel"},
 			nil,
 		),
 		subsLastSent: prometheus.NewDesc(
@@ -278,7 +283,7 @@ func newChannelsCollector(system string, servers []*CollectedServer) prometheus.
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + "/streaming/channelsz?subs=1",
+			URL: s.URL + ChannelszSuffix,
 		}
 	}
 
@@ -294,6 +299,19 @@ func (nc *channelsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.subsMaxInFlight
 }
 
+func getRoleFromChannelszURL(client *http.Client, url string) (string, error) {
+	if !strings.HasSuffix(url, ChannelszSuffix) {
+		return "", nil
+	}
+
+	var newURL = (strings.TrimSuffix(url, ChannelszSuffix) + ServerzSuffix)
+	var serverResp StreamingServerz
+	if err := getMetricURL(client, newURL, &serverResp); err != nil {
+		return "", err
+	}
+	return serverResp.Role, nil
+}
+
 func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, server := range nc.servers {
 		var resp Channelsz
@@ -301,14 +319,18 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 			Debugf("ignoring server %s: %v", server.ID, err)
 			continue
 		}
+		serverRole, err := getRoleFromChannelszURL(nc.httpClient, server.URL)
+		if err != nil {
+			Debugf("error getting server role %s: %v", server.ID, err)
+		}
 
 		for _, channel := range resp.Channels {
 			ch <- prometheus.MustNewConstMetric(nc.chanBytesTotal, prometheus.GaugeValue,
-				float64(channel.Bytes), server.ID, channel.Name)
+				float64(channel.Bytes), server.ID, serverRole, channel.Name)
 			ch <- prometheus.MustNewConstMetric(nc.chanMsgsTotal, prometheus.GaugeValue,
-				float64(channel.Msgs), server.ID, channel.Name)
+				float64(channel.Msgs), server.ID, serverRole, channel.Name)
 			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue,
-				float64(channel.LastSeq), server.ID, channel.Name)
+				float64(channel.LastSeq), server.ID, serverRole, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
 
@@ -320,7 +342,7 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 					subStrings := strings.Split(queueName, ":")
 					durableName, queueName = subStrings[0], subStrings[1]
 				}
-				labelValues := []string{server.ID, channel.Name, sub.ClientID, sub.Inbox,
+				labelValues := []string{server.ID, serverRole, channel.Name, sub.ClientID, sub.Inbox,
 					queueName, strconv.FormatBool(sub.IsDurable), strconv.FormatBool(sub.IsOffline), durableName}
 
 				ch <- prometheus.MustNewConstMetric(nc.subsLastSent, prometheus.GaugeValue,

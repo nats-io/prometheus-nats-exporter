@@ -559,7 +559,7 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 		}
 
 		foundQueuedDurableLabels, foundDurableLabels := false, false
-		expectedLabelNames := []string{"server_id", "channel", "client_id", "inbox",
+		expectedLabelNames := []string{"server_id", "server_role", "channel", "client_id", "inbox",
 			"queue_name", "is_durable", "is_offline", "durable_name"}
 		for subscriptionIndex := range subscriptions {
 			expectedLabelsNotFound := make([]string, 0)
