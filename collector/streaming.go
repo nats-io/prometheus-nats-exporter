@@ -24,8 +24,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const ChannelszSuffix = "/streaming/channelsz?subs=1"
-const ServerzSuffix = "/streaming/serverz"
+const (
+	ChannelszSuffix = "/streaming/channelsz?subs=1"
+	ServerzSuffix   = "/streaming/serverz"
+)
 
 // newStreamingCollector collects channelsz and serversz metrics of
 // streaming servers.
@@ -297,20 +299,17 @@ func (nc *channelsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.subsMaxInFlight
 }
 
-func getRoleFromChannelszURL(client *http.Client, url string) string {
+func getRoleFromChannelszURL(client *http.Client, url string) (string, error) {
 	if !strings.HasSuffix(url, ChannelszSuffix) {
-		return ""
+		return "", nil
 	}
 
 	var newURL = (strings.TrimSuffix(url, ChannelszSuffix) + ServerzSuffix)
-
-	println("Getting metrics from %s", newURL)
 	var serverResp StreamingServerz
 	if err := getMetricURL(client, newURL, &serverResp); err != nil {
-		return "error_getting_role"
+		return "", err
 	}
-
-	return serverResp.Role
+	return serverResp.Role, nil
 }
 
 func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
@@ -320,15 +319,18 @@ func (nc *channelsCollector) Collect(ch chan<- prometheus.Metric) {
 			Debugf("ignoring server %s: %v", server.ID, err)
 			continue
 		}
-		var serverRole = getRoleFromChannelszURL(nc.httpClient, server.URL)
+		serverRole, err := getRoleFromChannelszURL(nc.httpClient, server.URL)
+		if err != nil {
+			Debugf("error getting server role %s: %v", server.ID, err)
+		}
 
 		for _, channel := range resp.Channels {
 			ch <- prometheus.MustNewConstMetric(nc.chanBytesTotal, prometheus.GaugeValue,
-				float64(channel.Bytes), serverRole, server.ID, channel.Name)
+				float64(channel.Bytes), server.ID, serverRole, channel.Name)
 			ch <- prometheus.MustNewConstMetric(nc.chanMsgsTotal, prometheus.GaugeValue,
-				float64(channel.Msgs), serverRole, server.ID, channel.Name)
+				float64(channel.Msgs), server.ID, serverRole, channel.Name)
 			ch <- prometheus.MustNewConstMetric(nc.chanLastSeq, prometheus.GaugeValue,
-				float64(channel.LastSeq), serverRole, server.ID, channel.Name)
+				float64(channel.LastSeq), server.ID, serverRole, channel.Name)
 
 			for _, sub := range channel.Subscriptions {
 
