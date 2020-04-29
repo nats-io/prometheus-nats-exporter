@@ -10,7 +10,10 @@ release:
   name_template: 'Release {{.Tag}}'
 
 builds:
-- goos:
+- id: prometheus-nats-exporter
+  main: .
+  binary: prometheus-nats-exporter
+  goos:
   - linux
   - darwin
   - windows
@@ -25,10 +28,6 @@ builds:
   ignore:
     - goos: darwin
       goarch: 386
-
-  main: .
-  binary: prometheus-nats-exporter
-
   lang: go
 
 archive:
@@ -40,8 +39,17 @@ archive:
   - LICENSE
   - README.md
 
-nfpm:
-  formats:
+checksum:
+  name_template: '{{ .ProjectName }}-v{{ .Version }}-checksums.txt'
+
+snapshot:
+  name_template: SNAPSHOT-{{ .Commit }}
+
+github_urls:
+  download: https://github.com
+
+nfpms:
+- formats:
     - deb
   name_template: '{{ .ProjectName }}-v{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm
     }}v{{ .Arm }}{{ end }}'
@@ -52,13 +60,4 @@ nfpm:
   homepage: https://nats.io
   license: Apache 2.0
 
-snapshot:
-  name_template: SNAPSHOT-{{ .Commit }}
-
-checksum:
-  name_template: '{{ .ProjectName }}-v{{ .Version }}-checksums.txt'
-
 dist: dist
-
-github_urls:
-  download: https://github.com
