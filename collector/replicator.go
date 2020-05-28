@@ -70,7 +70,7 @@ type replicatorConnector struct {
 type replicatorVarz struct {
 	StartTime    int                   `json:"start_time"`
 	CurrentTime  int                   `json:"current_time"`
-	Uptime       string                `json:"uptime_time"`
+	Uptime       string                `json:"uptime"`
 	RequestCount int                   `json:"request_count"`
 	Connectors   []replicatorConnector `json:"connectors"`
 	HTTPRequests map[string]int64      `json:"http_requests"`
