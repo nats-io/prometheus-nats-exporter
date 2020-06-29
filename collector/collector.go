@@ -237,7 +237,7 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		Tracef("Initializing metrics collection from: %s", v.URL)
 		if err := getMetricURL(nc.httpClient, v.URL, &response); err != nil {
 			// if a server is not running, silently ignore it.
-			if strings.Contains(err.Error(), "connection refused") {
+			if strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "cannot assign requested address") {
 				Debugf("Unable to connect to the NATS server: %v", err)
 			} else {
 				// TODO:  Do not retry for other errors?
