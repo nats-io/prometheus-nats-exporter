@@ -75,6 +75,28 @@ func newPrometheusGaugeVec(system, subsystem, name, help, prefix string) (metric
 	return metric
 }
 
+// newLabelGauge creates a dummy gauge whose value should always be 1. This
+// gauge is useful to report static information like a version.
+func newLabelGauge(system, subsystem, name, help, prefix, label string) (*prometheus.GaugeVec) {
+	if help == "" {
+		help = name
+	}
+	namespace := system
+	if prefix != "" {
+		namespace = prefix
+	}
+	opts := prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: subsystem,
+		Name:      name,
+		Help:      help,
+	}
+	metric := prometheus.NewGaugeVec(opts, []string{"server_id", label})
+
+	Tracef("Created metric: %s, %s, %s, %s", namespace, subsystem, name, help)
+	return metric
+}
+
 // GetMetricURL retrieves a NATS Metrics JSON.
 // This can be called against any monitoring URL for NATS.
 // On any this function will error, warn and return nil.
@@ -190,6 +212,8 @@ func (nc *NATSCollector) collectStatsFromRequests(
 			switch v := response[key].(type) {
 			case float64: // not sure why, but all my json numbers are coming here.
 				m.WithLabelValues(id).Set(v)
+			case string:
+				m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
 			default:
 				Debugf("value no longer a float", id, v)
 			}
@@ -248,6 +272,12 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		}
 	}
 
+	labelKeys := map[string]struct{}{
+		"server_id":   struct{}{},
+		"server_name": struct{}{},
+		"version":     struct{}{},
+	}
+
 	// for each metric
 	for k := range response {
 		//  if it's not already defined in metricDefinitions
@@ -258,7 +288,10 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 			case float64: // all json numbers are handled here.
 				nc.Stats[k] = newPrometheusGaugeVec(nc.system, nc.endpoint, k, "", namespace)
 			case string:
-				// do nothing
+				if _, ok := labelKeys[k]; !ok {
+					break
+				}
+				nc.Stats[k] = newLabelGauge(nc.system, nc.endpoint, k, "", namespace, "value")
 			default:
 				// not one of the types currently handled
 				Tracef("Unknown type:  %v, %v", k, v)
