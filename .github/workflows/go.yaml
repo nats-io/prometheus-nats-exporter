@@ -5,7 +5,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go: [1.13, 1.12.9]
+        go: [1.15, 1.14.9]
         os: [ubuntu-latest, macOS-latest, windows-latest]
     runs-on: ${{matrix.os}}
     steps:
@@ -19,52 +19,16 @@ jobs:
         go-version: ${{matrix.go}}
     - name: Install deps
       shell: bash --noprofile --norc -x -eo pipefail {0}
-      env:
-        GO111MODULE: 'off'
       run: |
-        export GOPATH="$RUNNER_WORKSPACE"
-
-        go get -v github.com/nats-io/go-nats
-        go get -v github.com/nats-io/nats-server
-        go get -v github.com/nats-io/nats-replicator
-        go get -v github.com/wadey/gocovmerge
-        go get -v github.com/golangci/golangci-lint/cmd/golangci-lint
+        make install-tools
     - name: Lint
       shell: bash --noprofile --norc -x -eo pipefail {0}
-      env:
-        GO111MODULE: 'off'
       run: |
-        export GOPATH="$RUNNER_WORKSPACE"
-
-        go vet ./...
-        $(go env GOPATH)/bin/golangci-lint run \
-          --no-config --exclude-use-default=false --max-same-issues=0 \
-            --disable errcheck \
-            --enable golint \
-            --enable stylecheck \
-            --enable interfacer \
-            --enable unconvert \
-            --enable dupl \
-            --enable gocyclo \
-            --enable gofmt \
-            --enable goimports \
-            --enable misspell \
-            --enable lll \
-            --enable unparam \
-            --enable nakedret \
-            --enable prealloc \
-            --enable scopelint \
-            --enable gocritic \
-            --enable gochecknoinits \
-            ./...
-
+        make lint
     - name: Run tests
       shell: bash --noprofile --norc -x -eo pipefail {0}
       env:
-        GO111MODULE: 'off'
         CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
       run: |
-        export GOPATH="$RUNNER_WORKSPACE"
-
-        go test -v -race -p 1 ./...
-        ./scripts/cov.sh CI
+        make test
+        make test-cover-ci

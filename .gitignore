@@ -26,3 +26,4 @@ travis_wait*.log
 
 dist/
 prometheus-nats-exporter
+coverage.txt
