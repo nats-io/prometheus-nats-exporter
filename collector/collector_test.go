@@ -241,7 +241,10 @@ func TestNoServer(t *testing.T) {
 }
 
 func TestRegister(t *testing.T) {
-	cs := &CollectedServer{ID: "myid", URL: fmt.Sprintf("http://localhost:%d", pet.MonitorPort)}
+	cs := &CollectedServer{
+		ID:  "myid",
+		URL: fmt.Sprintf("http://localhost:%d", pet.MonitorPort),
+	}
 	servers := make([]*CollectedServer, 0)
 	servers = append(servers, cs)
 
@@ -254,8 +257,11 @@ func TestRegister(t *testing.T) {
 	nc := NewCollector("test", "varz", "", servers)
 
 	// test without a server (no error).
-	if err := prometheus.Register(nc); err == nil {
-		t.Fatalf("Did not get expected error.")
+	if err := prometheus.Register(nc); err != nil {
+		t.Fatal("Failed to register collector:", err)
+	}
+	if len(nc.(*NATSCollector).Stats) > 0 {
+		t.Fatal("Did not expect to get collector stats.")
 	}
 	prometheus.Unregister(nc)
 
@@ -266,16 +272,22 @@ func TestRegister(t *testing.T) {
 	// test collect with a server
 	nc = NewCollector("test", "varz", "", servers)
 	if err := prometheus.Register(nc); err != nil {
-		t.Fatalf("Got unexpected error: %v", err)
+		t.Fatal("Failed to register collector:", err)
+	}
+	if len(nc.(*NATSCollector).Stats) == 0 {
+		t.Fatalf("Expected to get collector stats.")
 	}
 	prometheus.Unregister(nc)
 
 	// test collect with an invalid endpoint
 	nc = NewCollector("test", "GARBAGE", "", servers)
-	if err := prometheus.Register(nc); err == nil {
-		t.Fatalf("Did not get expected error.")
-		defer prometheus.Unregister(nc)
+	if err := prometheus.Register(nc); err != nil {
+		t.Fatal("Failed to register collector:", err)
 	}
+	if len(nc.(*NATSCollector).Stats) > 0 {
+		t.Fatal("Did not expect to get collector stats.")
+	}
+	prometheus.Unregister(nc)
 }
 
 func TestAllEndpoints(t *testing.T) {
