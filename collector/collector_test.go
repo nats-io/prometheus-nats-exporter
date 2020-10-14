@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	stan "github.com/nats-io/go-nats-streaming"
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
+	stan "github.com/nats-io/stan.go"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
@@ -155,7 +155,7 @@ func getLabelValues(system, url, endpoint string, metricNames []string) (map[str
 	coll.Collect(metrics)
 	close(metrics)
 
-	//return after the processing goroutine is done
+	// return after the processing goroutine is done
 	select {
 	case err := <-errs:
 		return nil, err

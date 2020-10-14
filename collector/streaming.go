@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	ChannelszSuffix = "/streaming/channelsz?subs=1"
-	ServerzSuffix   = "/streaming/serverz"
+	channelszSuffix = "/streaming/channelsz?subs=1"
+	serverzSuffix   = "/streaming/serverz"
 )
 
 // newStreamingCollector collects channelsz and serversz metrics of
@@ -141,7 +141,7 @@ func newServerzCollector(system string, servers []*CollectedServer) prometheus.C
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + ServerzSuffix,
+			URL: s.URL + serverzSuffix,
 		}
 	}
 
@@ -283,7 +283,7 @@ func newChannelsCollector(system string, servers []*CollectedServer) prometheus.
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + ChannelszSuffix,
+			URL: s.URL + channelszSuffix,
 		}
 	}
 
@@ -300,11 +300,11 @@ func (nc *channelsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func getRoleFromChannelszURL(client *http.Client, url string) (string, error) {
-	if !strings.HasSuffix(url, ChannelszSuffix) {
+	if !strings.HasSuffix(url, channelszSuffix) {
 		return "", nil
 	}
 
-	var newURL = (strings.TrimSuffix(url, ChannelszSuffix) + ServerzSuffix)
+	var newURL = (strings.TrimSuffix(url, channelszSuffix) + serverzSuffix)
 	var serverResp StreamingServerz
 	if err := getMetricURL(client, newURL, &serverResp); err != nil {
 		return "", err

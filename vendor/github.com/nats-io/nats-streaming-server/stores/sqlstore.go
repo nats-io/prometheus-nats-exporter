@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2019 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,11 +23,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/nats-io/go-nats-streaming/pb"
 	"github.com/nats-io/nats-streaming-server/logger"
 	"github.com/nats-io/nats-streaming-server/spb"
 	"github.com/nats-io/nats-streaming-server/util"
 	"github.com/nats-io/nuid"
+	"github.com/nats-io/stan.go/pb"
 )
 
 const (
@@ -104,10 +104,10 @@ var sqlStmts = []string{
 	"INSERT INTO Channels (id, name, maxmsgs, maxbytes, maxage) VALUES (?, ?, ?, ?, ?)",                          // sqlAddChannel
 	"INSERT INTO Messages VALUES (?, ?, ?, ?, ?)",                                                                // sqlStoreMsg
 	"SELECT timestamp, data FROM Messages WHERE id=? AND seq=?",                                                  // sqlLookupMsg
-	"SELECT seq FROM Messages WHERE id=? AND timestamp>=? LIMIT 1",                                               // sqlGetSequenceFromTimestamp
+	"SELECT seq FROM Messages WHERE id=? AND timestamp>=? ORDER BY seq LIMIT 1",                                  // sqlGetSequenceFromTimestamp
 	"UPDATE Channels SET maxseq=? WHERE id=?",                                                                    // sqlUpdateChannelMaxSeq
 	"SELECT COUNT(seq), COALESCE(MAX(seq), 0), COALESCE(SUM(size), 0) FROM Messages WHERE id=? AND timestamp<=?", // sqlGetExpiredMessages
-	"SELECT timestamp FROM Messages WHERE id=? AND seq>=? LIMIT 1",                                               // sqlGetFirstMsgTimestamp
+	"SELECT timestamp FROM Messages WHERE id=? AND seq>=? ORDER BY seq LIMIT 1",                                  // sqlGetFirstMsgTimestamp
 	"DELETE FROM Messages WHERE id=? AND seq<=?",                                                                 // sqlDeletedMsgsWithSeqLowerThan
 	"SELECT size FROM Messages WHERE id=? AND seq=?",                                                             // sqlGetSizeOfMessage
 	"DELETE FROM Messages WHERE id=? AND seq=?",                                                                  // sqlDeleteMessage
@@ -181,6 +181,10 @@ const (
 	// Number of missed update interval after which the lock is assumed
 	// lost and another instance can update it.
 	sqlDefaultLockLostCount = 3
+
+	// Limit of number of messages in the cache before message store
+	// is automatically flushed on a Store() call.
+	sqlDefaultMsgCacheLimit = 1024
 )
 
 // These are initialized based on the constants that have reasonable values.
@@ -195,6 +199,7 @@ var (
 	sqlLockUpdateInterval        = sqlDefaultLockUpdateInterval
 	sqlLockLostCount             = sqlDefaultLockLostCount
 	sqlNoPanic                   = false // Used in tests to avoid go-routine to panic
+	sqlMsgCacheLimit             = sqlDefaultMsgCacheLimit
 )
 
 // SQLStoreOptions are used to configure the SQL Store.
@@ -337,10 +342,11 @@ type SQLMsgStore struct {
 }
 
 type sqlMsgsCache struct {
-	msgs map[uint64]*sqlCachedMsg
-	head *sqlCachedMsg
-	tail *sqlCachedMsg
-	free *sqlCachedMsg
+	msgs  map[uint64]*sqlCachedMsg
+	head  *sqlCachedMsg
+	tail  *sqlCachedMsg
+	free  *sqlCachedMsg
+	count int
 }
 
 type sqlCachedMsg struct {
@@ -1330,6 +1336,7 @@ func (mc *sqlMsgsCache) add(msg *pb.MsgProto, data []byte) {
 		mc.tail.next = cachedMsg
 	}
 	mc.tail = cachedMsg
+	mc.count++
 }
 
 func (mc *sqlMsgsCache) transferToFreeList() {
@@ -1339,6 +1346,7 @@ func (mc *sqlMsgsCache) transferToFreeList() {
 	}
 	mc.head = nil
 	mc.tail = nil
+	mc.count = 0
 }
 
 func (mc *sqlMsgsCache) pop() *sqlCachedMsg {
@@ -1349,6 +1357,7 @@ func (mc *sqlMsgsCache) pop() *sqlCachedMsg {
 		if mc.head == nil {
 			mc.tail = nil
 		}
+		mc.count--
 	}
 	return cm
 }
@@ -1370,6 +1379,11 @@ func (ms *SQLMsgStore) Store(m *pb.MsgProto) (uint64, error) {
 
 	useCache := !ms.sqlStore.opts.NoCaching
 	if useCache {
+		if ms.writeCache.count >= sqlMsgCacheLimit {
+			if err := ms.flush(); err != nil {
+				return 0, err
+			}
+		}
 		ms.writeCache.add(m, msgBytes)
 	} else {
 		if _, err := ms.sqlStore.preparedStmts[sqlStoreMsg].Exec(ms.channelID, seq, m.Timestamp, dataLen, msgBytes); err != nil {
@@ -1947,11 +1961,14 @@ func (ss *SQLSubStore) deleteSubPendingRow(subid, rowid uint64) error {
 func (ss *SQLSubStore) recoverPendingRow(rows *sql.Rows, sub *spb.SubState, ap *sqlSubAcksPending, pendingAcks PendingAcks,
 	gcedRows map[uint64]struct{}) error {
 	var (
-		seq, lastSent           uint64
+		rowID, seq, lastSent    uint64
 		pendingBytes, acksBytes []byte
 	)
-	if err := rows.Scan(&ss.curRow, &seq, &lastSent, &pendingBytes, &acksBytes); err != nil && err != sql.ErrNoRows {
+	if err := rows.Scan(&rowID, &seq, &lastSent, &pendingBytes, &acksBytes); err != nil && err != sql.ErrNoRows {
 		return err
+	}
+	if rowID > ss.curRow {
+		ss.curRow = rowID
 	}
 	// If seq is non zero, this was created from a non-buffered run.
 	if seq > 0 {
@@ -1963,7 +1980,7 @@ func (ss *SQLSubStore) recoverPendingRow(rows *sql.Rows, sub *spb.SubState, ap *
 		var row *sqlSubsPendingRow
 		if ap != nil {
 			row = &sqlSubsPendingRow{
-				ID:   ss.curRow,
+				ID:   rowID,
 				msgs: sqlSeqMapPool.Get().(map[uint64]struct{}),
 			}
 			ap.lastSent = lastSent

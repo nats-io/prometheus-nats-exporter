@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/nats-io/gnatsd/logger"
+	"github.com/nats-io/nats-server/v2/logger"
 )
 
 // Logging in the collector
@@ -149,7 +149,6 @@ func Fatalf(format string, v ...interface{}) {
 }
 
 // Debugf logs a debug statement
-// nolint
 func Debugf(format string, v ...interface{}) {
 	if atomic.LoadInt32(&debug) != 0 {
 		executeLogCall(func(log Logger, format string, v ...interface{}) {
@@ -159,7 +158,6 @@ func Debugf(format string, v ...interface{}) {
 }
 
 // Tracef logs a trace statement
-// nolint
 func Tracef(format string, v ...interface{}) {
 	if atomic.LoadInt32(&trace) != 0 {
 		executeLogCall(func(logger Logger, format string, v ...interface{}) {

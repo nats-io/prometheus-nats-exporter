@@ -77,7 +77,7 @@ func newPrometheusGaugeVec(system, subsystem, name, help, prefix string) (metric
 
 // newLabelGauge creates a dummy gauge whose value should always be 1. This
 // gauge is useful to report static information like a version.
-func newLabelGauge(system, subsystem, name, help, prefix, label string) (*prometheus.GaugeVec) {
+func newLabelGauge(system, subsystem, name, help, prefix, label string) *prometheus.GaugeVec {
 	if help == "" {
 		help = name
 	}
@@ -261,7 +261,10 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		Tracef("Initializing metrics collection from: %s", v.URL)
 		if err := getMetricURL(nc.httpClient, v.URL, &response); err != nil {
 			// if a server is not running, silently ignore it.
-			if strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "cannot assign requested address") {
+
+			isConnectErr := strings.Contains(err.Error(), "connection refused") ||
+				strings.Contains(err.Error(), "cannot assign requested address")
+			if isConnectErr {
 				Debugf("Unable to connect to the NATS server: %v", err)
 			} else {
 				// TODO:  Do not retry for other errors?
@@ -273,9 +276,9 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 	}
 
 	labelKeys := map[string]struct{}{
-		"server_id":   struct{}{},
-		"server_name": struct{}{},
-		"version":     struct{}{},
+		"server_id":   {},
+		"server_name": {},
+		"version":     {},
 	}
 
 	// for each metric

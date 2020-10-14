@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2019 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,11 +20,12 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/nats-io/go-nats"
 	"github.com/nats-io/nats-streaming-server/spb"
+	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -101,23 +102,18 @@ func (r *raftNode) shutdown() error {
 	}
 	r.closed = true
 	r.Unlock()
-	if r.Raft != nil {
-		if err := r.Raft.Shutdown().Error(); err != nil {
-			return err
-		}
-	}
 	if r.transport != nil {
 		if err := r.transport.Close(); err != nil {
 			return err
 		}
 	}
-	if r.store != nil {
-		if err := r.store.Close(); err != nil {
+	if r.Raft != nil {
+		if err := r.Raft.Shutdown().Error(); err != nil {
 			return err
 		}
 	}
-	if r.joinSub != nil {
-		if err := r.joinSub.Unsubscribe(); err != nil {
+	if r.store != nil {
+		if err := r.store.Close(); err != nil {
 			return err
 		}
 	}
@@ -451,6 +447,32 @@ func (s *StanServer) getClusteringPeerAddr(raftName, nodeID string) string {
 	return fmt.Sprintf("%s.%s.%s", s.opts.ID, nodeID, raftName)
 }
 
+// Returns the message store first and last sequence.
+// When in clustered mode, if the first and last are 0, returns the value of
+// the last sequence that we possibly got from the last snapshot. If a node
+// restores a snapshot that let's say has first=1 and last=100, but when it
+// tries to get these messages from the leader, the leader does not send them
+// back because they have all expired, the node will not store anything.
+// If we just rely on store's first/last, this node would use and report 0
+// for channel's first and last while when all messages have expired, it should
+// be last+1/last.
+func (s *StanServer) getChannelFirstAndlLastSeq(c *channel) (uint64, uint64, error) {
+	first, last, err := c.store.Msgs.FirstAndLastSequence()
+	if !s.isClustered {
+		return first, last, err
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+	if first == 0 && last == 0 {
+		if fseq := atomic.LoadUint64(&c.firstSeq); fseq != 0 {
+			first = fseq
+			last = fseq - 1
+		}
+	}
+	return first, last, nil
+}
+
 // Apply log is invoked once a log entry is committed.
 // It returns a value which will be made available in the
 // ApplyFuture returned by Raft.Apply method if that
@@ -461,6 +483,10 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 	if err := op.Unmarshal(l.Data); err != nil {
 		panic(err)
 	}
+	// We don't want snapshot Persist() and Apply() to execute concurrently,
+	// so use common lock.
+	r.Lock()
+	defer r.Unlock()
 	switch op.OpType {
 	case spb.RaftOperation_Publish:
 		// Message replication.
@@ -476,6 +502,17 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 				// just bail out.
 				if err == ErrChanDelInProgress {
 					return nil
+				} else if err == nil && !c.lSeqChecked {
+					// If msg.Sequence is > 1, then make sure we have no gap.
+					if msg.Sequence > 1 {
+						// We pass `1` for the `first` sequence. The function we call
+						// will do the right thing when it comes to restore possible
+						// missing messages.
+						err = s.raft.fsm.restoreMsgsFromSnapshot(c, 1, msg.Sequence-1, true)
+					}
+					if err == nil {
+						c.lSeqChecked = true
+					}
 				}
 			}
 			if err == nil {
@@ -486,7 +523,7 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 					msg.Sequence, msg.Subject, err))
 			}
 		}
-		return nil
+		return c.store.Msgs.Flush()
 	case spb.RaftOperation_Connect:
 		// Client connection create replication.
 		return s.processConnect(op.ClientConnect.Request, op.ClientConnect.Refresh)
@@ -495,7 +532,7 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 		return s.closeClient(op.ClientDisconnect.ClientID)
 	case spb.RaftOperation_Subscribe:
 		// Subscription replication.
-		sub, err := s.processSub(nil, op.Sub.Request, op.Sub.AckInbox)
+		sub, err := s.processSub(nil, op.Sub.Request, op.Sub.AckInbox, op.Sub.ID)
 		return &replicatedSub{sub: sub, err: err}
 	case spb.RaftOperation_RemoveSubscription:
 		fallthrough

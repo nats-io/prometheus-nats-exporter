@@ -15,11 +15,12 @@
 package collector
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func isGatewayzEndpoint(system, endpoint string) bool {
@@ -187,13 +188,13 @@ type Gatewayz struct {
 	InboundGateways  map[string][]*RemoteGatewayz `json:"inbound_gateways"`
 }
 
-// Gateway
+// RemoteGatewayz output
 type RemoteGatewayz struct {
 	IsConfigured bool     `json:"configured"`
 	Connection   ConnInfo `json:"connection,omitempty"`
 }
 
-// Gateway Connection
+// ConnInfo output
 type ConnInfo struct {
 	Cid          uint64    `json:"cid"`
 	Start        time.Time `json:"start"`

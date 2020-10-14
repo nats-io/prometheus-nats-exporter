@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package test can be used to create NATS servers used in exporter and
+// collector tests.
 package test
 
 import (
@@ -20,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nats-io/gnatsd/logger"
-	"github.com/nats-io/gnatsd/server"
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats-server/v2/logger"
+	"github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/nats.go"
 
 	rconf "github.com/nats-io/nats-replicator/server/conf"
 	rcore "github.com/nats-io/nats-replicator/server/core"
@@ -117,7 +119,7 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 			time.Sleep(50 * time.Millisecond)
 			continue
 		}
-		_ = conn.Close() // nolint
+		_ = conn.Close()
 
 		// Wait a bit to give a chance to the server to remove this
 		// "client" from its state, which may otherwise interfere with
