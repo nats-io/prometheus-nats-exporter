@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2019 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -330,6 +330,9 @@ func (n *natsStreamLayer) Accept() (net.Conn, error) {
 
 func (n *natsStreamLayer) Close() error {
 	n.mu.Lock()
+	nc := n.conn
+	// Do not set nc.conn to nil since it is accessed in some functions
+	// without the stream layer lock
 	conns := make(map[*natsConn]struct{}, len(n.conns))
 	for conn, s := range n.conns {
 		conns[conn] = s
@@ -338,7 +341,10 @@ func (n *natsStreamLayer) Close() error {
 	for c := range conns {
 		c.Close()
 	}
-	return n.sub.Unsubscribe()
+	if nc != nil {
+		nc.Close()
+	}
+	return nil
 }
 
 func (n *natsStreamLayer) Addr() net.Addr {

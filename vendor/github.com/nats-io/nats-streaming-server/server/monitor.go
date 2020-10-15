@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2019 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	gnatsd "github.com/nats-io/gnatsd/server"
+	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats-streaming-server/stores"
 	"github.com/prometheus/procfs"
 )
@@ -46,6 +46,7 @@ type Serverz struct {
 	Version       string    `json:"version"`
 	GoVersion     string    `json:"go"`
 	State         string    `json:"state"`
+	Role          string    `json:"role,omitempty"`
 	Now           time.Time `json:"now"`
 	Start         time.Time `json:"start_time"`
 	Uptime        string    `json:"uptime"`
@@ -127,12 +128,16 @@ type Subscriptionz struct {
 	IsStalled    bool   `json:"is_stalled"`
 }
 
-func (s *StanServer) startMonitoring(nOpts *gnatsd.Options) error {
+func (s *StanServer) startMonitoring(nOpts *natsd.Options) error {
 	var hh http.Handler
 	// If we are connecting to remote NATS Server, we start our own
 	// HTTP(s) server.
 	if s.opts.NATSServerURL != "" {
-		s.natsServer = gnatsd.New(nOpts)
+		ns, err := natsd.NewServer(nOpts)
+		if err != nil {
+			return err
+		}
+		s.natsServer = ns
 		if err := s.natsServer.StartMonitoring(); err != nil {
 			return err
 		}
@@ -183,12 +188,15 @@ func (s *StanServer) handleServerz(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Error getting information about channels state: %v", err), http.StatusInternalServerError)
 		return
 	}
+	var role string
 	s.mu.RLock()
 	state := s.state
+	if s.raft != nil {
+		role = s.raft.State().String()
+	}
 	s.mu.RUnlock()
-	s.monMu.RLock()
-	numSubs := s.numSubs
-	s.monMu.RUnlock()
+
+	numSubs := s.numSubs()
 	now := time.Now()
 
 	fds := 0
@@ -199,7 +207,7 @@ func (s *StanServer) handleServerz(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Error getting file descriptors len: %v", err), http.StatusInternalServerError)
 			return
 		}
-		limits, err := p.NewLimits()
+		limits, err := p.Limits()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error getting process limits: %v", err), http.StatusInternalServerError)
 			return
@@ -213,6 +221,7 @@ func (s *StanServer) handleServerz(w http.ResponseWriter, r *http.Request) {
 		Version:       VERSION,
 		GoVersion:     runtime.Version(),
 		State:         state.String(),
+		Role:          role,
 		Now:           now,
 		Start:         s.startTime,
 		Uptime:        myUptime(now.Sub(s.startTime)),
@@ -455,7 +464,7 @@ func (s *StanServer) handleChannelsz(w http.ResponseWriter, r *http.Request) {
 			carr = carr[minoff:maxoff]
 			for _, cz := range carr {
 				cs := channels[cz.Name]
-				if err := updateChannelz(cz, cs, subsOption); err != nil {
+				if err := s.updateChannelz(cz, cs, subsOption); err != nil {
 					http.Error(w, fmt.Sprintf("Error getting information about channel %q: %v", channelName, err), http.StatusInternalServerError)
 					return
 				}
@@ -483,19 +492,19 @@ func (s *StanServer) handleOneChannel(w http.ResponseWriter, r *http.Request, na
 		return
 	}
 	channelz := &Channelz{Name: name}
-	if err := updateChannelz(channelz, cs, subsOption); err != nil {
+	if err := s.updateChannelz(channelz, cs, subsOption); err != nil {
 		http.Error(w, fmt.Sprintf("Error getting information about channel %q: %v", name, err), http.StatusInternalServerError)
 		return
 	}
 	s.sendResponse(w, r, channelz)
 }
 
-func updateChannelz(cz *Channelz, c *channel, subsOption int) error {
+func (s *StanServer) updateChannelz(cz *Channelz, c *channel, subsOption int) error {
 	msgs, bytes, err := c.store.Msgs.State()
 	if err != nil {
 		return fmt.Errorf("unable to get message state: %v", err)
 	}
-	fseq, lseq, err := c.store.Msgs.FirstAndLastSequence()
+	fseq, lseq, err := s.getChannelFirstAndlLastSeq(c)
 	if err != nil {
 		return fmt.Errorf("unable to get first and last sequence: %v", err)
 	}
@@ -514,7 +523,7 @@ func (s *StanServer) sendResponse(w http.ResponseWriter, r *http.Request, conten
 	if err != nil {
 		s.log.Errorf("Error marshaling response to %q request: %v", r.URL, err)
 	}
-	gnatsd.ResponseHandler(w, r, b)
+	natsd.ResponseHandler(w, r, b)
 }
 
 func getOffsetAndLimit(r *http.Request) (int, int) {

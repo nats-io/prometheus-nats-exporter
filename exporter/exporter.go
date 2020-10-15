@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package exporter is a Prometheus exporter for NATS.
 package exporter
 
 import (
@@ -58,7 +59,7 @@ type NATSExporterOptions struct {
 	UseInternalServerID  bool
 }
 
-//NATSExporter collects NATS metrics
+// NATSExporter collects NATS metrics
 type NATSExporter struct {
 	sync.Mutex
 	opts       *NATSExporterOptions
@@ -106,7 +107,7 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 		http: nil,
 	}
 	if o.NATSServerURL != "" {
-		_ = ne.AddServer(o.NATSServerTag, o.NATSServerURL) // nolint
+		_ = ne.AddServer(o.NATSServerTag, o.NATSServerURL)
 	}
 	return ne
 }

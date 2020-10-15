@@ -8,8 +8,18 @@ routez) from a NATS server into a single Prometheus exporter endpoint.
 
 # Build
 ``` bash
-export GO111MODULE=off
-go build
+make build
+```
+
+If you want to run tests, you can do this.
+
+```bash
+make install-tools
+make test
+make lint
+
+# If you want to see the coverage locally, then run this.
+# make test-cover
 ```
 
 # Run
