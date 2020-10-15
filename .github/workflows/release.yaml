@@ -14,25 +14,10 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13
-    - name: Install deps
-      shell: bash --noprofile --norc -x -eo pipefail {0}
-      env:
-        GO111MODULE: 'off'
-      run: |
-        export GOPATH="$RUNNER_WORKSPACE"
-
-        go get -v github.com/nats-io/go-nats
-        go get -v github.com/nats-io/nats-server
-        go get -v github.com/nats-io/nats-replicator
-        go get -v github.com/wadey/gocovmerge
-        go get -v github.com/golangci/golangci-lint/cmd/golangci-lint
+        go-version: 1.15
     - name: Release
       shell: bash --noprofile --norc -x -eo pipefail {0}
       env:
-        GO111MODULE: 'off'
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       run: |
-        export GOPATH="$RUNNER_WORKSPACE"
-
         curl --location http://git.io/goreleaser | bash
