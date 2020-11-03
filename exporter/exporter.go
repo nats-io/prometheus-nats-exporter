@@ -33,6 +33,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	modeStarted uint8 = iota + 1
+	modeStopped
+)
+
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
@@ -67,7 +72,7 @@ type NATSExporter struct {
 	http       net.Listener
 	collectors []prometheus.Collector
 	servers    []*collector.CollectedServer
-	running    bool
+	mode       uint8
 }
 
 // Defaults
@@ -145,7 +150,7 @@ func (ne *NATSExporter) AddServer(id, url string) error {
 	ne.Lock()
 	defer ne.Unlock()
 
-	if ne.running {
+	if ne.mode == modeStarted {
 		return fmt.Errorf("servers cannot be added after the exporter is started")
 	}
 	cs := &collector.CollectedServer{ID: id, URL: url}
@@ -214,7 +219,7 @@ func (ne *NATSExporter) clearCollectors() {
 func (ne *NATSExporter) Start() error {
 	ne.Lock()
 	defer ne.Unlock()
-	if ne.running {
+	if ne.mode == modeStarted {
 		return nil
 	}
 
@@ -229,7 +234,7 @@ func (ne *NATSExporter) Start() error {
 	}
 
 	ne.doneWg.Add(1)
-	ne.running = true
+	ne.mode = modeStarted
 
 	return nil
 }
@@ -377,8 +382,15 @@ func (ne *NATSExporter) startHTTP() error {
 		for i := 0; i < 10; i++ {
 			var err error
 			if err = srv.Serve(sHTTP); err != nil {
-				// In a test environment, this can fail because the server is already running.
-				collector.Debugf("Unable to start HTTP server (may already be running): %v", err)
+				// In a test environment, this can fail because the server is
+				// already running.
+
+				srvState := ne.getMode()
+				if srvState == modeStopped {
+					collector.Debugf("Server has been stopped, skipping reconnects")
+					return
+				}
+				collector.Debugf("Unable to start HTTP server (mode=%d): %v", srvState, err)
 			} else {
 				collector.Debugf("Started HTTP server.")
 			}
@@ -386,6 +398,13 @@ func (ne *NATSExporter) startHTTP() error {
 	}()
 
 	return nil
+}
+
+func (ne *NATSExporter) getMode() uint8 {
+	ne.Lock()
+	mode := ne.mode
+	ne.Unlock()
+	return mode
 }
 
 // WaitUntilDone blocks until the collector is stopped.
@@ -403,14 +422,14 @@ func (ne *NATSExporter) Stop() {
 	ne.Lock()
 	defer ne.Unlock()
 
-	if !ne.running {
+	if ne.mode == modeStopped {
 		return
 	}
 
-	ne.running = false
 	if err := ne.http.Close(); err != nil {
 		collector.Debugf("Did not close HTTP: %v", err)
 	}
 	ne.clearCollectors()
 	ne.doneWg.Done()
+	ne.mode = modeStopped
 }
