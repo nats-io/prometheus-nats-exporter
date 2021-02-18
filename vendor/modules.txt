@@ -9,7 +9,7 @@ github.com/cespare/xxhash/v2
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
-# github.com/golang/protobuf v1.4.2
+# github.com/golang/protobuf v1.4.3
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
@@ -30,11 +30,7 @@ github.com/hashicorp/raft
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/nats-io/gnatsd v1.4.1
 ## explicit
-github.com/nats-io/gnatsd/conf
-github.com/nats-io/gnatsd/logger
-github.com/nats-io/gnatsd/server/pse
-# github.com/nats-io/jwt v1.0.1
-## explicit
+# github.com/nats-io/jwt v1.1.0
 github.com/nats-io/jwt
 # github.com/nats-io/nats-replicator v0.1.0
 ## explicit
@@ -43,9 +39,7 @@ github.com/nats-io/nats-replicator/server/core
 github.com/nats-io/nats-replicator/server/logging
 # github.com/nats-io/nats-server v1.4.1
 ## explicit
-github.com/nats-io/nats-server/logger
-github.com/nats-io/nats-server/server
-# github.com/nats-io/nats-server/v2 v2.1.8
+# github.com/nats-io/nats-server/v2 v2.1.9
 ## explicit
 github.com/nats-io/nats-server/v2/conf
 github.com/nats-io/nats-server/v2/internal/ldap
@@ -73,7 +67,7 @@ github.com/nats-io/nuid
 ## explicit
 github.com/nats-io/stan.go
 github.com/nats-io/stan.go/pb
-# github.com/prometheus/client_golang v1.7.1
+# github.com/prometheus/client_golang v1.9.0
 ## explicit
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
@@ -81,12 +75,12 @@ github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.2.0
 ## explicit
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.14.0
+# github.com/prometheus/common v0.17.0
 ## explicit
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.2.0
+# github.com/prometheus/procfs v0.6.0
 ## explicit
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
@@ -94,7 +88,7 @@ github.com/prometheus/procfs/internal/util
 # go.etcd.io/bbolt v1.3.5
 ## explicit
 go.etcd.io/bbolt
-# golang.org/x/crypto v0.0.0-20201012173705-84dcc777aaee
+# golang.org/x/crypto v0.0.0-20210218145215-b8e89b74b9df
 ## explicit
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
@@ -104,7 +98,7 @@ golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
-# golang.org/x/sys v0.0.0-20201013132646-2da7054afaeb
+# golang.org/x/sys v0.0.0-20210218155724-8ebf48af031b
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
