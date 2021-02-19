@@ -30,11 +30,11 @@ This file lists the dependencies used in this repository.
 | github.com/nats-io/nkeys v0.0.2 | Apache License 2.0 |
 | github.com/nats-io/nuid v1.0.1-0.20180712044959-3024a71c3cbe | Apache License 2.0 |
 | github.com/pkg/errors v0.8.2-0.20190227000051-27936f6d90f9 | BSD 2-Clause "Simplified" License |
-| github.com/prometheus/client_golang v0.8.1-0.20170108232857-74f9ce27f652 | Apache License 2.0 |
+| github.com/prometheus/client_golang v1.9.0 | Apache License 2.0 |
 | github.com/prometheus/client_model v0.0.0-20150212101744-fa8ad6fec335 | Apache License 2.0 |
-| github.com/prometheus/common v0.0.0-20170108231212-dd2f054febf4 | Apache License 2.0 |
-| github.com/prometheus/procfs v0.0.0-20161206222141-fcdb11ccb438 | Apache License 2.0 |
+| github.com/prometheus/common v0.17.0 | Apache License 2.0 |
+| github.com/prometheus/procfs v0.6.0 | Apache License 2.0 |
 | github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 | MIT |
-| golang.org/x/crypto v0.0.0-20190313024323-a1f597ede03a | BSD 3-Clause "New" or "Revised" License |
-| golang.org/x/sys v0.0.0-20190318195719-6c81ef8f67ca | BSD 3-Clause "New" or "Revised" License |
+| golang.org/x/crypto v0.0.0-20210218145215-b8e89b74b9df | BSD 3-Clause "New" or "Revised" License |
+| golang.org/x/sys v0.0.0-20210218155724-8ebf48af031b | BSD 3-Clause "New" or "Revised" License |
 | golang.org/x/tools v0.0.0-20180221164845-07fd8470d635 | BSD 3-Clause "New" or "Revised" License |

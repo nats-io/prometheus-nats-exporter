@@ -1,4 +1,3 @@
-export GOFLAGS := -mod=vendor
 export GO111MODULE := on
 
 .PHONY: build
