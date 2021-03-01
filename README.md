@@ -34,7 +34,7 @@ prometheus-nats-exporter -varz "http://localhost:5555"
 To run with docker, you can use the following image:
 
 ```sh
-docker run synadia/prometheus-nats-exporter:latest
+docker run natsio/prometheus-nats-exporter:latest
 ```
 
 ## Usage
