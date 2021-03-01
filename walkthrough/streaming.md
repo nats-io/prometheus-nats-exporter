@@ -5,7 +5,7 @@ have the exporter poll metrics from the NATS Streaming Server
 monitoring port:
 
 ```sh
-$ docker run synadia/prometheus-nats-exporter:0.3.0 -h
+$ docker run natsio/prometheus-nats-exporter:latest -h
 ...
   -channelz
     	Get streaming channel metrics.
@@ -37,7 +37,7 @@ And example dashboard can be found [here](grafana-nss-dash.json):
 
 <img width="2155" alt="Example" src="https://user-images.githubusercontent.com/26195/54957961-78215700-4f11-11e9-8b0b-ae013d0b066d.png">
 
-## Monitoring msgs/sec from a channel 
+## Monitoring msgs/sec from a channel
 
 ```
 sum(rate(nss_chan_msgs_total{channel="foo"}[5m])) by (channel) / 3
