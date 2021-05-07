@@ -629,7 +629,8 @@ func TestExporterGatewayz(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if _, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs", false); err != nil {
+	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs", false)
+	if err != nil {
 		t.Fatalf("%v", err)
 	}
 }

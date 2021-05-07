@@ -1,5 +1,6 @@
 package test
 
+// GatewayzTestResponse is static data for tests
 func GatewayzTestResponse() string {
 	return `{
 	"server_id": "SERVER_ID",

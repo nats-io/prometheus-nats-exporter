@@ -56,7 +56,7 @@ func RunStreamingServer() *nss.StanServer {
 func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
 	http.Handle("/gatewayz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, GatewayzTestResponse())
+		fmt.Fprint(w, GatewayzTestResponse())
 	}))
 
 	go func() {
