@@ -14,12 +14,14 @@
 package exporter
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -39,6 +41,13 @@ func getDefaultExporterTestOptions() (opts *NATSExporterOptions) {
 	o := GetDefaultExporterOptions()
 	o.NATSServerTag = "test-server"
 	o.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
+	return o
+}
+
+func getStaticExporterTestOptions() (opts *NATSExporterOptions) {
+	o := GetDefaultExporterOptions()
+	o.NATSServerTag = "test-server"
+	o.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.StaticPort)
 	return o
 }
 
@@ -598,6 +607,29 @@ func TestExporterPrefix(t *testing.T) {
 	defer exp.Stop()
 
 	if _, err := checkExporterForResult(exp.http.Addr().String(), "test_varz_connections", false); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterGatewayz(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetGatewayz = true
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunGatewayzStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if _, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs", false); err != nil {
 		t.Fatalf("%v", err)
 	}
 }

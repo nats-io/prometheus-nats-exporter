@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -37,6 +39,9 @@ const ClientPort = 11224
 // MonitorPort is the default monitor port
 const MonitorPort = 11424
 
+// StaticPort is where static nats metrics are served
+const StaticPort = 11425
+
 // RunServer runs the NATS server in a go routine
 func RunServer() *server.Server {
 	return RunServerWithPorts(ClientPort, MonitorPort)
@@ -45,6 +50,20 @@ func RunServer() *server.Server {
 // RunStreamingServer runs the STAN server in a go routine.
 func RunStreamingServer() *nss.StanServer {
 	return RunStreamingServerWithPorts(nss.DefaultClusterID, ClientPort, MonitorPort)
+}
+
+// RunGatewayzStaticServer starts an http server with static content
+func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
+	http.Handle("/gatewayz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, GatewayzTestResponse())
+	}))
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
 }
 
 // RunStreamingServerWithPorts runs the STAN server in a go routine allowing

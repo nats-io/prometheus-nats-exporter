@@ -99,7 +99,7 @@ func newGateway(system, endpoint, gwType string) *gateway {
 		configured: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_configured"),
 			"configured",
-			[]string{"gateway_name", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
 			nil),
 		connRtt: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_rtt"),
@@ -164,7 +164,7 @@ func (gw *gateway) Collect(server *CollectedServer, lgwName, rgwName string,
 		0.0, lgwName, rgwName, server.ID, rgw.Connection.Start.String(),
 		rgw.Connection.LastActivity.String(), rgw.Connection.Uptime, rgw.Connection.Idle)
 	ch <- prometheus.MustNewConstMetric(gw.configured, prometheus.GaugeValue,
-		boolToFloat(rgw.IsConfigured), lgwName, rgwName, server.ID)
+		boolToFloat(rgw.IsConfigured), lgwName, cid, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connRtt, prometheus.GaugeValue,
 		rtt.Seconds(), lgwName, cid, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connPendingBytes, prometheus.GaugeValue,
