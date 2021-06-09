@@ -16,6 +16,7 @@ package collector
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -242,6 +243,7 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 	resps := nc.makeRequests()
 	if len(resps) > 0 {
 		for key, stat := range nc.Stats {
+			fmt.Println(key, stat)
 			nc.collectStatsFromRequests(key, stat, resps, ch)
 		}
 	}
@@ -295,6 +297,41 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 					break
 				}
 				nc.Stats[k] = newLabelGauge(nc.system, nc.endpoint, k, "", namespace, "value")
+			case map[string]interface{}:
+				// First level
+				for kk, vv := range v {
+					// Second level
+					switch value := vv.(type) {
+					case map[string]interface{}:
+						for key, value := range value {
+							field := fmt.Sprintf("%s_%s_%s", k, kk, key)
+							switch value.(type) {
+							case float64: // all json numbers are handled here.
+								fmt.Println("metrics!", key, value)
+								nc.Stats[field] = newPrometheusGaugeVec(nc.system, nc.endpoint, field, "", namespace)
+							case string:
+								if _, ok := labelKeys[field]; !ok {
+									break
+								}
+								nc.Stats[field] = newLabelGauge(nc.system, nc.endpoint, field, "", namespace, "value")
+							}
+
+						}
+					}
+					// field := fmt.Sprintf("%s_%s_", k, kk)
+					// fmt.Println(">>>>>>>>>>>>>", field, vv)
+					// switch vvv := i.(type) {
+					// case float64:
+					// 	nc.Stats[field] = newPrometheusGaugeVec(nc.system, nc.endpoint, k, "", namespace)
+					// case string:
+					// 	if _, ok := labelKeys[k]; !ok {
+					// 		break
+					// 	}
+					// 	nc.Stats[k] = newLabelGauge(nc.system, nc.endpoint, k, "", namespace, "value")
+					// default:
+					// 	// Skip for now.
+					// }
+				}
 			default:
 				// not one of the types currently handled
 				Tracef("Unknown type:  %v, %v", k, v)
