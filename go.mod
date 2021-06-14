@@ -1,6 +1,6 @@
 module github.com/nats-io/prometheus-nats-exporter
 
-go 1.15
+go 1.16
 
 require (
 	github.com/gogo/protobuf v1.2.2-0.20190316100346-88dda4156dab // indirect
