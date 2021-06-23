@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
 	stan "github.com/nats-io/stan.go"
 	"github.com/prometheus/client_golang/prometheus"
@@ -194,7 +195,7 @@ func TestVarz(t *testing.T) {
 		"gnatsd_varz_out_msgs":          1,
 		"gnatsd_varz_in_bytes":          5,
 		"gnatsd_varz_out_bytes":         5,
-		"gnatsd_varz_subscriptions":     1,
+		"gnatsd_varz_subscriptions":     37,
 	}
 
 	verifyCollector(CoreSystem, url, "varz", cases, t)
@@ -312,7 +313,7 @@ func TestAllEndpoints(t *testing.T) {
 	verifyCollector(CoreSystem, url, "routez", cases, t)
 
 	cases = map[string]float64{
-		"gnatsd_subsz_num_subscriptions": 1,
+		"gnatsd_subsz_num_subscriptions": 37,
 	}
 	verifyCollector(CoreSystem, url, "subsz", cases, t)
 
@@ -353,13 +354,13 @@ func TestStreamingVarz(t *testing.T) {
 	}
 
 	cases := map[string]float64{
-		"gnatsd_varz_total_connections": 4,
-		"gnatsd_varz_connections":       4,
+		"gnatsd_varz_total_connections": 5,
+		"gnatsd_varz_connections":       5,
 		"gnatsd_varz_in_msgs":           45,
 		"gnatsd_varz_out_msgs":          44,
-		"gnatsd_varz_in_bytes":          1644,
-		"gnatsd_varz_out_bytes":         1599,
-		"gnatsd_varz_subscriptions":     14,
+		"gnatsd_varz_in_bytes":          1594,
+		"gnatsd_varz_out_bytes":         1549,
+		"gnatsd_varz_subscriptions":     50,
 	}
 
 	verifyCollector(CoreSystem, url, "varz", cases, t)
@@ -606,6 +607,49 @@ func TestStreamingSubscriptionsMetricLabels(t *testing.T) {
 				"for a durable subscription", streamingSunscriptionMetric)
 		}
 	}
+}
+
+func TestJetStreamMetrics(t *testing.T) {
+	clientPort := 4229
+	monitorPort := 8229
+	s := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name: "foo",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sub, err := js.SubscribeSync("foo", nats.Durable("my-name"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Unsubscribe()
+
+	js.Publish("foo", []byte("bar1"))
+	js.Publish("foo", []byte("bar2"))
+	js.Publish("foo", []byte("bar3"))
+	time.Sleep(5 * time.Second)
+
+	cases := map[string]float64{
+		"jetstream_server_total_streams":   1,
+		"jetstream_server_total_consumers": 1,
+	}
+	verifyCollector(JetStreamSystem, url, "jsz", cases, t)
 }
 
 func TestReplicatorMetrics(t *testing.T) {
