@@ -52,6 +52,7 @@ type NATSExporterOptions struct {
 	GetReplicatorVarz    bool
 	GetStreamingChannelz bool
 	GetStreamingServerz  bool
+	GetJszFilter         string
 	RetryInterval        time.Duration
 	CertFile             string
 	KeyFile              string
@@ -170,9 +171,10 @@ func (ne *NATSExporter) initializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
+	getJsz := opts.GetJszFilter != ""
 	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
 		!opts.GetGatewayz && !opts.GetStreamingChannelz &&
-		!opts.GetStreamingServerz && !opts.GetReplicatorVarz {
+		!opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
 		return fmt.Errorf("no collectors specfied")
 	}
 	if opts.GetReplicatorVarz && opts.GetVarz {
@@ -202,6 +204,15 @@ func (ne *NATSExporter) initializeCollectors() error {
 	if opts.GetReplicatorVarz {
 		ne.createCollector(collector.ReplicatorSystem, "varz")
 	}
+	if getJsz {
+		switch strings.ToLower(opts.GetJszFilter) {
+		case "account", "accounts", "consumer", "consumers", "all", "stream", "streams":
+		default:
+			return fmt.Errorf("invalid jsz filter %q", opts.GetJszFilter)
+		}
+		ne.createCollector(collector.JetStreamSystem, opts.GetJszFilter)
+	}
+
 	return nil
 }
 

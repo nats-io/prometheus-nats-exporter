@@ -25,7 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// System Name Varibles
+// System Name Variables
 var (
 	// use gnatsd for backward compatibility. Changing would require users to
 	// change their dashboards or other applications that rely on the
@@ -33,6 +33,7 @@ var (
 	CoreSystem       = "gnatsd"
 	StreamingSystem  = "nss"
 	ReplicatorSystem = "replicator"
+	JetStreamSystem  = "jetstream"
 )
 
 // CollectedServer is a NATS server polled by this collector
@@ -357,6 +358,9 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 
 	if isReplicatorEndpoint(system, endpoint) {
 		return newReplicatorCollector(getSystem(system, prefix), servers)
+	}
+	if isJszEndpoint(system) {
+		return newJszCollector(getSystem(system, prefix), endpoint, servers)
 	}
 	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
 }
