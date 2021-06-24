@@ -17,8 +17,11 @@ package test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -26,6 +29,7 @@ import (
 
 	"github.com/nats-io/nats-server/v2/logger"
 	"github.com/nats-io/nats-server/v2/server"
+	natsserver "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 
 	rconf "github.com/nats-io/nats-replicator/server/conf"
@@ -148,6 +152,22 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 		return s
 	}
 	panic("Unable to start NATS Server in Go Routine")
+}
+
+var tempRoot = filepath.Join(os.TempDir(), "exporter")
+
+// RunJetStreamServerWithPorts starts a JetStream server.
+func RunJetStreamServerWithPorts(port, monitorPort int, domain string) *server.Server {
+	opts := natsserver.DefaultTestOptions
+	opts.Port = port
+	opts.JetStream = true
+	opts.JetStreamDomain = domain
+	tdir, _ := ioutil.TempDir(tempRoot, "js-storedir-")
+	opts.StoreDir = filepath.Dir(tdir)
+	opts.HTTPHost = "127.0.0.1"
+	opts.HTTPPort = monitorPort
+
+	return natsserver.RunServer(&opts)
 }
 
 func resetPreviousHTTPConnections() {

@@ -27,7 +27,7 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
-var version = "0.6.2"
+var version = "0.8.0"
 
 // parseServerIDAndURL parses the url argument the optional id for the server ID.
 func parseServerIDAndURL(urlArg string) (string, string, error) {
@@ -75,7 +75,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 
 	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz ||
 		opts.GetRoutez || opts.GetGatewayz || opts.GetStreamingChannelz ||
-		opts.GetStreamingServerz || opts.GetReplicatorVarz
+		opts.GetStreamingServerz || opts.GetReplicatorVarz || opts.GetJszFilter == ""
 	if !metricsSpecified {
 		// No logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
@@ -117,6 +117,7 @@ func main() {
 	flag.BoolVar(&opts.GetStreamingChannelz, "channelz", false, "Get streaming channel metrics.")
 	flag.BoolVar(&opts.GetStreamingServerz, "serverz", false, "Get streaming server metrics.")
 	flag.BoolVar(&opts.GetVarz, "varz", false, "Get general metrics.")
+	flag.StringVar(&opts.GetJszFilter, "jsz", "", "Select JetStream metrics to filter (e.g streams, accounts, consumers)")
 	flag.StringVar(&opts.CertFile, "tlscert", "", "Server certificate file (Enables HTTPS).")
 	flag.StringVar(&opts.KeyFile, "tlskey", "", "Private key for server certificate (used with HTTPS).")
 	flag.StringVar(&opts.CaFile, "tlscacert", "", "Client certificate CA for verification (used with HTTPS).")
