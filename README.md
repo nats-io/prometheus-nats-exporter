@@ -59,6 +59,8 @@ prometheus-nats-exporter <flags> url
     	Set the password for HTTP scrapes. NATS bcrypt supported.
   -http_user string
     	Enable basic auth and set user name for HTTP scrapes.
+  -jsz string
+    	Select JetStream metrics to filter (e.g streams, accounts, consumers, all)
   -l string
     	Log file name.
   -log string
