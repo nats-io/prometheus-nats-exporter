@@ -42,10 +42,15 @@ type CollectedServer struct {
 	ID  string
 }
 
+type metric struct {
+	path   []string
+	metric interface{}
+}
+
 // NATSCollector collects NATS metrics
 type NATSCollector struct {
 	sync.Mutex
-	Stats      map[string]interface{}
+	Stats      map[string]metric
 	httpClient *http.Client
 	endpoint   string
 	system     string
@@ -173,7 +178,7 @@ func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
 
 	// for each stat in nc.Stats
 	for _, k := range nc.Stats {
-		switch m := k.(type) {
+		switch m := k.metric.(type) {
 
 		// Describe the stat to the channel
 		case *prometheus.GaugeVec:
@@ -203,30 +208,42 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 	return resps
 }
 
+func lookupValue(response map[string]interface{}, path []string) interface{} {
+	for _, tk := range path {
+		switch r := response[tk].(type) {
+		case map[string]interface{}:
+			response = r
+		default:
+			return r
+		}
+	}
+	return nil
+}
+
 // collectStatsFromRequests collects the statistics from a set of responses
 // returned by a NATS server.
 func (nc *NATSCollector) collectStatsFromRequests(
-	key string, stat interface{}, resps map[string]map[string]interface{}, ch chan<- prometheus.Metric) {
-	switch m := stat.(type) {
+	key string, stat metric, resps map[string]map[string]interface{}, ch chan<- prometheus.Metric) {
+	switch m := stat.metric.(type) {
 	case *prometheus.GaugeVec:
 		for id, response := range resps {
-			switch v := response[key].(type) {
-			case float64: // not sure why, but all my json numbers are coming here.
+			switch v := lookupValue(response, stat.path).(type) {
+			case float64: // json only has floats
 				m.WithLabelValues(id).Set(v)
 			case string:
 				m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
 			default:
-				Debugf("value no longer a float", id, v)
+				Debugf("value %s no longer a float", key, id, v)
 			}
 		}
 		m.Collect(ch) // update the stat.
 	case *prometheus.CounterVec:
 		for id, response := range resps {
-			switch v := response[key].(type) {
-			case float64: // not sure why, but all my json numbers are coming here.
+			switch v := lookupValue(response, stat.path).(type) {
+			case float64: // json only has floats
 				m.WithLabelValues(id).Add(v)
 			default:
-				Debugf("value no longer a float", id, v)
+				Debugf("value %s no longer a float", key, id, v)
 			}
 		}
 		m.Collect(ch) // update the stat.
@@ -251,11 +268,10 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 // initMetricsFromServers builds the configuration
 // For each NATS Metrics endpoint (/*z) get the first URL
 // to determine the list of possible metrics.
-// TODO: flatten embedded maps.
 func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 	var response map[string]interface{}
 
-	nc.Stats = make(map[string]interface{})
+	nc.Stats = make(map[string]metric)
 
 	// gets URLs until one responds.
 	for _, v := range nc.servers {
@@ -276,30 +292,74 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		}
 	}
 
+	nc.objectToMetrics(response, namespace)
+}
+
+// returns a sanitized fully qualified name and path
+func fqName(name string, prefix ...string) (string, []string) {
+	l := len(prefix) + 1
+	path := make([]string, 0, l)
+	if l > 1 {
+		path = append(path, prefix...)
+	}
+	path = append(path, name)
+	fqn := strings.Trim(strings.ReplaceAll(strings.Join(path, "_"), "/", "_"), "_")
+	for strings.Contains(fqn, "__") {
+		fqn = strings.ReplaceAll(fqn, "__", "_")
+	}
+	return fqn, path
+}
+
+func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namespace string, prefix ...string) {
+	skipFQN := map[string]struct{}{
+		"leaf":                    {},
+		"trusted_operators_claim": {},
+		"cluster_tls_timeout":     {},
+		"cluster_cluster_port":    {},
+		"cluster_auth_timeout":    {},
+		"gateway_port":            {},
+		"gateway_auth_timeout":    {},
+		"gateway_tls_timeout":     {},
+		"gateway_connect_retries": {},
+	}
 	labelKeys := map[string]struct{}{
 		"server_id":   {},
 		"server_name": {},
 		"version":     {},
+		"domain":      {},
+		"leader":      {},
+		"name":        {},
 	}
-
-	// for each metric
 	for k := range response {
-		//  if it's not already defined in metricDefinitions
-		_, ok := nc.Stats[k]
-		if !ok {
-			i := response[k]
-			switch v := i.(type) {
-			case float64: // all json numbers are handled here.
-				nc.Stats[k] = newPrometheusGaugeVec(nc.system, nc.endpoint, k, "", namespace)
-			case string:
-				if _, ok := labelKeys[k]; !ok {
-					break
-				}
-				nc.Stats[k] = newLabelGauge(nc.system, nc.endpoint, k, "", namespace, "value")
-			default:
-				// not one of the types currently handled
-				Tracef("Unknown type:  %v, %v", k, v)
+		fqn, path := fqName(k, prefix...)
+		if _, ok := skipFQN[fqn]; ok {
+			continue
+		}
+		// if it's not already defined in metricDefinitions
+		if _, ok := nc.Stats[fqn]; ok {
+			continue
+		}
+		i := response[k]
+		switch v := i.(type) {
+		case float64: // all json numbers are handled here.
+			nc.Stats[fqn] = metric{
+				path:   path,
+				metric: newPrometheusGaugeVec(nc.system, nc.endpoint, fqn, "", namespace),
 			}
+		case string:
+			if _, ok := labelKeys[k]; !ok {
+				break
+			}
+			nc.Stats[fqn] = metric{
+				path:   path,
+				metric: newLabelGauge(nc.system, nc.endpoint, fqn, "", namespace, "value"),
+			}
+		case map[string]interface{}:
+			// recurse and flatten
+			nc.objectToMetrics(v, namespace, path...)
+		default:
+			// not one of the types currently handled
+			Tracef("Unknown type:  %v %v, %v", fqn, k, v)
 		}
 	}
 }
