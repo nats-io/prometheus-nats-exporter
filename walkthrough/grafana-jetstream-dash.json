@@ -14,7 +14,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "5.1.0"
+      "version": "7.2.0"
     },
     {
       "type": "panel",
@@ -740,7 +740,7 @@
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "unit": "mpm"
+          "unit": "mps"
         },
         "overrides": []
       },
@@ -780,7 +780,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(delta(jetstream_stream_total_messages{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])) by (stream_name)",
+          "expr": "sum(rate(jetstream_stream_total_messages{server_id=~\"$server\",stream_name=~\"$stream\"}[$__rate_interval])) by (stream_name)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{stream_name}}",
@@ -791,7 +791,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Message Rate",
+      "title": "Message Rate (per second)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -807,7 +807,7 @@
       },
       "yaxes": [
         {
-          "format": "mpm",
+          "format": "mps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -852,7 +852,7 @@
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "unit": "mpm"
+          "unit": "mps"
         },
         "overrides": []
       },
@@ -899,83 +899,27 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])) by (consumer_name)",
-          "hide": true,
-          "interval": "1m",
-          "legendFormat": "{{consumer_name}} +",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])) by (consumer_name)",
-          "hide": true,
-          "interval": "1m",
-          "legendFormat": "{{consumer_name}} -",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])) by (consumer_name)",
-          "hide": true,
-          "interval": "1m",
-          "legendFormat": "{{consumer_name}} -",
-          "refId": "C"
-        },
-        {
-          "expr": "rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])+rate(jetstream_consumer_num_pending{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])",
-          "hide": true,
-          "interval": "",
-          "legendFormat": "{{consumer_name}} +",
-          "refId": "D"
-        },
-        {
-          "expr": "rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])",
-          "hide": true,
-          "interval": "",
-          "legendFormat": "{{consumer_name}} -",
-          "refId": "E"
-        },
-        {
-          "expr": "jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}+jetstream_consumer_num_pending{server_id=~\"$server\",stream_name=~\"$stream\"}",
-          "hide": true,
-          "interval": "",
-          "legendFormat": "{{consumer_name}} +",
-          "refId": "F"
-        },
-        {
-          "expr": "jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}",
-          "hide": true,
-          "interval": "",
-          "legendFormat": "{{consumer_name}} -",
-          "refId": "G"
-        },
-        {
-          "expr": "rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[2m])",
-          "hide": true,
-          "interval": "",
-          "legendFormat": "{{consumer_name}} -",
-          "refId": "H"
-        },
-        {
-          "expr": "sum(delta(jetstream_consumer_num_pending{server_id=~\"$server\",stream_name=~\"$stream\",consumer_name=~\"$consumer\"}[2m])+delta(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\",consumer_name=~\"$consumer\"}[2m])) by (consumer_name)",
+          "expr": "sum(rate(jetstream_consumer_num_pending{server_id=~\"$server\",stream_name=~\"$stream\",consumer_name=~\"$consumer\"}[$__rate_interval])+rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\",consumer_name=~\"$consumer\"}[$__rate_interval])) by (consumer_name)",
           "hide": false,
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{consumer_name}} +",
-          "refId": "I"
+          "refId": "B"
         },
         {
-          "expr": "- sum(delta(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\",consumer_name=~\"$consumer\",consumer_name=~\"$consumer\"}[2m])) by (consumer_name)",
+          "expr": "- sum(rate(jetstream_consumer_delivered_consumer_seq{server_id=~\"$server\",stream_name=~\"$stream\",consumer_name=~\"$consumer\",consumer_name=~\"$consumer\"}[$__rate_interval])) by (consumer_name)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{consumer_name}} -",
-          "refId": "J"
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Messages per minute (++/--)",
+      "title": "Messages per second (++/--)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -991,7 +935,7 @@
       },
       "yaxes": [
         {
-          "format": "mpm",
+          "format": "mps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -999,7 +943,7 @@
           "show": true
         },
         {
-          "format": "mpm",
+          "format": "mps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1187,7 +1131,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1283,7 +1227,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
