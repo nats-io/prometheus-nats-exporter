@@ -98,6 +98,9 @@ Experiment running benchmarks and applications and you'll see a dashboard like t
 
 ![Dashboard Image](images/GrafanaDashboard.jpg?raw=true "Grafana NATS Dashboard")
 
+If you're using JetStream, you can import the JetStream dashboard (`grafana-jetstream-dash.json`) too:
+
+![Dashboard Image](images/GrafanaJetStreamDashboard.png?raw=true "Grafana JetStream Dashboard")
 
 
 
