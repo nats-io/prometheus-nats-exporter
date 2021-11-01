@@ -107,7 +107,7 @@ func GatewayzTestResponse() string {
 
 }
 
-func LeafzTestResponse() string {
+func leafzTestResponse() string {
 	return `{
 	"server_id": "NC2FJCRMPBE5RI5OSRN7TKUCWQONCKNXHKJXCJIDVSAZ6727M7MQFVT3",
 	"now": "2019-08-27T09:07:05.841132-06:00",

@@ -49,9 +49,8 @@ lint:
 	$(shell go env GOPATH)/bin/golangci-lint run \
 	  --no-config --exclude-use-default=false --max-same-issues=0 \
 		--disable errcheck \
-		--enable golint \
+		--enable revive \
 		--enable stylecheck \
-		--enable interfacer \
 		--enable unconvert \
 		--enable dupl \
 		--enable gocyclo \
@@ -62,7 +61,7 @@ lint:
 		--enable unparam \
 		--enable nakedret \
 		--enable prealloc \
-		--enable scopelint \
+		--enable exportloopref \
 		--enable gocritic \
 		--enable gochecknoinits \
 		./...
