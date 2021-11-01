@@ -49,6 +49,7 @@ type NATSExporterOptions struct {
 	GetSubz              bool
 	GetRoutez            bool
 	GetGatewayz          bool
+	GetLeafz             bool
 	GetReplicatorVarz    bool
 	GetStreamingChannelz bool
 	GetStreamingServerz  bool
@@ -173,7 +174,7 @@ func (ne *NATSExporter) initializeCollectors() error {
 
 	getJsz := opts.GetJszFilter != ""
 	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
-		!opts.GetGatewayz && !opts.GetStreamingChannelz &&
+		!opts.GetGatewayz && !opts.GetLeafz && !opts.GetStreamingChannelz &&
 		!opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
 		return fmt.Errorf("no collectors specfied")
 	}
@@ -191,6 +192,9 @@ func (ne *NATSExporter) initializeCollectors() error {
 	}
 	if opts.GetGatewayz {
 		ne.createCollector(collector.CoreSystem, "gatewayz")
+	}
+	if opts.GetLeafz {
+		ne.createCollector(collector.CoreSystem, "leafz")
 	}
 	if opts.GetRoutez {
 		ne.createCollector(collector.CoreSystem, "routez")

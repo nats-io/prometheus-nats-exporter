@@ -142,6 +142,7 @@ func TestExporter(t *testing.T) {
 	opts.GetConnz = true
 	opts.GetSubz = true
 	opts.GetGatewayz = true
+	opts.GetLeafz = true
 	opts.GetRoutez = true
 	opts.GetStreamingChannelz = true
 	opts.GetStreamingServerz = true
@@ -630,6 +631,30 @@ func TestExporterGatewayz(t *testing.T) {
 	defer exp.Stop()
 
 	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs", false)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterLeafz(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetLeafz = true
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunLeafzStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_leafz_conn_in_msgs", false)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

@@ -106,3 +106,42 @@ func GatewayzTestResponse() string {
 `
 
 }
+
+func LeafzTestResponse() string {
+	return `{
+	"server_id": "NC2FJCRMPBE5RI5OSRN7TKUCWQONCKNXHKJXCJIDVSAZ6727M7MQFVT3",
+	"now": "2019-08-27T09:07:05.841132-06:00",
+	"leafnodes": 1,
+	"leafs": [
+		{
+			"account": "$G",
+			"ip": "127.0.0.1",
+			"port": 6223,
+			"rtt": "200µs",
+			"in_msgs": 0,
+			"out_msgs": 10000,
+			"in_bytes": 0,
+			"out_bytes": 1280000,
+			"subscriptions": 1,
+			"subscriptions_list": [
+				"foo"
+			]
+		},
+		{
+			"account": "$G",
+			"ip": "127.0.0.2",
+			"port": 6224,
+			"rtt": "400µs",
+			"in_msgs": 20,
+			"out_msgs": 20000,
+			"in_bytes": 30,
+			"out_bytes": 2560000,
+			"subscriptions": 2,
+			"subscriptions_list": [
+				"foo",
+				"bar"
+			]
+		}
+	]
+}`
+}

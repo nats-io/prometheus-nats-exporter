@@ -55,6 +55,8 @@ prometheus-nats-exporter <flags> url
     	Get connection metrics.
   -gatewayz
     	Get gateway metrics.
+  -leafz
+    	Get leaf metrics.
   -http_pass string
     	Set the password for HTTP scrapes. NATS bcrypt supported.
   -http_user string
