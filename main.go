@@ -74,7 +74,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 	}
 
 	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz ||
-		opts.GetRoutez || opts.GetGatewayz || opts.GetStreamingChannelz ||
+		opts.GetRoutez || opts.GetGatewayz || opts.GetLeafz || opts.GetStreamingChannelz ||
 		opts.GetStreamingServerz || opts.GetReplicatorVarz || opts.GetJszFilter == ""
 	if !metricsSpecified {
 		// No logger setup yet, so use fmt
@@ -112,6 +112,7 @@ func main() {
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
 	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetGatewayz, "gatewayz", false, "Get gateway metrics.")
+	flag.BoolVar(&opts.GetLeafz, "leafz", false, "Get leaf metrics.")
 	flag.BoolVar(&opts.GetRoutez, "routez", false, "Get route metrics.")
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
 	flag.BoolVar(&opts.GetStreamingChannelz, "channelz", false, "Get streaming channel metrics.")

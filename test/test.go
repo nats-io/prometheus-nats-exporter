@@ -70,6 +70,19 @@ func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 	return srv
 }
 
+func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
+	http.Handle("/leafz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, LeafzTestResponse())
+	}))
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
 // RunStreamingServerWithPorts runs the STAN server in a go routine allowing
 // the clusterID and ports to be specified..
 func RunStreamingServerWithPorts(clusterID string, port, monitorPort int) *nss.StanServer {

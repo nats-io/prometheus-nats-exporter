@@ -415,7 +415,9 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isGatewayzEndpoint(system, endpoint) {
 		return newGatewayzCollector(getSystem(system, prefix), endpoint, servers)
 	}
-
+	if isLeafzEndpoint(system, endpoint) {
+		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
+	}
 	if isReplicatorEndpoint(system, endpoint) {
 		return newReplicatorCollector(getSystem(system, prefix), servers)
 	}
