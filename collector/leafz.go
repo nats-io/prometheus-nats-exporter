@@ -28,7 +28,7 @@ func isLeafzEndpoint(system, endpoint string) bool {
 	return system == CoreSystem && endpoint == "leafz"
 }
 
-// leafzCollector is reponsible to gather metrics on leaf nodes.
+// leafzCollector is responsible to gather metrics on leaf nodes.
 type leafzCollector struct {
 	sync.Mutex
 
@@ -143,15 +143,15 @@ func newLeafMetrics(system, endpoint string) *leafMetrics {
 
 // Describe destribes the list of prometheus descriptors available
 // to be scraped.
-func (lf *leafMetrics) Describe(ch chan<- *prometheus.Desc) {
-	ch <- lf.info
-	ch <- lf.connRtt
-	ch <- lf.connInMsgs
-	ch <- lf.connOutMsgs
-	ch <- lf.connInBytes
-	ch <- lf.connOutBytes
-	ch <- lf.connSubscriptionsTotal
-	ch <- lf.connSubscriptions
+func (lm *leafMetrics) Describe(ch chan<- *prometheus.Desc) {
+	ch <- lm.info
+	ch <- lm.connRtt
+	ch <- lm.connInMsgs
+	ch <- lm.connOutMsgs
+	ch <- lm.connInBytes
+	ch <- lm.connOutBytes
+	ch <- lm.connSubscriptionsTotal
+	ch <- lm.connSubscriptions
 }
 
 // Collect collects all the metrics about the a leafnode connection.

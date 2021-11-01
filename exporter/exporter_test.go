@@ -130,8 +130,8 @@ func checkExporter(addr string, secure bool) error {
 	return err
 }
 
-func checkExporterForResult(addr, result string, secure bool) (string, error) {
-	return checkExporterFull("", "", addr, result, "/metrics", secure, http.StatusOK)
+func checkExporterForResult(addr, result string) (string, error) {
+	return checkExporterFull("", "", addr, result, "/metrics", false, http.StatusOK)
 }
 
 func TestExporter(t *testing.T) {
@@ -607,7 +607,7 @@ func TestExporterPrefix(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	if _, err := checkExporterForResult(exp.http.Addr().String(), "test_varz_connections", false); err != nil {
+	if _, err := checkExporterForResult(exp.http.Addr().String(), "test_varz_connections"); err != nil {
 		t.Fatalf("%v", err)
 	}
 }
@@ -630,7 +630,7 @@ func TestExporterGatewayz(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs", false)
+	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -654,7 +654,7 @@ func TestExporterLeafz(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_leafz_conn_in_msgs", false)
+	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_leafz_conn_in_msgs")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -690,7 +690,7 @@ func TestExporterReplicator(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	resp, err := checkExporterForResult(exp.http.Addr().String(), "replicator_server_start_time", false)
+	resp, err := checkExporterForResult(exp.http.Addr().String(), "replicator_server_start_time")
 	if err != nil {
 		t.Fatalf("%v:\n%s", err, resp)
 	}
