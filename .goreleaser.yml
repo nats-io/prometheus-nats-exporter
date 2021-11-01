@@ -28,7 +28,6 @@ builds:
   ignore:
     - goos: darwin
       goarch: 386
-  lang: go
 
 archives:
   - name_template: '{{.ProjectName}}-{{.Tag}}-{{.Os}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}'
