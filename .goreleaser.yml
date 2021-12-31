@@ -14,8 +14,9 @@ builds:
   main: .
   binary: prometheus-nats-exporter
   goos:
-  - linux
   - darwin
+  - freebsd
+  - linux
   - windows
   goarch:
   - 386
