@@ -36,7 +36,7 @@ nats-server -m 8222
 
 Next, launch the NATS prometheus exporter.  Here we configure the same monitor port we specified when launching the NATS server.  If a NATS server is not running, the exporter will retry to connect to the NATS server indefinitely.
 ```sh
-prometheus-nats-exporter -varz http://localhost:8222
+prometheus-nats-exporter -varz -jsz=all http://localhost:8222
 ```
 
 You should see something like this:
@@ -67,7 +67,7 @@ For this walkthrough we use the default URL, `http://localhost:9090`.
 
 ### 3) Start Grafana
 
-Start your Grafana server (__your settings may differ__).
+Start your Grafana server. Your settings may differ. Try starting with the server config included in the Grafana tarball.
 ```bash
 grafana-server --config=/usr/local/etc/grafana/grafana.ini --homepath /usr/local/share/grafana cfg:default.paths.logs=/usr/local/var/log/grafana cfg:default.paths.data=/usr/local/var/lib/grafana cfg:default.paths.plugins=/usr/local/var/lib/grafana/plugins
 ```
@@ -90,7 +90,7 @@ Leave the rest as defaults.
 
 ![Data Source Image](images/GrafanaDatasource.jpg?raw=true "Grafana NATS Data Source")
 
-Next import the NATS dashboard, `grafana-nats-dash.json` into Grafana, and associate the 
+Next import the NATS dashboard, `grafana-nats-dash.json` into Grafana, and associate the
 Prometheus datasource you just created.  You should start seeing data graph as follows (note that
 selecting a view of the last five minutes will be more exciting).
 
