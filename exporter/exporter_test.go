@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -325,14 +324,19 @@ func TestExporterWait(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	var didStop int32
+	var mu sync.Mutex
+	var didStop bool
 	go func() {
 		time.Sleep(time.Second * 1)
+		mu.Lock()
+		defer mu.Unlock()
 		exp.Stop()
-		atomic.AddInt32(&didStop, 1)
+		didStop = true
 	}()
 	exp.WaitUntilDone()
-	if atomic.LoadInt32(&didStop) == 0 {
+	mu.Lock()
+	defer mu.Unlock()
+	if !didStop {
 		t.Fatalf("did not wait until completed.")
 	}
 }
