@@ -14,7 +14,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.15
+        go-version: 1.17
     - name: Release
       shell: bash --noprofile --norc -x -eo pipefail {0}
       env:
