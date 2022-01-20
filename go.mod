@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/nats-io/nats-replicator v0.1.0
-	github.com/nats-io/nats-server/v2 v2.7.0
+	github.com/nats-io/nats-server/v2 v2.7.1-0.20220120233230-7aba8a8e9ee7
 	github.com/nats-io/nats-streaming-server v0.21.3-0.20210521153059-e071c9354f65
 	github.com/nats-io/nats.go v1.13.1-0.20211122170419-d7c1d78a50fc
 	github.com/nats-io/stan.go v0.10.2
