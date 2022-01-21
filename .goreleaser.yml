@@ -15,19 +15,26 @@ builds:
   binary: prometheus-nats-exporter
   goos:
   - darwin
-  - freebsd
   - linux
   - windows
+  - freebsd
   goarch:
-  - 386
   - amd64
   - arm
   - arm64
+  - 386
+  - mips64le
   goarm:
   - 6
   - 7
   ignore:
     - goos: darwin
+      goarch: 386
+    - goos: freebsd
+      goarch: arm
+    - goos: freebsd
+      goarch: arm64
+    - goos: freebsd
       goarch: 386
 
 archives:
