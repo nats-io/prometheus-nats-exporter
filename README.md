@@ -188,7 +188,7 @@ used to monitor NATS Streaming as well. Refer to the
 
 [License-Url]: https://www.apache.org/licenses/LICENSE-2.0
 [License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg
-[Build-Status-Url]: http://travis-ci.org/nats-io/prometheus-nats-exporter
-[Build-Status-Image]: https://travis-ci.org/nats-io/prometheus-nats-exporter.svg?branch=master
+[Build-Status-Url]: https://github.com/nats-io/prometheus-nats-exporter/actions/workflows/go.yaml
+[Build-Status-Image]: https://github.com/nats-io/prometheus-nats-exporter/actions/workflows/go.yaml/badge.svg
 [Coverage-Url]: https://codecov.io/gh/nats-io/prometheus-nats-exporter
 [Coverage-image]: https://codecov.io/gh/nats-io/prometheus-nats-exporter/branch/master/graph/badge.svg
