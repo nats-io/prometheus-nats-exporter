@@ -103,8 +103,6 @@ If you're using JetStream, you can import the JetStream dashboard (`grafana-jets
 ![Dashboard Image](images/GrafanaJetStreamDashboard.png?raw=true "Grafana JetStream Dashboard")
 
 ---
-**Note for Helm Deployments:**
-
 > :warning: **Note for Helm Deployments:** When deploying the Prometheus NATS exporter via the standard Helm charts, the metrics prefix is [overridden](https://github.com/nats-io/k8s/blob/13bb6fc04855f43dd4350f2f691512d4a71ccad5/helm/charts/nats/templates/statefulset.yaml#L574) from `gnatsd` & `jetstream` to `nats`. You can either simply do a find & replace for these prefixes and replace them in the dashboard, or use the `grafana-jetstream-dash-helm.json` file (where this has been done already).
 
 ---
