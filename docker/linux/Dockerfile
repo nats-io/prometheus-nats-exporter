@@ -1,4 +1,4 @@
-FROM golang:1.16 AS build
+FROM golang:1.18 AS build
 COPY . /go/src/prometheus-nats-exporter
 WORKDIR /go/src/prometheus-nats-exporter
 RUN make prometheus-nats-exporter.docker
