@@ -72,6 +72,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	consumerLabels = append(consumerLabels, "consumer_name")
 	consumerLabels = append(consumerLabels, "consumer_leader")
 	consumerLabels = append(consumerLabels, "is_consumer_leader")
+	consumerLabels = append(consumerLabels, "consumer_desc")
 
 	nc := &jszCollector{
 		httpClient: &http.Client{
@@ -239,7 +240,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		case "account", "accounts":
 			suffix = "/jsz?accounts=true"
 		case "consumer", "consumers", "all":
-			suffix = "/jsz?consumers=true"
+			suffix = "/jsz?consumers=true&config=true"
 		case "stream", "streams":
 			suffix = "/jsz?streams=true"
 		default:
@@ -256,7 +257,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
 		var streamName, streamLeader string
-		var consumerName, consumerLeader string
+		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
 
@@ -315,6 +316,9 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				// Now with the consumers.
 				for _, consumer := range stream.Consumer {
 					consumerName = consumer.Name
+					if consumer.Config != nil {
+						consumerDesc = consumer.Config.Description
+					}
 					if consumer.Cluster != nil {
 						consumerLeader = consumer.Cluster.Leader
 						if consumerLeader == serverName {
@@ -332,7 +336,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Stream Labels
 							accountName, streamName, streamLeader, isStreamLeader,
 							// Consumer Labels
-							consumerName, consumerLeader, isConsumerLeader,
+							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
 					}
 					ch <- consumerMetric(nc.consumerDeliveredConsumerSeq, float64(consumer.Delivered.Consumer))
