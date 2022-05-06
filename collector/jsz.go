@@ -51,6 +51,8 @@ type jszCollector struct {
 	consumerNumRedelivered       *prometheus.Desc
 	consumerNumWaiting           *prometheus.Desc
 	consumerNumPending           *prometheus.Desc
+	consumerAckFloorStreamSeq    *prometheus.Desc
+	consumerAckFloorConsumerSeq  *prometheus.Desc
 }
 
 func isJszEndpoint(system string) bool {
@@ -188,6 +190,18 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 		consumerNumPending: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "consumer", "num_pending"),
 			"Number of pending messages from a consumer",
+			consumerLabels,
+			nil,
+		),
+		consumerAckFloorStreamSeq: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "consumer", "ack_floor_stream_seq"),
+			"Number of ack floor stream seq from a consumer",
+			consumerLabels,
+			nil,
+		),
+		consumerAckFloorConsumerSeq: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "consumer", "ack_floor_consumer_seq"),
+			"Number of ack floor consumer seq from a consumer",
 			consumerLabels,
 			nil,
 		),
@@ -345,6 +359,8 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					ch <- consumerMetric(nc.consumerNumRedelivered, float64(consumer.NumRedelivered))
 					ch <- consumerMetric(nc.consumerNumWaiting, float64(consumer.NumWaiting))
 					ch <- consumerMetric(nc.consumerNumPending, float64(consumer.NumPending))
+					ch <- consumerMetric(nc.consumerAckFloorStreamSeq, float64(consumer.AckFloor.Stream))
+					ch <- consumerMetric(nc.consumerAckFloorConsumerSeq, float64(consumer.AckFloor.Consumer))
 				}
 			}
 		}
