@@ -72,7 +72,7 @@ type NATSExporter struct {
 	opts       *NATSExporterOptions
 	doneWg     sync.WaitGroup
 	http       net.Listener
-	collectors []prometheus.Collector
+	Collectors []prometheus.Collector
 	servers    []*collector.CollectedServer
 	mode       uint8
 }
@@ -141,7 +141,7 @@ func (ne *NATSExporter) registerCollector(system, endpoint string, nc prometheus
 		}
 	} else {
 		collector.Debugf("Registered collector for system %s, endpoint: %s", system, endpoint)
-		ne.collectors = append(ne.collectors, nc)
+		ne.Collectors = append(ne.Collectors, nc)
 	}
 }
 
@@ -163,9 +163,9 @@ func (ne *NATSExporter) AddServer(id, url string) error {
 	return nil
 }
 
-// initializeCollectors initializes the collectors for the exporter.
+// InitializeCollectors initializes the Collectors for the exporter.
 // Caller must lock
-func (ne *NATSExporter) initializeCollectors() error {
+func (ne *NATSExporter) InitializeCollectors() error {
 	opts := ne.opts
 
 	if len(ne.servers) == 0 {
@@ -176,7 +176,7 @@ func (ne *NATSExporter) initializeCollectors() error {
 	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
 		!opts.GetGatewayz && !opts.GetLeafz && !opts.GetStreamingChannelz &&
 		!opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
-		return fmt.Errorf("no collectors specfied")
+		return fmt.Errorf("no Collectors specfied")
 	}
 	if opts.GetReplicatorVarz && opts.GetVarz {
 		return fmt.Errorf("replicatorVarz cannot be used with varz")
@@ -220,13 +220,14 @@ func (ne *NATSExporter) initializeCollectors() error {
 	return nil
 }
 
+// ClearCollectors unregisters the collectors
 // caller must lock
-func (ne *NATSExporter) clearCollectors() {
-	if ne.collectors != nil {
-		for _, c := range ne.collectors {
+func (ne *NATSExporter) ClearCollectors() {
+	if ne.Collectors != nil {
+		for _, c := range ne.Collectors {
 			prometheus.Unregister(c)
 		}
-		ne.collectors = nil
+		ne.Collectors = nil
 	}
 }
 
@@ -238,13 +239,13 @@ func (ne *NATSExporter) Start() error {
 		return nil
 	}
 
-	if err := ne.initializeCollectors(); err != nil {
-		ne.clearCollectors()
+	if err := ne.InitializeCollectors(); err != nil {
+		ne.ClearCollectors()
 		return err
 	}
 
 	if err := ne.startHTTP(); err != nil {
-		ne.clearCollectors()
+		ne.ClearCollectors()
 		return fmt.Errorf("error serving http:  %v", err)
 	}
 
@@ -444,7 +445,7 @@ func (ne *NATSExporter) Stop() {
 	if err := ne.http.Close(); err != nil {
 		collector.Debugf("Did not close HTTP: %v", err)
 	}
-	ne.clearCollectors()
+	ne.ClearCollectors()
 	ne.doneWg.Done()
 	ne.mode = modeStopped
 }
