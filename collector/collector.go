@@ -98,8 +98,8 @@ func newLabelGauge(system, subsystem, name, help, prefix, label string) *prometh
 		Help:      help,
 	}
 	metric := prometheus.NewGaugeVec(opts, []string{"server_id", label})
-	metric.
-		Tracef("Created metric: %s, %s, %s, %s", namespace, subsystem, name, help)
+
+	Tracef("Created metric: %s, %s, %s, %s", namespace, subsystem, name, help)
 	return metric
 }
 
