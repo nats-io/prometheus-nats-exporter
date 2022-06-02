@@ -231,6 +231,7 @@ func (nc *NATSCollector) collectStatsFromRequests(
 			case float64: // json only has floats
 				m.WithLabelValues(id).Set(v)
 			case string:
+				m.Reset()
 				m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
 			default:
 				Debugf("value %s no longer a float", key, id, v)
