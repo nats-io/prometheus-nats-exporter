@@ -31,6 +31,7 @@ type jszCollector struct {
 	endpoint   string
 
 	// JetStream server stats
+	disabled   *prometheus.Desc
 	streams    *prometheus.Desc
 	consumers  *prometheus.Desc
 	messages   *prometheus.Desc
@@ -81,6 +82,13 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			Timeout: 5 * time.Second,
 		},
 		endpoint: endpoint,
+		// jetstream_disabled
+		disabled: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "server", "jetstream_disabled"),
+			"JetStream disabled or not",
+			serverLabels,
+			nil,
+		),
 		// jetstream_stream_total_messages
 		streams: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "server", "total_streams"),
@@ -222,6 +230,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 // Describe shares the info description from a prometheus metric.
 func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	// Server state
+	ch <- nc.disabled
 	ch <- nc.streams
 	ch <- nc.consumers
 	ch <- nc.messages
@@ -294,6 +303,12 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
 				serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader)
 		}
+
+		var isJetStreamDisabled float64 = 0
+		if resp.Disabled {
+			isJetStreamDisabled = 1
+		}
+		ch <- serverMetric(nc.disabled, isJetStreamDisabled)
 		ch <- serverMetric(nc.maxMemory, float64(resp.Config.MaxMemory))
 		ch <- serverMetric(nc.maxStorage, float64(resp.Config.MaxStore))
 		ch <- serverMetric(nc.streams, float64(resp.Streams))
