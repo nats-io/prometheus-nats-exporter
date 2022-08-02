@@ -28,7 +28,9 @@ build:
 test:
 	go test -race -count=1 -parallel=1 -v ./test/...
 	go test -race -count=1 -parallel=1 -v ./collector/...
-	go test -race -count=1 -parallel=1 -v ./exporter/...
+
+	# TODO: Fix certs use "insecure algorithm SHA1-RSA", then remove GODEBUG
+	GODEBUG=x509sha1=1 go test -race -count=1 -parallel=1 -v ./exporter/...
 
 .PHONY: test-cover
 test-cover:
@@ -40,8 +42,8 @@ test-cover-ci:
 
 .PHONY: install-tools
 install-tools:
-	cd /tmp && go get github.com/wadey/gocovmerge
-	cd /tmp && go get github.com/golangci/golangci-lint/cmd/golangci-lint
+	cd /tmp && go install github.com/wadey/gocovmerge@latest
+	cd /tmp && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 .PHONY: lint
 lint:
