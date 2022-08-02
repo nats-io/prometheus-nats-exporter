@@ -5,28 +5,30 @@ jobs:
   test:
     strategy:
       matrix:
-        go: [1.17, 1.16]
         os: [ubuntu-latest, macOS-latest, windows-latest]
     runs-on: ${{matrix.os}}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
       with:
         path: src/github.com/nats-io/prometheus-nats-exporter
     - name: Setup Go
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v3
       with:
-        go-version: ${{matrix.go}}
+        go-version-file: src/github.com/nats-io/prometheus-nats-exporter/go.mod
     - name: Install deps
       shell: bash --noprofile --norc -x -eo pipefail {0}
+      working-directory: src/github.com/nats-io/prometheus-nats-exporter
       run: |
         make install-tools
     - name: Lint
       shell: bash --noprofile --norc -x -eo pipefail {0}
+      working-directory: src/github.com/nats-io/prometheus-nats-exporter
       run: |
         make lint
     - name: Run tests
       shell: bash --noprofile --norc -x -eo pipefail {0}
+      working-directory: src/github.com/nats-io/prometheus-nats-exporter
       env:
         CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
       run: |
