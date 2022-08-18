@@ -1,4 +1,5 @@
 export GO111MODULE := on
+drepo ?= natsio
 
 prometheus-nats-exporter.docker:
 	CGO_ENABLED=0 GOOS=linux go build -o $@ -v -a
@@ -10,7 +11,7 @@ dockerx:
 ifneq ($(ver),)
 	# Ensure 'docker buildx ls' shows correct platforms.
 	docker buildx build \
-		--tag natsio/prometheus-nats-exporter:$(ver) --tag natsio/prometheus-nats-exporter:latest \
+		--tag $(drepo)/prometheus-nats-exporter:$(ver) --tag $(drepo)/prometheus-nats-exporter:latest \
 		--platform linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8 \
 		--file docker/linux/Dockerfile \
 		--push .
