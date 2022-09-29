@@ -42,6 +42,7 @@ type jszCollector struct {
 	// Stream stats
 	streamMessages      *prometheus.Desc
 	streamBytes         *prometheus.Desc
+	streamFirstSeq      *prometheus.Desc
 	streamLastSeq       *prometheus.Desc
 	streamConsumerCount *prometheus.Desc
 
@@ -145,6 +146,13 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			streamLabels,
 			nil,
 		),
+		// jetstream_stream_state_first_seq
+		streamFirstSeq: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "first_seq"),
+			"First sequence from a stream",
+			streamLabels,
+			nil,
+		),
 		// jetstream_stream_state_last_seq
 		streamLastSeq: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "last_seq"),
@@ -241,6 +249,7 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	// Stream state
 	ch <- nc.streamMessages
 	ch <- nc.streamBytes
+	ch <- nc.streamFirstSeq
 	ch <- nc.streamLastSeq
 	ch <- nc.streamConsumerCount
 
@@ -339,6 +348,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
+				ch <- streamMetric(nc.streamFirstSeq, float64(stream.State.FirstSeq))
 				ch <- streamMetric(nc.streamLastSeq, float64(stream.State.LastSeq))
 				ch <- streamMetric(nc.streamConsumerCount, float64(stream.State.Consumers))
 
