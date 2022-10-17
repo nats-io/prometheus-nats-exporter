@@ -39,13 +39,6 @@ type jszCollector struct {
 	maxMemory  *prometheus.Desc
 	maxStorage *prometheus.Desc
 
-	// Stream stats
-	streamMessages      *prometheus.Desc
-	streamBytes         *prometheus.Desc
-	streamFirstSeq      *prometheus.Desc
-	streamLastSeq       *prometheus.Desc
-	streamConsumerCount *prometheus.Desc
-
 	// Consumer stats
 	consumerDeliveredConsumerSeq *prometheus.Desc
 	consumerDeliveredStreamSeq   *prometheus.Desc
@@ -71,8 +64,8 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	// which creates a high cardinality - overwhelming Victoria Metrics.
 
 	//streamLabels = append(streamLabels, "stream_name")
-	streamLabels = append(streamLabels, "stream_leader")
-	streamLabels = append(streamLabels, "is_stream_leader")
+	//streamLabels = append(streamLabels, "stream_leader")
+	//streamLabels = append(streamLabels, "is_stream_leader")
 
 	var consumerLabels []string
 	consumerLabels = append(consumerLabels, streamLabels...)
@@ -133,41 +126,6 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			prometheus.BuildFQName(system, "server", "max_storage"),
 			"JetStream Max Storage",
 			serverLabels,
-			nil,
-		),
-		// jetstream_stream_total_messages
-		streamMessages: prometheus.NewDesc(
-			prometheus.BuildFQName(system, "stream", "total_messages"),
-			"Total number of messages from a stream",
-			streamLabels,
-			nil,
-		),
-		// jetstream_stream_total_bytes
-		streamBytes: prometheus.NewDesc(
-			prometheus.BuildFQName(system, "stream", "total_bytes"),
-			"Total stored bytes from a stream",
-			streamLabels,
-			nil,
-		),
-		// jetstream_stream_state_first_seq
-		streamFirstSeq: prometheus.NewDesc(
-			prometheus.BuildFQName(system, "stream", "first_seq"),
-			"First sequence from a stream",
-			streamLabels,
-			nil,
-		),
-		// jetstream_stream_state_last_seq
-		streamLastSeq: prometheus.NewDesc(
-			prometheus.BuildFQName(system, "stream", "last_seq"),
-			"Last sequence from a stream",
-			streamLabels,
-			nil,
-		),
-		// jetstream_stream_consumer_count
-		streamConsumerCount: prometheus.NewDesc(
-			prometheus.BuildFQName(system, "stream", "consumer_count"),
-			"Total number of consumers from a stream",
-			streamLabels,
 			nil,
 		),
 		// jetstream_consumer_delivered_consumer_seq
@@ -250,11 +208,11 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.maxStorage
 
 	// Stream state
-	ch <- nc.streamMessages
-	ch <- nc.streamBytes
-	ch <- nc.streamFirstSeq
-	ch <- nc.streamLastSeq
-	ch <- nc.streamConsumerCount
+	//ch <- nc.streamMessages
+	//ch <- nc.streamBytes
+	//ch <- nc.streamFirstSeq
+	//ch <- nc.streamLastSeq
+	//ch <- nc.streamConsumerCount
 
 	// Consumer state
 	ch <- nc.consumerDeliveredConsumerSeq
@@ -291,10 +249,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
-		var streamLeader string
-		var consumerName, consumerDesc, consumerLeader string
-		var isMetaLeader, isStreamLeader, isConsumerLeader string
-		var accountName string
+		var isMetaLeader string
 
 		serverID = server.ID
 		serverName = varz.Name
@@ -327,69 +282,5 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- serverMetric(nc.consumers, float64(resp.Consumers))
 		ch <- serverMetric(nc.messages, float64(resp.Messages))
 		ch <- serverMetric(nc.bytes, float64(resp.Bytes))
-
-		for _, account := range resp.AccountDetails {
-			accountName = account.Name
-			for _, stream := range account.Streams {
-				if stream.Cluster != nil {
-					streamLeader = stream.Cluster.Leader
-					if streamLeader == serverName {
-						isStreamLeader = "true"
-					} else {
-						isStreamLeader = "false"
-					}
-				} else {
-					isStreamLeader = "true"
-				}
-				streamMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
-					return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
-						// Server Labels
-						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
-						// Stream Labels
-						accountName, streamLeader, isStreamLeader)
-				}
-				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
-				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
-				ch <- streamMetric(nc.streamFirstSeq, float64(stream.State.FirstSeq))
-				ch <- streamMetric(nc.streamLastSeq, float64(stream.State.LastSeq))
-				ch <- streamMetric(nc.streamConsumerCount, float64(stream.State.Consumers))
-
-				// Now with the consumers.
-				for _, consumer := range stream.Consumer {
-					consumerName = consumer.Name
-					if consumer.Config != nil {
-						consumerDesc = consumer.Config.Description
-					}
-					if consumer.Cluster != nil {
-						consumerLeader = consumer.Cluster.Leader
-						if consumerLeader == serverName {
-							isConsumerLeader = "true"
-						} else {
-							isConsumerLeader = "false"
-						}
-					} else {
-						isConsumerLeader = "true"
-					}
-					consumerMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
-						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
-							// Server Labels
-							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
-							// Stream Labels
-							accountName, streamLeader, isStreamLeader,
-							// Consumer Labels
-							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
-						)
-					}
-					ch <- consumerMetric(nc.consumerDeliveredConsumerSeq, float64(consumer.Delivered.Consumer))
-					ch <- consumerMetric(nc.consumerDeliveredStreamSeq, float64(consumer.Delivered.Stream))
-					ch <- consumerMetric(nc.consumerNumAckPending, float64(consumer.NumAckPending))
-					ch <- consumerMetric(nc.consumerNumRedelivered, float64(consumer.NumRedelivered))
-					ch <- consumerMetric(nc.consumerNumWaiting, float64(consumer.NumWaiting))
-					ch <- consumerMetric(nc.consumerNumPending, float64(consumer.NumPending))
-					ch <- consumerMetric(nc.consumerAckFloorStreamSeq, float64(consumer.AckFloor.Stream))
-					ch <- consumerMetric(nc.consumerAckFloorConsumerSeq, float64(consumer.AckFloor.Consumer))
-				}
-			}
-		}
 	}
 }
