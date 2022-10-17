@@ -67,7 +67,10 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	var streamLabels []string
 	streamLabels = append(streamLabels, serverLabels...)
 	streamLabels = append(streamLabels, "account")
-	streamLabels = append(streamLabels, "stream_name")
+	// Amnon: We remove the stream_name tag from our metrics, because we have a large number of streams,
+	// which creates a high cardinality - overwhelming Victoria Metrics.
+
+	//streamLabels = append(streamLabels, "stream_name")
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
 
