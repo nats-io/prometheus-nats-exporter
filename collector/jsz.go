@@ -291,7 +291,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
-		var streamName, streamLeader string
+		var streamLeader string
 		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
@@ -331,7 +331,6 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		for _, account := range resp.AccountDetails {
 			accountName = account.Name
 			for _, stream := range account.Streams {
-				streamName = stream.Name
 				if stream.Cluster != nil {
 					streamLeader = stream.Cluster.Leader
 					if streamLeader == serverName {
@@ -347,7 +346,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						// Server Labels
 						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 						// Stream Labels
-						accountName, streamName, streamLeader, isStreamLeader)
+						accountName, streamLeader, isStreamLeader)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -376,7 +375,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, streamName, streamLeader, isStreamLeader,
+							accountName, streamLeader, isStreamLeader,
 							// Consumer Labels
 							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
