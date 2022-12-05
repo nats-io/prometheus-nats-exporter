@@ -70,6 +70,20 @@ func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 	return srv
 }
 
+// RunAccstatzStaticServer starts an http server with static content
+func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
+	http.Handle("/accstatz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, AccstatzTestResponse())
+	}))
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
 // RunLeafzStaticServer runs a leafz static server.
 func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}

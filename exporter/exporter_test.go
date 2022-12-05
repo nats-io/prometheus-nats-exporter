@@ -640,6 +640,30 @@ func TestExporterGatewayz(t *testing.T) {
 	}
 }
 
+func TestExporterAccstatz(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetAccstatz = true
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunAccstatzStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_accstatz_current_connections")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
 func TestExporterLeafz(t *testing.T) {
 	opts := getStaticExporterTestOptions()
 	opts.ListenAddress = "localhost"

@@ -107,6 +107,48 @@ func GatewayzTestResponse() string {
 
 }
 
+// AccstatzTestResponse is static data for tests
+func AccstatzTestResponse() string {
+	return `{
+	"server_id": "SERVER_ID",
+	"now": "2021-05-07T18:13:47.70796395Z",
+	"account_statz": [
+		{
+	      "acc": "$G",
+	      "conns": 100,
+	      "leafnodes": 0,
+	      "total_conns": 1000,
+	      "sent": {
+	        "msgs": 0,
+	        "bytes": 0
+	      },
+	      "received": {
+	        "msgs": 35922,
+	        "bytes": 4574155
+	      },
+	      "slow_consumers": 0
+	    },
+		{
+	      "acc": "$A",
+	      "conns": 0,
+	      "leafnodes": 0,
+	      "total_conns": 0,
+	      "sent": {
+	        "msgs": 0,
+	        "bytes": 0
+	      },
+	      "received": {
+	        "msgs": 0,
+	        "bytes": 0
+	      },
+	      "slow_consumers": 0
+	    }
+	]
+}
+`
+
+}
+
 func leafzTestResponse() string {
 	return `{
 	"server_id": "NC2FJCRMPBE5RI5OSRN7TKUCWQONCKNXHKJXCJIDVSAZ6727M7MQFVT3",
