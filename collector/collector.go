@@ -171,6 +171,56 @@ func GetServerIDFromVarz(endpoint string, retryInterval time.Duration) string {
 	return id
 }
 
+func GetServerNameFromVarz(endpoint string, retryInterval time.Duration) string {
+	getServerName := func() (string, error) {
+		resp, err := http.DefaultClient.Get(endpoint + "/varz")
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		var response map[string]interface{}
+		err = json.Unmarshal(body, &response)
+		if err != nil {
+			return "", err
+		}
+		serverName, ok := response["server_name"]
+		if !ok {
+			Fatalf("Could not find server name in /varz")
+		}
+		id, ok := serverName.(string)
+		if !ok {
+			Fatalf("Invalid server_name type in /varz: %+v", serverName)
+		}
+
+		return id, nil
+	}
+
+	var id string
+	var err error
+	id, err = getServerName()
+	if err == nil {
+		return id
+	}
+
+	// Retry periodically until available, in case it never starts
+	// then a liveness check against the NATS Server itself should
+	// detect that an restart the server, in terms of the exporter
+	// we just wait for it to eventually be available.
+	for range time.NewTicker(retryInterval).C {
+		id, err = getServerName()
+		if err != nil {
+			Errorf("Could not find server id: %s", err)
+			continue
+		}
+		break
+	}
+	return id
+}
+
 // Describe the metric to the Prometheus server.
 func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
 	nc.Lock()
