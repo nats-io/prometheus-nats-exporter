@@ -9,6 +9,9 @@ release:
 
   name_template: 'Release {{.Tag}}'
 
+env:
+  - IMAGE_REPOSITORY={{ if index .Env "IMAGE_REGISTRY" }}{{ .Env.IMAGE_REGISTRY }}/{{ end }}{{ .ProjectName }}
+
 builds:
 - id: prometheus-nats-exporter
   main: .
@@ -58,9 +61,6 @@ checksum:
 snapshot:
   name_template: SNAPSHOT-{{ .Commit }}
 
-github_urls:
-  download: https://github.com
-
 nfpms:
   - file_name_template: '{{.ProjectName}}-{{.Tag}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}'
     homepage:  https://nats.io
@@ -71,4 +71,70 @@ nfpms:
     formats:
     - deb
 
-dist: dist
+dockers:
+  - use: buildx
+    ids:
+      - prometheus-nats-exporter
+    dockerfile: docker/linux/Dockerfile
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+  - use: buildx
+    ids:
+      - prometheus-nats-exporter
+    dockerfile: docker/linux/Dockerfile
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+  - use: buildx
+    ids:
+      - prometheus-nats-exporter
+    dockerfile: docker/linux/Dockerfile
+    goos: linux
+    goarch: arm
+    goarm: 6
+    image_templates:
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-armv6"
+    build_flag_templates:
+      - "--platform=linux/arm/v6"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+  - use: buildx
+    ids:
+      - prometheus-nats-exporter
+    dockerfile: docker/linux/Dockerfile
+    goos: linux
+    goarch: arm
+    goarm: 7
+    image_templates:
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-armv7"
+    build_flag_templates:
+      - "--platform=linux/arm/v7"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+
+docker_manifests:
+  - name_template:  "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}"
+    image_templates:
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-amd64"
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-arm64"
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-armv6"
+      - "{{ .Env.IMAGE_REPOSITORY }}:{{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ .Tag }}{{ end }}-armv7"

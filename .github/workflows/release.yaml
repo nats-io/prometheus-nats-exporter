@@ -2,22 +2,38 @@ name: Exporter Release
 on:
   push:
     tags:
-      - 'v*'
+      - v[0-9]+.[0-9]+.[0-9]+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v1
-      with:
-        path: src/github.com/nats-io/prometheus-nats-exporter
+
     - name: Setup Go
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v3
       with:
-        go-version: 1.17
-    - name: Release
-      shell: bash --noprofile --norc -x -eo pipefail {0}
+        go-version: 1.19
+
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Setup Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Setup Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_CLI_TOKEN }}
+
+    - name: Generate goreleaser release
+      uses: goreleaser/goreleaser-action@v4
       env:
-        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-      run: |
-        curl --location http://git.io/goreleaser | bash
+        IMAGE_REGISTRY: "natsio" 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --rm-dist
