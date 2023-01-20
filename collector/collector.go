@@ -16,7 +16,7 @@ package collector
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -112,7 +112,7 @@ func getMetricURL(httpClient *http.Client, url string, response interface{}) err
 		return err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func GetServerIDFromVarz(endpoint string, retryInterval time.Duration) string {
 			return "", err
 		}
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return "", err
 		}

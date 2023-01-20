@@ -313,7 +313,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader)
 		}
 
-		var isJetStreamDisabled float64 = 0
+		var isJetStreamDisabled float64
 		if resp.Disabled {
 			isJetStreamDisabled = 1
 		}

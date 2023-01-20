@@ -19,9 +19,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -276,7 +276,7 @@ func (ne *NATSExporter) generateTLSConfig() (*tls.Config, error) {
 	}
 	// Add in CAs if applicable.
 	if ne.opts.CaFile != "" {
-		rootPEM, err := ioutil.ReadFile(ne.opts.CaFile)
+		rootPEM, err := os.ReadFile(ne.opts.CaFile)
 		if err != nil || rootPEM == nil {
 			return nil, fmt.Errorf("failed to load root ca certificate (%s): %v", ne.opts.CaFile, err)
 		}
