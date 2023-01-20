@@ -2,7 +2,7 @@ export GO111MODULE := on
 drepo ?= natsio
 
 prometheus-nats-exporter.docker:
-	CGO_ENABLED=0 GOOS=linux go build -o $@ -v -a
+	CGO_ENABLED=0 GOOS=linux go build -o $@ -v -a \
 		-tags netgo -tags timetzdata \
 		-installsuffix netgo -ldflags "-s -w"
 
