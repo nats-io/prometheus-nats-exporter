@@ -15,7 +15,6 @@ package collector
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -72,7 +71,7 @@ func TestLogging(t *testing.T) {
 	// ConfigureLogger(sOpts, nOpts)
 
 	// test file
-	tmpDir, err := ioutil.TempDir("", "_exporter")
+	tmpDir, err := os.MkdirTemp("", "_exporter")
 	if err != nil {
 		t.Fatal("Could not create tmp dir")
 	}
@@ -80,7 +79,7 @@ func TestLogging(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	file, err := ioutil.TempFile(tmpDir, "exporter:log_")
+	file, err := os.CreateTemp(tmpDir, "exporter:log_")
 	if err != nil {
 		t.Fatalf("unable to create temporary file")
 	}

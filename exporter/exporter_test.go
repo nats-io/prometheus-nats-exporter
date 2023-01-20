@@ -18,8 +18,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -52,7 +53,7 @@ func getStaticExporterTestOptions() (opts *NATSExporterOptions) {
 
 func httpGetSecure(url string) (*http.Response, error) {
 	tlsConfig := &tls.Config{}
-	caCert, err := ioutil.ReadFile(caCertFile)
+	caCert, err := os.ReadFile(caCertFile)
 	if err != nil {
 		return nil, fmt.Errorf("Got error reading RootCA file: %s", err)
 	}
@@ -113,7 +114,7 @@ func checkExporterFull(user, pass, addr, result, path string, secure bool, expec
 		return "", nil
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("got an error reading the body: %v", err)
 	}
