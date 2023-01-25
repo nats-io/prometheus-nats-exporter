@@ -13,32 +13,35 @@ env:
   - IMAGE_REPOSITORY={{ if index .Env "IMAGE_REGISTRY" }}{{ .Env.IMAGE_REGISTRY }}/{{ end }}{{ .ProjectName }}
 
 builds:
-- id: prometheus-nats-exporter
-  main: .
-  binary: prometheus-nats-exporter
-  goos:
-  - darwin
-  - linux
-  - windows
-  - freebsd
-  goarch:
-  - amd64
-  - arm
-  - arm64
-  - 386
-  - mips64le
-  goarm:
-  - 6
-  - 7
-  ignore:
-    - goos: darwin
-      goarch: 386
-    - goos: freebsd
-      goarch: arm
-    - goos: freebsd
-      goarch: arm64
-    - goos: freebsd
-      goarch: 386
+  - id: prometheus-nats-exporter
+    main: .
+    binary: prometheus-nats-exporter
+    env:
+      - GO111MODULE=on
+      - CGO_ENABLED=0
+    goos:
+    - darwin
+    - linux
+    - windows
+    - freebsd
+    goarch:
+    - amd64
+    - arm
+    - arm64
+    - 386
+    - mips64le
+    goarm:
+    - 6
+    - 7
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: freebsd
+        goarch: arm
+      - goos: freebsd
+        goarch: arm64
+      - goos: freebsd
+        goarch: 386
 
 archives:
   - name_template: '{{.ProjectName}}-{{.Tag}}-{{.Os}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}'
