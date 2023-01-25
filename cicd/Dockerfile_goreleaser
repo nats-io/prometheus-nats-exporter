@@ -1,0 +1,19 @@
+#syntax=docker/dockerfile-upstream:1.4
+FROM --platform=$BUILDPLATFORM goreleaser
+
+ARG CI
+ARG GITHUB_TOKEN
+
+COPY --from=src . /go/src
+
+RUN <<EOT
+  set -e
+  cd /go/src
+  FLAGS="--rm-dist"
+  if [[ -z ${GITHUB_TOKEN} ]]; then
+    if [[ ${CI} != "true" ]]; then FLAGS="${FLAGS} --skip-validate --single-target"; fi
+    goreleaser build ${FLAGS}
+  else
+    goreleaser release ${FLAGS}
+  fi
+EOT

@@ -1,4 +1,4 @@
-name: Exporter Release
+name: Release
 on:
   push:
     tags:
@@ -28,12 +28,18 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_CLI_TOKEN }}
 
-    - name: Generate goreleaser release
-      uses: goreleaser/goreleaser-action@v4
+    - name: Get Image Tags
+      id: tags
+      run: |
+        version=$(sed 's/^v//' <<< ${{ github.ref_name }})
+        echo tags="latest,${version}" >> $GITHUB_OUTPUT
+
+    - name: Build and Push
+      uses: docker/bake-action@v2
       env:
-        IMAGE_REGISTRY: "natsio" 
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAGS: "${{ steps.tags.outputs.tags }}"
+        REGISTRY: "natsio"
       with:
-        distribution: goreleaser
-        version: latest
-        args: release --rm-dist
+        push: true
+        set:
+          goreleaser.args.GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
