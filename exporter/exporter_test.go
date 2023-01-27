@@ -140,6 +140,7 @@ func TestExporter(t *testing.T) {
 	opts.ListenPort = 0
 	opts.GetVarz = true
 	opts.GetConnz = true
+	opts.GetHealthz = true
 	opts.GetSubz = true
 	opts.GetGatewayz = true
 	opts.GetLeafz = true
@@ -265,6 +266,7 @@ func TestExporterScrapePathOption(t *testing.T) {
 	opts.ScrapePath = "/some/other/path/to/metrics"
 	opts.GetVarz = true
 	opts.GetConnz = true
+	opts.GetHealthz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
 
@@ -556,6 +558,7 @@ func TestExporterBasicAuth(t *testing.T) {
 	opts.ListenPort = 0
 	opts.GetVarz = true
 	opts.GetConnz = true
+	opts.GetHealthz = true
 	opts.GetSubz = true
 	opts.GetRoutez = true
 

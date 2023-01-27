@@ -44,6 +44,7 @@ type NATSExporterOptions struct {
 	ListenAddress        string
 	ListenPort           int
 	ScrapePath           string
+	GetHealthz           bool
 	GetConnz             bool
 	GetVarz              bool
 	GetSubz              bool
@@ -173,7 +174,7 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 
 	getJsz := opts.GetJszFilter != ""
-	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
+	if !opts.GetHealthz && !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
 		!opts.GetGatewayz && !opts.GetLeafz && !opts.GetStreamingChannelz &&
 		!opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
 		return fmt.Errorf("no Collectors specfied")
@@ -186,6 +187,9 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetVarz {
 		ne.createCollector(collector.CoreSystem, "varz")
+	}
+	if opts.GetHealthz {
+		ne.createCollector(collector.CoreSystem, "healthz")
 	}
 	if opts.GetConnz {
 		ne.createCollector(collector.CoreSystem, "connz")
