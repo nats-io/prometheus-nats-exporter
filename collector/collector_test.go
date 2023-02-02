@@ -321,6 +321,11 @@ func TestAllEndpoints(t *testing.T) {
 		"gnatsd_connz_total_connections": 1,
 	}
 	verifyCollector(CoreSystem, url, "connz", cases, t)
+
+	cases = map[string]float64{
+		"gnatsd_healthz_status": 0,
+	}
+	verifyCollector(CoreSystem, url, "healthz", cases, t)
 }
 
 const (

@@ -74,7 +74,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 		opts.LogType = collector.RemoteSysLogType
 	}
 
-	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz ||
+	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetHealthz ||
 		opts.GetRoutez || opts.GetGatewayz || opts.GetLeafz || opts.GetStreamingChannelz ||
 		opts.GetStreamingServerz || opts.GetReplicatorVarz || opts.GetJszFilter == ""
 	if !metricsSpecified {
@@ -111,6 +111,7 @@ func main() {
 	flag.BoolVar(&opts.Trace, "V", false, "Enable trace log level.")
 	flag.BoolVar(&debugAndTrace, "DV", false, "Enable debug and trace log levels.")
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
+	flag.BoolVar(&opts.GetHealthz, "healthz", false, "Get health metrics.")
 	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetGatewayz, "gatewayz", false, "Get gateway metrics.")
 	flag.BoolVar(&opts.GetLeafz, "leafz", false, "Get leaf metrics.")
