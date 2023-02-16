@@ -111,6 +111,8 @@ func main() {
 	flag.BoolVar(&opts.Trace, "V", false, "Enable trace log level.")
 	flag.BoolVar(&debugAndTrace, "DV", false, "Enable debug and trace log levels.")
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
+	flag.BoolVar(&opts.GetConnzDetailed, "connz_detailed", false,
+		"Get detailed connection metrics for each client. Enables flag `connz` implicitly.")
 	flag.BoolVar(&opts.GetHealthz, "healthz", false, "Get health metrics.")
 	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetGatewayz, "gatewayz", false, "Get gateway metrics.")
