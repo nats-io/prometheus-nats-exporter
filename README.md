@@ -55,6 +55,8 @@ prometheus-nats-exporter <flags> url
     	Get streaming channel metrics.
   -connz
     	Get connection metrics.
+  -connz_detailed
+    	Get detailed connection metrics for each client. Enables flag "-connz" implicitly.
   -healthz
         Get health metrics.
   -gatewayz

@@ -46,6 +46,7 @@ type NATSExporterOptions struct {
 	ScrapePath           string
 	GetHealthz           bool
 	GetConnz             bool
+	GetConnzDetailed     bool
 	GetVarz              bool
 	GetSubz              bool
 	GetRoutez            bool
@@ -174,9 +175,9 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 
 	getJsz := opts.GetJszFilter != ""
-	if !opts.GetHealthz && !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
-		!opts.GetGatewayz && !opts.GetLeafz && !opts.GetStreamingChannelz &&
-		!opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
+	if !opts.GetHealthz && !opts.GetConnz && !opts.GetConnzDetailed && !opts.GetRoutez &&
+		!opts.GetSubz && !opts.GetVarz && !opts.GetGatewayz && !opts.GetLeafz &&
+		!opts.GetStreamingChannelz && !opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
 		return fmt.Errorf("no Collectors specfied")
 	}
 	if opts.GetReplicatorVarz && opts.GetVarz {
@@ -191,7 +192,9 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	if opts.GetHealthz {
 		ne.createCollector(collector.CoreSystem, "healthz")
 	}
-	if opts.GetConnz {
+	if opts.GetConnzDetailed {
+		ne.createCollector(collector.CoreSystem, "connz_detailed")
+	} else if opts.GetConnz {
 		ne.createCollector(collector.CoreSystem, "connz")
 	}
 	if opts.GetGatewayz {
