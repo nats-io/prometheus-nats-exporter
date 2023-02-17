@@ -28,7 +28,7 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
-var version = "0.10.1"
+var version = "0.11.0"
 
 // parseServerIDAndURL parses the url argument the optional id for the server ID.
 func parseServerIDAndURL(urlArg string) (string, string, error) {
