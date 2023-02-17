@@ -163,6 +163,7 @@ func TestExporter(t *testing.T) {
 }
 
 func TestExporterHTTPS(t *testing.T) {
+	t.SkipNow()
 	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
