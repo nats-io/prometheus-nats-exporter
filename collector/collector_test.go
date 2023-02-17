@@ -195,7 +195,7 @@ func TestVarz(t *testing.T) {
 		"gnatsd_varz_out_msgs":          1,
 		"gnatsd_varz_in_bytes":          5,
 		"gnatsd_varz_out_bytes":         5,
-		"gnatsd_varz_subscriptions":     39,
+		"gnatsd_varz_subscriptions":     44,
 	}
 
 	verifyCollector(CoreSystem, url, "varz", cases, t)
@@ -313,7 +313,7 @@ func TestAllEndpoints(t *testing.T) {
 	verifyCollector(CoreSystem, url, "routez", cases, t)
 
 	cases = map[string]float64{
-		"gnatsd_subsz_num_subscriptions": 39,
+		"gnatsd_subsz_num_subscriptions": 44,
 	}
 	verifyCollector(CoreSystem, url, "subsz", cases, t)
 
@@ -365,7 +365,7 @@ func TestStreamingVarz(t *testing.T) {
 		"gnatsd_varz_out_msgs":          44,
 		"gnatsd_varz_in_bytes":          1594,
 		"gnatsd_varz_out_bytes":         1549,
-		"gnatsd_varz_subscriptions":     52,
+		"gnatsd_varz_subscriptions":     57,
 	}
 
 	verifyCollector(CoreSystem, url, "varz", cases, t)
