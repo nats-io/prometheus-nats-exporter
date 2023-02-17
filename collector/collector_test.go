@@ -313,7 +313,7 @@ func TestAllEndpoints(t *testing.T) {
 	verifyCollector(CoreSystem, url, "routez", cases, t)
 
 	cases = map[string]float64{
-		"gnatsd_subsz_num_subscriptions": 39,
+		"gnatsd_subsz_num_subscriptions": 44,
 	}
 	verifyCollector(CoreSystem, url, "subsz", cases, t)
 
