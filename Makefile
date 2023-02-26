@@ -44,7 +44,7 @@ test-cover-ci:
 .PHONY: install-tools
 install-tools:
 	cd /tmp && go install github.com/wadey/gocovmerge@latest
-	cd /tmp && go install github.com/golangci/golangci-lint/cmd/golangci-lint@6f7f8ae
+	cd /tmp && go install github.com/golangci/golangci-lint/cmd/golangci-lint@f0dbc75
 
 .PHONY: lint
 lint:
