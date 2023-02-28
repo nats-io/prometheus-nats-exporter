@@ -2,7 +2,7 @@ export GO111MODULE := on
 drepo ?= natsio
 
 prometheus-nats-exporter.docker:
-	CGO_ENABLED=0 GOOS=linux go build -o $@ -v -a
+	CGO_ENABLED=0 GOOS=linux go build -o $@ -v -a \
 		-tags netgo -tags timetzdata \
 		-installsuffix netgo -ldflags "-s -w"
 
@@ -44,7 +44,7 @@ test-cover-ci:
 .PHONY: install-tools
 install-tools:
 	cd /tmp && go install github.com/wadey/gocovmerge@latest
-	cd /tmp && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	cd /tmp && go install github.com/golangci/golangci-lint/cmd/golangci-lint@f0dbc75
 
 .PHONY: lint
 lint:

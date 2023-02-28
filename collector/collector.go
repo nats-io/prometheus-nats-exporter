@@ -16,7 +16,7 @@ package collector
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -112,7 +112,7 @@ func getMetricURL(httpClient *http.Client, url string, response interface{}) err
 		return err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func GetServerIDFromVarz(endpoint string, retryInterval time.Duration) string {
 			return "", err
 		}
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return "", err
 		}
@@ -455,10 +455,13 @@ func boolToFloat(b bool) float64 {
 }
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
-// Each URL should be to a specific endpoint (e.g. varz, connz, subsz, or routez)
+// Each URL should be to a specific endpoint (e.g. varz, connz, healthz, subsz, or routez)
 func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
 	if isStreamingEndpoint(system, endpoint) {
 		return newStreamingCollector(getSystem(system, prefix), endpoint, servers)
+	}
+	if isHealthzEndpoint(system, endpoint) {
+		return newHealthzCollector(getSystem(system, prefix), endpoint, servers)
 	}
 	if isConnzEndpoint(system, endpoint) {
 		return newConnzCollector(getSystem(system, prefix), endpoint, servers)

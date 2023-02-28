@@ -19,9 +19,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,30 +41,34 @@ const (
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
-	ListenAddress         string
-	ListenPort            int
-	ScrapePath            string
-	GetConnz              bool
-	GetVarz               bool
-	GetSubz               bool
-	GetRoutez             bool
-	GetGatewayz           bool
-	GetLeafz              bool
-	GetReplicatorVarz     bool
-	GetStreamingChannelz  bool
-	GetStreamingServerz   bool
-	GetJszFilter          string
-	RetryInterval         time.Duration
-	CertFile              string
-	KeyFile               string
-	CaFile                string
-	NATSServerURL         string
-	NATSServerTag         string
-	HTTPUser              string // User in metrics scrape by prometheus.
-	HTTPPassword          string
-	Prefix                string
-	UseInternalServerID   bool
+
 	UseInternalServerName bool
+	ListenAddress        string
+	ListenPort           int
+	ScrapePath           string
+	GetHealthz           bool
+	GetConnz             bool
+	GetConnzDetailed     bool
+	GetVarz              bool
+	GetSubz              bool
+	GetRoutez            bool
+	GetGatewayz          bool
+	GetLeafz             bool
+	GetReplicatorVarz    bool
+	GetStreamingChannelz bool
+	GetStreamingServerz  bool
+	GetJszFilter         string
+	RetryInterval        time.Duration
+	CertFile             string
+	KeyFile              string
+	CaFile               string
+	NATSServerURL        string
+	NATSServerTag        string
+	HTTPUser             string // User in metrics scrape by prometheus.
+	HTTPPassword         string
+	Prefix               string
+	UseInternalServerID  bool
+  UseInternalServerName bool
 }
 
 // NATSExporter collects NATS metrics
@@ -174,9 +178,9 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 
 	getJsz := opts.GetJszFilter != ""
-	if !opts.GetConnz && !opts.GetRoutez && !opts.GetSubz && !opts.GetVarz &&
-		!opts.GetGatewayz && !opts.GetLeafz && !opts.GetStreamingChannelz &&
-		!opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
+	if !opts.GetHealthz && !opts.GetConnz && !opts.GetConnzDetailed && !opts.GetRoutez &&
+		!opts.GetSubz && !opts.GetVarz && !opts.GetGatewayz && !opts.GetLeafz &&
+		!opts.GetStreamingChannelz && !opts.GetStreamingServerz && !opts.GetReplicatorVarz && !getJsz {
 		return fmt.Errorf("no Collectors specfied")
 	}
 	if opts.GetReplicatorVarz && opts.GetVarz {
@@ -188,7 +192,12 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	if opts.GetVarz {
 		ne.createCollector(collector.CoreSystem, "varz")
 	}
-	if opts.GetConnz {
+	if opts.GetHealthz {
+		ne.createCollector(collector.CoreSystem, "healthz")
+	}
+	if opts.GetConnzDetailed {
+		ne.createCollector(collector.CoreSystem, "connz_detailed")
+	} else if opts.GetConnz {
 		ne.createCollector(collector.CoreSystem, "connz")
 	}
 	if opts.GetGatewayz {
@@ -277,7 +286,7 @@ func (ne *NATSExporter) generateTLSConfig() (*tls.Config, error) {
 	}
 	// Add in CAs if applicable.
 	if ne.opts.CaFile != "" {
-		rootPEM, err := ioutil.ReadFile(ne.opts.CaFile)
+		rootPEM, err := os.ReadFile(ne.opts.CaFile)
 		if err != nil || rootPEM == nil {
 			return nil, fmt.Errorf("failed to load root ca certificate (%s): %v", ne.opts.CaFile, err)
 		}

@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// prometheus-nats-exporter
 package main
 
 import (
@@ -27,7 +28,7 @@ import (
 	"github.com/nats-io/prometheus-nats-exporter/exporter"
 )
 
-var version = "0.10.1"
+var version = "0.11.0"
 
 // parseServerIDAndURL parses the url argument the optional id for the server ID.
 func parseServerIDAndURL(urlArg string) (string, string, error) {
@@ -73,7 +74,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 		opts.LogType = collector.RemoteSysLogType
 	}
 
-	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz ||
+	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetHealthz ||
 		opts.GetRoutez || opts.GetGatewayz || opts.GetLeafz || opts.GetStreamingChannelz ||
 		opts.GetStreamingServerz || opts.GetReplicatorVarz || opts.GetJszFilter == ""
 	if !metricsSpecified {
@@ -110,6 +111,9 @@ func main() {
 	flag.BoolVar(&opts.Trace, "V", false, "Enable trace log level.")
 	flag.BoolVar(&debugAndTrace, "DV", false, "Enable debug and trace log levels.")
 	flag.BoolVar(&opts.GetConnz, "connz", false, "Get connection metrics.")
+	flag.BoolVar(&opts.GetConnzDetailed, "connz_detailed", false,
+		"Get detailed connection metrics for each client. Enables flag `connz` implicitly.")
+	flag.BoolVar(&opts.GetHealthz, "healthz", false, "Get health metrics.")
 	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetGatewayz, "gatewayz", false, "Get gateway metrics.")
 	flag.BoolVar(&opts.GetLeafz, "leafz", false, "Get leaf metrics.")

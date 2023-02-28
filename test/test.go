@@ -17,7 +17,6 @@ package test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -176,7 +175,7 @@ func RunJetStreamServerWithPorts(port, monitorPort int, domain string) *server.S
 	opts.Port = port
 	opts.JetStream = true
 	opts.JetStreamDomain = domain
-	tdir, _ := ioutil.TempDir(tempRoot, "js-storedir-")
+	tdir, _ := os.MkdirTemp(tempRoot, "js-storedir-")
 	opts.StoreDir = filepath.Dir(tdir)
 	opts.HTTPHost = "127.0.0.1"
 	opts.HTTPPort = monitorPort

@@ -67,6 +67,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	var streamLabels []string
 	streamLabels = append(streamLabels, serverLabels...)
 	streamLabels = append(streamLabels, "account")
+	streamLabels = append(streamLabels, "account_id")
 	streamLabels = append(streamLabels, "stream_name")
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
@@ -292,6 +293,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
+		var accountID string
 
 		serverID = server.ID
 		serverName = varz.Name
@@ -313,7 +315,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader)
 		}
 
-		var isJetStreamDisabled float64 = 0
+		var isJetStreamDisabled float64
 		if resp.Disabled {
 			isJetStreamDisabled = 1
 		}
@@ -327,6 +329,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 
 		for _, account := range resp.AccountDetails {
 			accountName = account.Name
+			accountID = account.Id
 			for _, stream := range account.Streams {
 				streamName = stream.Name
 				if stream.Cluster != nil {
@@ -344,7 +347,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						// Server Labels
 						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 						// Stream Labels
-						accountName, streamName, streamLeader, isStreamLeader)
+						accountName, accountID, streamName, streamLeader, isStreamLeader)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -373,7 +376,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, streamName, streamLeader, isStreamLeader,
+							accountName, accountID, streamName, streamLeader, isStreamLeader,
 							// Consumer Labels
 							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
