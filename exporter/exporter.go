@@ -66,6 +66,7 @@ type NATSExporterOptions struct {
 	HTTPPassword         string
 	Prefix               string
 	UseInternalServerID  bool
+	UseServerName        bool
 }
 
 // NATSExporter collects NATS metrics
