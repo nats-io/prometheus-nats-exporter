@@ -50,6 +50,11 @@ func RunServer() *server.Server {
 	return RunServerWithPorts(ClientPort, MonitorPort)
 }
 
+// RunServerWithName runs the NATS server in a go routine
+func RunServerWithName(name string) *server.Server {
+	return RunServerWithPortsAndName(ClientPort, MonitorPort, name)
+}
+
 // RunStreamingServer runs the STAN server in a go routine.
 func RunStreamingServer() *nss.StanServer {
 	return RunStreamingServerWithPorts(nss.DefaultClusterID, ClientPort, MonitorPort)
@@ -105,8 +110,8 @@ func RunStreamingServerWithPorts(clusterID string, port, monitorPort int) *nss.S
 	return s
 }
 
-// RunServerWithPorts runs the NATS server with a monitor port in a go routine
-func RunServerWithPorts(cport, mport int) *server.Server {
+// RunServerWithPortsAndName runs the NATS server with a monitor port and a name in a go routine
+func RunServerWithPortsAndName(cport, mport int, serverName string) *server.Server {
 	var enableLogging bool
 
 	resetPreviousHTTPConnections()
@@ -116,12 +121,13 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 	// enableLogging = true
 
 	opts := &server.Options{
-		Host:     "127.0.0.1",
-		Port:     cport,
-		HTTPHost: "127.0.0.1",
-		HTTPPort: mport,
-		NoLog:    !enableLogging,
-		NoSigs:   true,
+		ServerName: serverName,
+		Host:       "127.0.0.1",
+		Port:       cport,
+		HTTPHost:   "127.0.0.1",
+		HTTPPort:   mport,
+		NoLog:      !enableLogging,
+		NoSigs:     true,
 	}
 
 	s := server.New(opts)
@@ -165,6 +171,11 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 		return s
 	}
 	panic("Unable to start NATS Server in Go Routine")
+}
+
+// RunServerWithPorts runs the NATS server with a monitor port in a go routine
+func RunServerWithPorts(cport, mport int) *server.Server {
+	return RunServerWithPortsAndName(cport, mport, "")
 }
 
 var tempRoot = filepath.Join(os.TempDir(), "exporter")

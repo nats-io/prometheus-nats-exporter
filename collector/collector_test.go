@@ -176,6 +176,18 @@ func TestServerIDFromVarz(t *testing.T) {
 	}
 }
 
+func TestServerNameFromVarz(t *testing.T) {
+	serverName := "My Awesome Server Name"
+	s := pet.RunServerWithName(serverName)
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+	result := GetServerNameFromVarz(url, 2*time.Second)
+	if result != serverName {
+		t.Fatalf("Unexpected server name: %v", result)
+	}
+}
+
 func TestVarz(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
