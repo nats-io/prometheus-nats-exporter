@@ -130,7 +130,7 @@ func main() {
 	flag.StringVar(&opts.HTTPPassword, "http_pass", "", "Set the password for HTTP scrapes. NATS bcrypt supported.")
 	flag.StringVar(&opts.Prefix, "prefix", "", "Replace the default prefix for all the metrics.")
 	flag.BoolVar(&opts.UseInternalServerID, "use_internal_server_id", false, "Enables using ServerID from /varz")
-	flag.BoolVar(&opts.UseInternalServerName, "use_internal_server_name", false, "Enables using ServerName from /varz")
+	flag.BoolVar(&opts.UseServerName, "use_internal_server_name", false, "Enables using ServerName from /varz")
 	flag.Parse()
 
 	opts.RetryInterval = time.Duration(retryInterval) * time.Second
@@ -166,7 +166,7 @@ necessary.`)
 		if err := exp.AddServer(id, url); err != nil {
 			collector.Fatalf("Unable to setup server in exporter: %s, %s: %v", id, url, err)
 		}
-	} else if len(args) == 1 && opts.UseInternalServerID {
+	} else if len(args) == 1 && opts.UseServerName {
 		// Pick the server id from the /varz endpoint info.
 		url := flag.Args()[0]
 		id := collector.GetServerNameFromVarz(url, opts.RetryInterval)

@@ -41,32 +41,32 @@ const (
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
-	ListenAddress         string
-	ListenPort            int
-	ScrapePath            string
-	GetHealthz            bool
-	GetConnz              bool
-	GetConnzDetailed      bool
-	GetVarz               bool
-	GetSubz               bool
-	GetRoutez             bool
-	GetGatewayz           bool
-	GetLeafz              bool
-	GetReplicatorVarz     bool
-	GetStreamingChannelz  bool
-	GetStreamingServerz   bool
-	GetJszFilter          string
-	RetryInterval         time.Duration
-	CertFile              string
-	KeyFile               string
-	CaFile                string
-	NATSServerURL         string
-	NATSServerTag         string
-	HTTPUser              string // User in metrics scrape by prometheus.
-	HTTPPassword          string
-	Prefix                string
-	UseInternalServerID   bool
-	UseInternalServerName bool
+	ListenAddress        string
+	ListenPort           int
+	ScrapePath           string
+	GetHealthz           bool
+	GetConnz             bool
+	GetConnzDetailed     bool
+	GetVarz              bool
+	GetSubz              bool
+	GetRoutez            bool
+	GetGatewayz          bool
+	GetLeafz             bool
+	GetReplicatorVarz    bool
+	GetStreamingChannelz bool
+	GetStreamingServerz  bool
+	GetJszFilter         string
+	RetryInterval        time.Duration
+	CertFile             string
+	KeyFile              string
+	CaFile               string
+	NATSServerURL        string
+	NATSServerTag        string
+	HTTPUser             string // User in metrics scrape by prometheus.
+	HTTPPassword         string
+	Prefix               string
+	UseInternalServerID  bool
+	UseServerName        bool
 }
 
 // NATSExporter collects NATS metrics
