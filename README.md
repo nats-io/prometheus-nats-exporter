@@ -106,6 +106,8 @@ prometheus-nats-exporter <flags> url
     	Private key for server certificate (used with HTTPS).
   -use_internal_server_id
     	Enables using ServerID from /varz
+  -use_internal_server_name
+        Enables using ServerName from /varz
   -varz
     	Get general metrics.
   -version
