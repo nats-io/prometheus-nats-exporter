@@ -42,7 +42,7 @@ type connzCollector struct {
 	servers    []*CollectedServer
 	detailed   bool
 
-	numConnections     *prometheus.Desc
+	totalConnections   *prometheus.Desc
 	total              *prometheus.Desc
 	offset             *prometheus.Desc
 	limit              *prometheus.Desc
@@ -56,6 +56,7 @@ type connzCollector struct {
 }
 
 type connzCollectorDetailed struct {
+	connections   *prometheus.Desc
 	pendingBytes  *prometheus.Desc
 	subscriptions *prometheus.Desc
 	inBytes       *prometheus.Desc
@@ -73,7 +74,7 @@ func createConnzCollector(system string) *connzCollector {
 	summaryLabels := []string{"server_id"}
 	return &connzCollector{
 		httpClient: http.DefaultClient,
-		numConnections: prometheus.NewDesc(
+		totalConnections: prometheus.NewDesc(
 			prometheus.BuildFQName(system, connzEndpoint, "num_connections"),
 			"num_connections",
 			summaryLabels,
@@ -140,6 +141,12 @@ func createConnzDetailedCollector(system string) *connzCollector {
 	connzCollector := createConnzCollector(system)
 	detailLabels := []string{"server_id", "cid", "kind", "type", "ip", "port", "name", "lang",
 		"version", "tls_version", "tls_cipher_suite"}
+	connzCollector.connections = prometheus.NewDesc(
+		prometheus.BuildFQName(system, connzEndpoint, "num_connections"),
+		"num_connections",
+		detailLabels,
+		nil,
+	)
 	connzCollector.pendingBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(system, connzEndpoint, "pending_bytes"),
 		"pending_bytes",
@@ -251,6 +258,8 @@ func (nc *connzCollector) Collect(ch chan<- prometheus.Metric) {
 			if nc.detailed {
 				detailLabelValues := []string{server.ID, conn.Cid, conn.Kind, conn.Type, conn.IP, conn.Port,
 					conn.Name, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
+				ch <- prometheus.MustNewConstMetric(nc.connections, prometheus.GaugeValue, 1,
+					detailLabelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.pendingBytes, prometheus.GaugeValue, conn.PendingBytes, detailLabelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subscriptions, prometheus.GaugeValue, conn.Subscriptions,
 					detailLabelValues...)
@@ -267,7 +276,7 @@ func (nc *connzCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 		}
 
-		ch <- prometheus.MustNewConstMetric(nc.numConnections, prometheus.GaugeValue, resp.NumConnections, server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.totalConnections, prometheus.GaugeValue, resp.NumConnections, server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.total, prometheus.GaugeValue, resp.Total, server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.offset, prometheus.GaugeValue, resp.Offset, server.ID)
 		ch <- prometheus.MustNewConstMetric(nc.limit, prometheus.GaugeValue, resp.Limit, server.ID)
