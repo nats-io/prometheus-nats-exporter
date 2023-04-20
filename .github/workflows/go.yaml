@@ -13,7 +13,7 @@ jobs:
       with:
         path: src/github.com/nats-io/prometheus-nats-exporter
     - name: Setup Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version-file: src/github.com/nats-io/prometheus-nats-exporter/go.mod
     - name: Install deps
