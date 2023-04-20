@@ -1,5 +1,16 @@
-#syntax=docker/dockerfile-upstream:1.4
-FROM --platform=$BUILDPLATFORM goreleaser
+#syntax=docker/dockerfile-upstream:1.5
+FROM --platform=$BUILDPLATFORM golang:1.20.3-bullseye as build
+
+RUN <<EOT
+    set -e
+
+    echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sources.list.d/goreleaser.list
+    apt-get update
+    apt-get install -y goreleaser
+    rm -rf /var/lib/apt/lists/*
+EOT
+
+FROM build
 
 ARG CI
 ARG GITHUB_TOKEN
@@ -9,9 +20,9 @@ COPY --from=src . /go/src
 RUN <<EOT
   set -e
   cd /go/src
-  FLAGS="--rm-dist"
-  if [[ -z ${GITHUB_TOKEN} ]]; then
-    if [[ ${CI} != "true" ]]; then FLAGS="${FLAGS} --skip-validate --single-target"; fi
+  FLAGS="--clean"
+  if [ -z ${GITHUB_TOKEN} ]; then
+    if [ ${CI} != "true" ]; then FLAGS="${FLAGS} --skip-validate --single-target"; fi
     goreleaser build ${FLAGS}
   else
     goreleaser release ${FLAGS}

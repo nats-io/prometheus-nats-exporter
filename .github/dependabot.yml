@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # version updates: enabled
+  # security updates: enabled
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "cicd"
+    schedule:
+      interval: "daily"
+    ignore:
+      - dependency-name: "golang"
+        update-types: ["version-update:semver-major"]
+
+  # version updates: disabled
+  # security updates: enabled
+  # https://docs.github.com/en/code-security/dependabot/dependabot-security-updates/configuring-dependabot-security-updates#overriding-the-default-behavior-with-a-configuration-file
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 0
