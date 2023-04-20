@@ -15,14 +15,6 @@ variable CI {
   default = false
 }
 
-variable image_base {
-  default = "docker-image://alpine:3.17.1"
-}
-
-variable image_goreleaser {
-  default = "docker-image://goreleaser/goreleaser:v1.14.1"
-}
-
 ###################
 ### Functions
 ###################
@@ -58,7 +50,6 @@ group "default" {
 
 target "goreleaser" {
   contexts = {
-    goreleaser = image_goreleaser
     src = "."
   }
   args = {
@@ -70,7 +61,6 @@ target "goreleaser" {
 
 target "prometheus-nats-exporter" {
   contexts = {
-    base  = image_base
     build = "target:goreleaser"
   }
   args = {
