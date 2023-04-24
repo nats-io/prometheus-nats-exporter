@@ -62,6 +62,7 @@ target "goreleaser" {
 target "prometheus-nats-exporter" {
   contexts = {
     build = "target:goreleaser"
+    assets = "cicd/assets"
   }
   args = {
     GO_APP = "prometheus-nats-exporter"
