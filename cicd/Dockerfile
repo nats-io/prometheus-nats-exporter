@@ -1,7 +1,7 @@
 #syntax=docker/dockerfile-upstream:1.5
 ARG GO_APP
 
-FROM alpine:3.17.3 as deps
+FROM alpine:3.18.0 as deps
 
 ARG GO_APP
 
@@ -25,7 +25,7 @@ RUN <<EOT
   cp ${BIN_PATH} /go/bin
 EOT
 
-FROM alpine:3.17.3
+FROM alpine:3.18.0
 
 ARG GO_APP
 ENV GO_APP ${GO_APP}
