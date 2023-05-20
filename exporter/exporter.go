@@ -126,7 +126,7 @@ func (ne *NATSExporter) createCollector(system, endpoint string) {
 	ne.registerCollector(system, endpoint,
 		collector.NewCollector(system, endpoint,
 			ne.opts.Prefix,
-			ne.servers))
+			ne.servers, ne.opts.RetryInterval))
 }
 
 func (ne *NATSExporter) registerCollector(system, endpoint string, nc prometheus.Collector) {

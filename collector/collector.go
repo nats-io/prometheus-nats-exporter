@@ -278,7 +278,7 @@ func (nc *NATSCollector) Collect(ch chan<- prometheus.Metric) {
 // initMetricsFromServers builds the configuration
 // For each NATS Metrics endpoint (/*z) get the first URL
 // to determine the list of possible metrics.
-func (nc *NATSCollector) initMetricsFromServers(namespace string) {
+func (nc *NATSCollector) initMetricsFromServers(namespace string, retryTime time.Duration) {
 	var response map[string]interface{}
 
 	nc.Stats = make(map[string]metric)
@@ -300,6 +300,13 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		} else {
 			break
 		}
+	}
+
+	if response == nil && retryTime > 0 {
+		Debugf("Retrying NATS connection for %s in %s", namespace, retryTime)
+		time.Sleep(retryTime)
+		nc.initMetricsFromServers(namespace, 0)
+		return
 	}
 
 	nc.objectToMetrics(response, namespace)
@@ -374,7 +381,7 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 	}
 }
 
-func newNatsCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
+func newNatsCollector(system, endpoint string, servers []*CollectedServer, retryTime time.Duration) prometheus.Collector {
 	// TODO:  Potentially add TLS config in the transport.
 	tr := &http.Transport{}
 	hc := &http.Client{Transport: tr}
@@ -394,7 +401,7 @@ func newNatsCollector(system, endpoint string, servers []*CollectedServer) prome
 		}
 	}
 
-	nc.initMetricsFromServers(system)
+	nc.initMetricsFromServers(system, retryTime)
 
 	return nc
 }
@@ -415,7 +422,9 @@ func boolToFloat(b bool) float64 {
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, healthz, subsz, or routez)
-func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
+// Some endpoints might not be available right away so a retry time is set after
+// which the endpoint is tried again.
+func NewCollector(system, endpoint, prefix string, servers []*CollectedServer, retryTime time.Duration) prometheus.Collector {
 	if isStreamingEndpoint(system, endpoint) {
 		return newStreamingCollector(getSystem(system, prefix), endpoint, servers)
 	}
@@ -437,5 +446,5 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers)
 	}
-	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
+	return newNatsCollector(getSystem(system, prefix), endpoint, servers, retryTime)
 }

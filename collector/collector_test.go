@@ -39,7 +39,7 @@ func verifyCollector(system, url string, endpoint string, cases map[string]float
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(system, endpoint, "", servers)
+	coll := NewCollector(system, endpoint, "", servers, time.Microsecond)
 
 	// now collect the metrics
 	c := make(chan prometheus.Metric)
@@ -74,7 +74,7 @@ func verifyStreamingCollector(url string, endpoint string, cases map[string]floa
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(StreamingSystem, endpoint, "", servers)
+	coll := NewCollector(StreamingSystem, endpoint, "", servers, time.Microsecond)
 
 	// now collect the metrics
 	c := make(chan prometheus.Metric)
@@ -152,7 +152,7 @@ func getLabelValues(system, url, endpoint string, metricNames []string) (map[str
 		ID:  "id",
 		URL: url,
 	}
-	coll := NewCollector(system, endpoint, "", servers)
+	coll := NewCollector(system, endpoint, "", servers, time.Microsecond)
 	coll.Collect(metrics)
 	close(metrics)
 
@@ -264,10 +264,10 @@ func TestRegister(t *testing.T) {
 	// check duplicates do not panic
 	servers = append(servers, cs)
 
-	NewCollector("test", "varz", "", servers)
+	NewCollector("test", "varz", "", servers, time.Microsecond)
 
 	// test idenpotency.
-	nc := NewCollector("test", "varz", "", servers)
+	nc := NewCollector("test", "varz", "", servers, time.Microsecond)
 
 	// test without a server (no error).
 	if err := prometheus.Register(nc); err != nil {
@@ -283,7 +283,7 @@ func TestRegister(t *testing.T) {
 	defer s.Shutdown()
 
 	// test collect with a server
-	nc = NewCollector("test", "varz", "", servers)
+	nc = NewCollector("test", "varz", "", servers, time.Microsecond)
 	if err := prometheus.Register(nc); err != nil {
 		t.Fatal("Failed to register collector:", err)
 	}
@@ -293,7 +293,7 @@ func TestRegister(t *testing.T) {
 	prometheus.Unregister(nc)
 
 	// test collect with an invalid endpoint
-	nc = NewCollector("test", "GARBAGE", "", servers)
+	nc = NewCollector("test", "GARBAGE", "", servers, time.Microsecond)
 	if err := prometheus.Register(nc); err != nil {
 		t.Fatal("Failed to register collector:", err)
 	}
