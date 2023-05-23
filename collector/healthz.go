@@ -21,8 +21,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	healthzEndpoint = "healthz"
+)
+
 func isHealthzEndpoint(system, endpoint string) bool {
-	return system == CoreSystem && endpoint == "healthz"
+	return system == CoreSystem && endpoint == healthzEndpoint
 }
 
 type healthzCollector struct {
@@ -49,7 +53,7 @@ func newHealthzCollector(system, endpoint string, servers []*CollectedServer) pr
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + endpoint,
+			URL: s.URL + "/" + healthzEndpoint,
 		}
 	}
 
