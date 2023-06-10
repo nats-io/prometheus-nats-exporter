@@ -30,10 +30,10 @@ import (
 )
 
 const (
-	clientCert = "../test/certs/client-cert.pem"
-	clientKey  = "../test/certs/client-key.pem"
-	serverCert = "../test/certs/server-cert.pem"
-	serverKey  = "../test/certs/server-key.pem"
+	clientCert = "../test/certs/client.pem"
+	clientKey  = "../test/certs/client.key"
+	serverCert = "../test/certs/server.pem"
+	serverKey  = "../test/certs/server.key"
 	caCertFile = "../test/certs/ca.pem"
 )
 
@@ -163,7 +163,6 @@ func TestExporter(t *testing.T) {
 }
 
 func TestExporterHTTPS(t *testing.T) {
-	t.SkipNow()
 	opts := getDefaultExporterTestOptions()
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0

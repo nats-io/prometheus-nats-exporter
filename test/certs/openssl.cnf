@@ -1,0 +1,48 @@
+[ ca ]
+default_ca      = CA_default
+
+[ CA_default ]
+private_key     = ca.key
+certificate     = ca.pem
+new_certs_dir   = .
+default_days    = 365
+default_md      = sha256
+policy          = policy_match
+
+[ policy_match ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+default_bits            = 2048
+distinguished_name      = req_distinguished_name
+x509_extensions         = v3_req
+prompt                  = no
+
+[ req_distinguished_name ]
+countryName             = US
+stateOrProvinceName     = CA
+organizationName        = Synadia
+organizationalUnitName  = NATS.io
+emailAddress            = info@synadia.com
+commonName              = localhost
+
+[ v3_ca ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer:always
+basicConstraints        = CA:TRUE
+
+[ v3_req ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer:always
+basicConstraints        = CA:FALSE
+keyUsage                = digitalSignature, keyEncipherment
+subjectAltName          = @alt_names
+
+[alt_names]
+DNS.1 = localhost
+IP.1 = 127.0.0.1
