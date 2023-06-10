@@ -5,7 +5,7 @@ on:
       - main
       - deps-update
 jobs:
-  test:
+  coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
     steps:
@@ -19,8 +19,10 @@ jobs:
     - name: Setup Goveralls
       run: go install github.com/mattn/goveralls@v0.0.12
 
-    - name: Setup Dependencies
-      run: go mod download
+    - name: Lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        skip-pkg-cache: true
 
     - name: Run Tests
       run: make test-cov

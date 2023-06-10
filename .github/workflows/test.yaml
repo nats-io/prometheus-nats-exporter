@@ -16,10 +16,5 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - name: Lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        args: -v
-
     - name: Run tests
       run: make test
