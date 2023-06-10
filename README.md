@@ -1,4 +1,4 @@
-[![License][License-Image]][License-Url] [![Build][Build-Status-Image]][Build-Status-Url] [![Coverage][Coverage-Image]][Coverage-Url]
+[![License][License-Image]][License-Url] ![Build][Build-Status-Image] [![Coverage][Coverage-Image]][Coverage-Url]
 
 # The Prometheus NATS Exporter
 
@@ -196,7 +196,6 @@ used to monitor NATS Streaming as well. Refer to the
 
 [License-Url]: https://www.apache.org/licenses/LICENSE-2.0
 [License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg
-[Build-Status-Url]: https://github.com/nats-io/prometheus-nats-exporter/actions/workflows/go.yaml
-[Build-Status-Image]: https://github.com/nats-io/prometheus-nats-exporter/actions/workflows/go.yaml/badge.svg
-[Coverage-Url]: https://codecov.io/gh/nats-io/prometheus-nats-exporter
-[Coverage-image]: https://codecov.io/gh/nats-io/prometheus-nats-exporter/branch/master/graph/badge.svg
+[Build-Status-Image]: https://img.shields.io/github/actions/workflow/status/nats-io/prometheus-nats-exporter/coverage.yaml?branch=main
+[Coverage-Url]: https://coveralls.io/github/nats-io/prometheus-nats-exporter?branch=main
+[Coverage-Image]: https://coveralls.io/repos/github/nats-io/prometheus-nats-exporter/badge.svg?branch=main
