@@ -3,31 +3,33 @@ on:
   push:
     branches:
       - main
-      - deps-update
+    paths-ignore:
+      - '**.md'
+
 jobs:
   coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version-file: go.mod
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
 
-    - name: Setup Goveralls
-      run: go install github.com/mattn/goveralls@v0.0.12
+      - name: Setup Goveralls
+        run: go install github.com/mattn/goveralls@v0.0.12
 
-    - name: Lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        skip-pkg-cache: true
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          skip-pkg-cache: true
 
-    - name: Run Tests
-      run: make test-cov
+      - name: Run Tests
+        run: make test-cov
 
-    - name: Run Coveralls
-      run: goveralls -coverprofile=test.out,collector.out,exporter.out -service=github
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Coveralls
+        run: goveralls -coverprofile=collector.out,exporter.out -service=github
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
