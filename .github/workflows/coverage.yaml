@@ -1,0 +1,31 @@
+name: Test Coverage
+on:
+  push:
+    branches:
+      - main
+      - deps-update
+jobs:
+  test:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+
+    - name: Setup Goveralls
+      run: go install github.com/mattn/goveralls@v0.0.12
+
+    - name: Setup Dependencies
+      run: go mod download
+
+    - name: Run Tests
+      run: make test-cov
+
+    - name: Run Coveralls
+      run: goveralls -coverprofile=test.out,collector.out,exporter.out -service=github
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}

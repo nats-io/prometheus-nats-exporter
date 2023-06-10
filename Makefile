@@ -1,4 +1,3 @@
-export GO111MODULE := on
 drepo ?= natsio
 
 prometheus-nats-exporter.docker:
@@ -8,18 +7,7 @@ prometheus-nats-exporter.docker:
 
 .PHONY: dockerx
 dockerx:
-ifneq ($(ver),)
-	# Ensure 'docker buildx ls' shows correct platforms.
-	docker buildx build \
-		--tag $(drepo)/prometheus-nats-exporter:$(ver) --tag $(drepo)/prometheus-nats-exporter:latest \
-		--platform linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8 \
-		--file docker/linux/Dockerfile \
-		--push .
-else
-	# Missing version, try this.
-	# make dockerx ver=1.2.3
-	exit 1
-endif
+	docker buildx bake --load
 
 .PHONY: build
 build:
@@ -31,38 +19,18 @@ test:
 	go test -race -count=1 -parallel=1 -v ./collector/...
 	go test -race -count=1 -parallel=1 -v ./exporter/...
 
-.PHONY: test-cover
-test-cover:
-	./scripts/cov.sh
-
-.PHONY: test-cover-ci
-test-cover-ci:
-	./scripts/cov.sh CI
-
-.PHONY: install-tools
-install-tools:
-	cd /tmp && go install github.com/wadey/gocovmerge@latest
-	cd /tmp && go install github.com/golangci/golangci-lint/cmd/golangci-lint@f0dbc75
+.PHONY: test-cov
+test-cov:
+	go test -v -race -count=1 -parallel=1 -coverprofile=test.out ./test/...
+	go test -v -race -count=1 -parallel=1 -coverprofile=collector.out ./collector/...
+	go test -v -race -count=1 -parallel=1 -coverprofile=exporter.out ./exporter/...
 
 .PHONY: lint
 lint:
+	@PATH=$(shell go env GOPATH)/bin:$(PATH)
+	@if ! which  golangci-lint >/dev/null; then \
+		echo "golangci-lint is required and was not found"; \
+		exit 1; \
+	fi
 	go vet ./...
-	$(shell go env GOPATH)/bin/golangci-lint run \
-	  --no-config --exclude-use-default=false --max-same-issues=0 \
-		--disable errcheck \
-		--enable revive \
-		--enable stylecheck \
-		--enable unconvert \
-		--enable dupl \
-		--enable gocyclo \
-		--enable gofmt \
-		--enable goimports \
-		--enable misspell \
-		--enable lll \
-		--enable unparam \
-		--enable nakedret \
-		--enable prealloc \
-		--enable exportloopref \
-		--enable gocritic \
-		--enable gochecknoinits \
-		./...
+	$(shell go env GOPATH)/bin/golangci-lint run ./...

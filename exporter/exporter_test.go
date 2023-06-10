@@ -199,8 +199,8 @@ func TestExporterHTTPSInvalidConfig(t *testing.T) {
 	checkExporterStart := func() {
 		exp := NewExporter(opts)
 		if err := exp.Start(); err == nil {
-			t.Fatalf("Did not receive expected error.")
 			exp.Stop()
+			t.Fatalf("Did not receive expected error.")
 		}
 	}
 
@@ -443,8 +443,8 @@ func TestPortReuse(t *testing.T) {
 	// attempt to start another exporter on the same port
 	exp2 := NewExporter(opts)
 	if err := exp2.Start(); err == nil {
-		t.Fatalf("Did not receive expected error.")
 		exp2.Stop()
+		t.Fatalf("Did not receive expected error.")
 	}
 }
 
@@ -534,8 +534,8 @@ func TestExporterStartNoMetricsSelected(t *testing.T) {
 	}
 
 	if err := exp.Start(); err == nil {
+		exp.Stop()
 		t.Fatalf("Did not receive expected error adding a server.")
-		defer exp.Stop()
 	}
 }
 
