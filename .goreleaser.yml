@@ -2,26 +2,23 @@
 project_name: prometheus-nats-exporter
 
 release:
+  name_template: 'Release {{.Tag}}'
   draft: true
   github:
     owner: nats-io
     name: prometheus-nats-exporter
 
-  name_template: 'Release {{.Tag}}'
-
-env:
-  - IMAGE_REPOSITORY={{ if index .Env "IMAGE_REGISTRY" }}{{ .Env.IMAGE_REGISTRY }}/{{ end }}{{ .ProjectName }}
-
 builds:
   - id: prometheus-nats-exporter
-    main: .
     binary: prometheus-nats-exporter
+    main: .
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}
     env:
-      - GO111MODULE=on
       - CGO_ENABLED=0
     goos:
-    - darwin
     - linux
+    - darwin
     - windows
     - freebsd
     goarch:
@@ -30,6 +27,7 @@ builds:
     - arm64
     - 386
     - mips64le
+    - s390x
     goarm:
     - 6
     - 7
@@ -43,33 +41,34 @@ builds:
       - goos: freebsd
         goarch: 386
 
-archives:
-  - name_template: '{{.ProjectName}}-{{.Tag}}-{{.Os}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}'
-    wrap_in_directory: true
-    format: zip
-    files:
-      - README.md
-      - LICENSE
-  - name_template: '{{.ProjectName}}-{{.Tag}}-{{.Os}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}'
-    id: targz-archives
-    wrap_in_directory: true
-    format: tar.gz
-    files:
-      - README.md
-      - LICENSE
-
 checksum:
-  name_template: '{{ .ProjectName }}-v{{ .Version }}-checksums.txt'
+  name_template: 'checksums.txt'
 
-snapshot:
-  name_template: SNAPSHOT-{{ .Commit }}
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-v{{ .Version }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+    - goos: windows
+      format: zip
 
 nfpms:
-  - file_name_template: '{{.ProjectName}}-{{.Tag}}-{{.Arch}}{{if .Arm}}{{.Arm}}{{end}}'
-    homepage:  https://nats.io
-    description: A Prometheus exporter for NATS
-    maintainer: Colin Sullivan <colin@nats.io>
-    vendor: nats.io
-    license: Apache 2.0
-    formats:
+- formats:
     - deb
+  file_name_template: >-
+      {{ .ProjectName }}-v{{ .Version }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+  description: A Prometheus exporter for NATS
+  vendor: nats.io
+  homepage: https://nats.io
+  license: Apache 2.0
+  maintainer: Synadia <info@synadia.com>
