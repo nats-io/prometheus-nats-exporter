@@ -16,7 +16,6 @@ make build
 If you want to run tests, you can do this.
 
 ```bash
-make install-tools
 make test
 make lint
 
