@@ -4,18 +4,21 @@ ARG GO_APP
 FROM alpine:3.18.2 as deps
 
 ARG GO_APP
+ARG GORELEASER_DIST_DIR=/go/src/dist
 
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-RUN mkdir -p /go/bin /go/src
+RUN mkdir -p /go/bin /go/src ${GORELEASER_DIST_DIR}
 
-COPY --from=build /go/src/dist /go/src/dist
+COPY --from=build ${GORELEASER_DIST_DIR}/ ${GORELEASER_DIST_DIR}
 
 RUN <<EOT
   set -e 
   apk add --no-cache ca-certificates jq
+  cd ${GORELEASER_DIST_DIR}/..
+
   if [[ ${TARGETARCH} == "arm" ]]; then VARIANT=$(echo ${TARGETVARIANT} | sed 's/^v//'); fi
   BIN_PATH=$(jq -r ".[] |select(.type   == \"Binary\" and \
                                 .name   == \"${GO_APP}\" and \
