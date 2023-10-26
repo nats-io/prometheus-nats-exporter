@@ -61,7 +61,7 @@ prometheus-nats-exporter <flags> url
   -gatewayz
     	Get gateway metrics.
   -accstatz
-      Get accstatz metrics.
+    	Get accstatz metrics.
   -leafz
     	Get leaf metrics.
   -http_pass string

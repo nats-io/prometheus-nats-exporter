@@ -176,13 +176,6 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	getJsz := opts.GetJszFilter != ""
-	if !opts.GetHealthz && !opts.GetConnz && !opts.GetConnzDetailed && !opts.GetRoutez &&
-		!opts.GetSubz && !opts.GetVarz && !opts.GetGatewayz && !opts.GetAccstatz && !opts.GetLeafz &&
-		!opts.GetStreamingChannelz && !opts.GetStreamingServerz &&
-		!opts.GetReplicatorVarz && !getJsz {
-		return fmt.Errorf("no Collectors specfied")
-	}
 	if opts.GetReplicatorVarz && opts.GetVarz {
 		return fmt.Errorf("replicatorVarz cannot be used with varz")
 	}
@@ -221,13 +214,16 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	if opts.GetReplicatorVarz {
 		ne.createCollector(collector.ReplicatorSystem, "varz")
 	}
-	if getJsz {
+	if opts.GetJszFilter != "" {
 		switch strings.ToLower(opts.GetJszFilter) {
 		case "account", "accounts", "consumer", "consumers", "all", "stream", "streams":
 		default:
 			return fmt.Errorf("invalid jsz filter %q", opts.GetJszFilter)
 		}
 		ne.createCollector(collector.JetStreamSystem, opts.GetJszFilter)
+	}
+	if len(ne.Collectors) == 0 {
+		return fmt.Errorf("no Collectors specified")
 	}
 
 	return nil
