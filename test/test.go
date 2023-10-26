@@ -1,4 +1,4 @@
-// Copyright 2017-2019 The NATS Authors
+// Copyright 2017-2023 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -65,6 +65,20 @@ func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
 	http.Handle("/gatewayz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, GatewayzTestResponse())
+	}))
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
+// RunAccstatzStaticServer starts an http server with static content
+func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
+	http.Handle("/accstatz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, AccstatzTestResponse())
 	}))
 
 	go func() {

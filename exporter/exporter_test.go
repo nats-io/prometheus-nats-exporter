@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2023 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -639,6 +639,30 @@ func TestExporterGatewayz(t *testing.T) {
 	defer exp.Stop()
 
 	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_gatewayz_inbound_gateway_conn_in_msgs")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterAccstatz(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetAccstatz = true
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunAccstatzStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.http.Addr().String(), "gnatsd_accstatz_current_connections")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

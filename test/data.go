@@ -1,3 +1,16 @@
+// Copyright 2021-2023 The NATS Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package test
 
 // GatewayzTestResponse is static data for tests
@@ -105,6 +118,47 @@ func GatewayzTestResponse() string {
 }
 `
 
+}
+
+// AccstatzTestResponse is static data for tests
+func AccstatzTestResponse() string {
+	return `{
+	"server_id": "SERVER_ID",
+	"now": "2021-05-07T18:13:47.70796395Z",
+	"account_statz": [
+		{
+	      "acc": "$G",
+	      "conns": 100,
+	      "leafnodes": 0,
+	      "total_conns": 1000,
+	      "sent": {
+	        "msgs": 0,
+	        "bytes": 0
+	      },
+	      "received": {
+	        "msgs": 35922,
+	        "bytes": 4574155
+	      },
+	      "slow_consumers": 0
+	    },
+		{
+	      "acc": "$A",
+	      "conns": 0,
+	      "leafnodes": 0,
+	      "total_conns": 0,
+	      "sent": {
+	        "msgs": 0,
+	        "bytes": 0
+	      },
+	      "received": {
+	        "msgs": 0,
+	        "bytes": 0
+	      },
+	      "slow_consumers": 0
+	    }
+	]
+}
+`
 }
 
 func leafzTestResponse() string {

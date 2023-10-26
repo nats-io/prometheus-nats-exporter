@@ -1,4 +1,4 @@
-// Copyright 2017-2019 The NATS Authors
+// Copyright 2017-2023 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -427,6 +427,9 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	}
 	if isGatewayzEndpoint(system, endpoint) {
 		return newGatewayzCollector(getSystem(system, prefix), endpoint, servers)
+	}
+	if isAccstatzEndpoint(system, endpoint) {
+		return newAccstatzCollector(getSystem(system, prefix), endpoint, servers)
 	}
 	if isLeafzEndpoint(system, endpoint) {
 		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
