@@ -44,7 +44,7 @@ func newHealthzCollector(system, endpoint string, servers []*CollectedServer) pr
 		status: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "status"),
 			"status",
-			[]string{"server_id"},
+			[]string{"server_id", "value"},
 			nil,
 		),
 	}
@@ -69,16 +69,21 @@ func (nc *healthzCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, server := range nc.servers {
 		var health Healthz
 		if err := getMetricURL(nc.httpClient, server.URL, &health); err != nil {
-			Debugf("ignoring server %s: %v", server.ID, err)
-			continue
+			Debugf("error collecting server %s: %v", server.ID, err)
+			health.Error = err.Error()
 		}
 
-		var status float64 = 1
+		var (
+			status float64 = 1
+			value          = health.Error
+		)
+
 		if health.Status == "ok" {
 			status = 0
+			value = health.Status
 		}
 
-		ch <- prometheus.MustNewConstMetric(nc.status, prometheus.GaugeValue, status, server.ID)
+		ch <- prometheus.MustNewConstMetric(nc.status, prometheus.GaugeValue, status, server.ID, value)
 	}
 }
 

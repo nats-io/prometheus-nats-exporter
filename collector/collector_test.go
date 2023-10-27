@@ -242,6 +242,30 @@ func TestConnz(t *testing.T) {
 	verifyCollector(CoreSystem, url, "connz", cases, t)
 }
 
+func TestHealthz(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
+	// see if we get the same stats as the original monitor testing code.
+	// just for our monitoring_port
+
+	cases := map[string]float64{
+		"gnatsd_healthz_status": 0,
+	}
+
+	verifyCollector(CoreSystem, url, "healthz", cases, t)
+
+	// test after server shutdown
+	s.Shutdown()
+
+	cases = map[string]float64{
+		"gnatsd_healthz_status": 1,
+	}
+
+	verifyCollector(CoreSystem, url, "healthz", cases, t)
+}
+
 func TestNoServer(t *testing.T) {
 	url := fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
 
