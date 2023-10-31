@@ -16,6 +16,7 @@ package collector
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -489,6 +490,59 @@ func TestStreamingMetricsCustomPrefix(t *testing.T) {
 	}
 
 	verifyStreamingCollector(url, "serverz", cases, t)
+}
+
+func TestLeafzMetricLabels(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	s := pet.RunLeafzStaticServer(&wg)
+	defer s.Close()
+
+	url := fmt.Sprintf("http://localhost:%d", pet.StaticPort)
+
+	outmsgs := "gnatsd_leafz_conn_out_msgs"
+	labelValues, err := getLabelValues(CoreSystem, url, "leafz", []string{outmsgs})
+	if err != nil {
+		t.Fatalf("Unexpected error getting labels for %s metrics: %v", outmsgs, err)
+	}
+	labelMaps, found := labelValues[outmsgs]
+	if !found || len(labelMaps) != 2 {
+		t.Fatalf("No info found for metric %s", outmsgs)
+	}
+	expectedLabelMaps := []map[string]string{
+		{
+			"name":      "leafz_server",
+			"account":   "$G",
+			"ip":        "127.0.0.1",
+			"port":      "6223",
+			"server_id": "id",
+		},
+		{
+			"name":      "",
+			"account":   "$G",
+			"ip":        "127.0.0.2",
+			"port":      "6224",
+			"server_id": "id",
+		},
+	}
+	expectedLabelsNotFound := make(map[string]string, 0)
+	for _, expLabelMap := range expectedLabelMaps {
+		for expLabel, expValue := range expLabelMap {
+			flag := false
+			for _, labelMap := range labelMaps {
+				if value, ok := labelMap[expLabel]; ok && value == expValue {
+					flag = true
+					break
+				}
+			}
+			if !flag {
+				expectedLabelsNotFound[expLabel] = expValue
+			}
+		}
+	}
+	if len(expectedLabelsNotFound) > 0 {
+		t.Fatalf("the following expected labels were missing: %v", expectedLabelsNotFound)
+	}
 }
 
 func TestStreamingServerInfoMetricLabels(t *testing.T) {
