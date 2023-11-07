@@ -213,6 +213,31 @@ func TestVarz(t *testing.T) {
 	verifyCollector(CoreSystem, url, "varz", cases, t)
 }
 
+func TestStartAndConfigLoadTimeVarz(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	varz, err := s.Varz(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+
+	nc := pet.CreateClientConnSubscribeAndPublish(t)
+	defer nc.Close()
+
+	// see if we get the same stats as the original monitor testing code.
+	// just for our monitoring_port
+
+	cases := map[string]float64{
+		"gnatsd_varz_start":            float64(varz.Start.UnixMilli()),
+		"gnatsd_varz_config_load_time": float64(varz.ConfigLoadTime.UnixMilli()),
+	}
+
+	verifyCollector(CoreSystem, url, "varz", cases, t)
+}
+
 func TestConnz(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
