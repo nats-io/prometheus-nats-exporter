@@ -45,6 +45,7 @@ type CollectedServer struct {
 type metric struct {
 	path   []string
 	metric interface{}
+	time   bool
 }
 
 // NATSCollector collects NATS metrics
@@ -240,8 +241,12 @@ func (nc *NATSCollector) collectStatsFromRequests(
 			case float64: // json only has floats
 				m.WithLabelValues(id).Set(v)
 			case string:
-				m.Reset()
-				m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
+				if stat.time {
+					m.WithLabelValues(id).Set(parseDateString(v))
+				} else {
+					m.Reset()
+					m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
+				}
 			default:
 				Debugf("value %s no longer a float", key, id, v)
 			}
@@ -332,14 +337,18 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 		"gateway_tls_timeout":     {},
 		"gateway_connect_retries": {},
 	}
+
 	labelKeys := map[string]struct{}{
-		"server_id":   {},
-		"server_name": {},
-		"version":     {},
-		"domain":      {},
-		"leader":      {},
-		"name":        {},
+		"server_id":        {},
+		"server_name":      {},
+		"version":          {},
+		"domain":           {},
+		"leader":           {},
+		"name":             {},
+		"start":            {},
+		"config_load_time": {},
 	}
+
 	for k := range response {
 		fqn, path := fqName(k, prefix...)
 		if _, ok := skipFQN[fqn]; ok {
@@ -360,9 +369,21 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 			if _, ok := labelKeys[k]; !ok {
 				break
 			}
-			nc.Stats[fqn] = metric{
-				path:   path,
-				metric: newLabelGauge(nc.system, nc.endpoint, fqn, "", namespace, "value"),
+
+			// Check if the value is a valid time string.
+			// Go JSONMarshal time.Time in RFC3339Nano format.
+			_, err := time.Parse(time.RFC3339Nano, v)
+			if err == nil {
+				nc.Stats[fqn] = metric{
+					path:   path,
+					metric: newPrometheusGaugeVec(nc.system, nc.endpoint, fqn, "", namespace),
+					time:   true,
+				}
+			} else {
+				nc.Stats[fqn] = metric{
+					path:   path,
+					metric: newLabelGauge(nc.system, nc.endpoint, fqn, "", namespace, "value"),
+				}
 			}
 		case map[string]interface{}:
 			// recurse and flatten
