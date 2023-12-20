@@ -17,6 +17,7 @@ package collector
 import (
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -51,11 +52,12 @@ type metric struct {
 // NATSCollector collects NATS metrics
 type NATSCollector struct {
 	sync.Mutex
-	Stats      map[string]metric
-	httpClient *http.Client
-	endpoint   string
-	system     string
-	servers    []*CollectedServer
+	Stats          map[string]metric
+	httpClient     *http.Client
+	endpoint       string
+	system         string
+	servers        []*CollectedServer
+	serverRespKeys map[string]struct{}
 }
 
 // newPrometheusGaugeVec creates a custom GaugeVec
@@ -213,6 +215,14 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 			Debugf("ignoring server %s: %v", u.ID, err)
 			delete(resps, u.ID)
 		}
+
+		// verify if there are any new keys in the response that we haven't seen before
+		keys := mapKeys(response, "")
+		if !maps.Equal(keys, nc.serverRespKeys) {
+			Debugf("new keys found in the response from %s, updating metrics", u.URL)
+			nc.objectToMetrics(response, nc.system)
+			nc.serverRespKeys = keys
+		}
 		resps[u.ID] = response
 	}
 	return resps
@@ -307,6 +317,7 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		}
 	}
 
+	nc.serverRespKeys = mapKeys(response, "")
 	nc.objectToMetrics(response, namespace)
 }
 
@@ -393,6 +404,30 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 			Tracef("Unknown type:  %v %v, %v", fqn, k, v)
 		}
 	}
+}
+
+// mapKeys returns a map of all keys in a map, including nested maps.
+// The keys from nested maps are prefixed with the parent key.
+func mapKeys(input map[string]interface{}, prefix string) map[string]struct{} {
+	keys := make(map[string]struct{})
+
+	for k, v := range input {
+		fullKey := k
+		if prefix != "" {
+			fullKey = prefix + "_" + k
+		}
+
+		if nestedMap, ok := v.(map[string]interface{}); ok {
+			nestedKeys := mapKeys(nestedMap, fullKey)
+			for nestedKey := range nestedKeys {
+				keys[nestedKey] = struct{}{}
+			}
+		} else {
+			keys[fullKey] = struct{}{}
+		}
+	}
+
+	return keys
 }
 
 func newNatsCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
