@@ -15,6 +15,7 @@ package collector
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -727,4 +728,31 @@ func TestReplicatorMetrics(t *testing.T) {
 
 	url := "http://127.0.0.1:9922"
 	verifyCollector(ReplicatorSystem, url, "varz", cases, t)
+}
+
+func TestMapKeys(t *testing.T) {
+	m := map[string]any{
+		"foo": "bar",
+		"baz": "quux",
+		"nested": map[string]any{
+			"foo": "bar",
+			"baz": "quux",
+			"nested": map[string]any{
+				"foo": "bar",
+				"baz": "quux",
+			},
+		},
+	}
+	expected := map[string]struct{}{
+		"foo":               {},
+		"baz":               {},
+		"nested_foo":        {},
+		"nested_baz":        {},
+		"nested_nested_foo": {},
+		"nested_nested_baz": {},
+	}
+	keys := mapKeys(m, "")
+	if !maps.Equal(keys, expected) {
+		t.Fatalf("expected %v, got %v", expected, keys)
+	}
 }

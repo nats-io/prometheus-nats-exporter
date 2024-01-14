@@ -408,7 +408,7 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 
 // mapKeys returns a map of all keys in a map, including nested maps.
 // The keys from nested maps are prefixed with the parent key.
-func mapKeys(input map[string]interface{}, prefix string) map[string]struct{} {
+func mapKeys(input map[string]any, prefix string) map[string]struct{} {
 	keys := make(map[string]struct{})
 
 	for k, v := range input {
@@ -417,7 +417,7 @@ func mapKeys(input map[string]interface{}, prefix string) map[string]struct{} {
 			fullKey = prefix + "_" + k
 		}
 
-		if nestedMap, ok := v.(map[string]interface{}); ok {
+		if nestedMap, ok := v.(map[string]any); ok {
 			nestedKeys := mapKeys(nestedMap, fullKey)
 			for nestedKey := range nestedKeys {
 				keys[nestedKey] = struct{}{}
