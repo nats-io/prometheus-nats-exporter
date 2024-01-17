@@ -138,7 +138,7 @@ func createConnzCollector(system string) *connzCollector {
 
 func createConnzDetailedCollector(system string) *connzCollector {
 	connzCollector := createConnzCollector(system)
-	detailLabels := []string{"server_id", "cid", "kind", "type", "ip", "port", "name", "lang",
+	detailLabels := []string{"server_id", "cid", "kind", "type", "ip", "port", "name", "name_tag", "lang",
 		"version", "tls_version", "tls_cipher_suite"}
 	connzCollector.pendingBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(system, connzEndpoint, "pending_bytes"),
@@ -223,6 +223,10 @@ func newConnzCollector(system, endpoint string, servers []*CollectedServer) prom
 			ID:  s.ID,
 			URL: s.URL + "/" + connzEndpoint,
 		}
+
+		if nc.detailed {
+			nc.servers[i].URL += "?auth=true"
+		}
 	}
 	return nc
 }
@@ -250,7 +254,7 @@ func (nc *connzCollector) Collect(ch chan<- prometheus.Metric) {
 			outMsgs += conn.OutMsgs
 			if nc.detailed {
 				detailLabelValues := []string{server.ID, conn.Cid, conn.Kind, conn.Type, conn.IP, conn.Port,
-					conn.Name, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
+					conn.Name, conn.NameTag, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
 				ch <- prometheus.MustNewConstMetric(nc.pendingBytes, prometheus.GaugeValue, conn.PendingBytes, detailLabelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subscriptions, prometheus.GaugeValue, conn.Subscriptions,
 					detailLabelValues...)
@@ -308,6 +312,7 @@ type ConnzConnection struct {
 	OutBytes       float64 `json:"out_bytes"`
 	Subscriptions  float64 `json:"subscriptions"`
 	Name           string  `json:"name"`
+	NameTag        string  `json:"name_tag"`
 	Lang           string  `json:"lang"`
 	Version        string  `json:"version"`
 	TLSVersion     string  `json:"tls_version"`
@@ -377,6 +382,9 @@ func (c *ConnzConnection) UnmarshalJSON(data []byte) error {
 	}
 	if val, exists := connection["name"]; exists {
 		c.Name = val.(string)
+	}
+	if val, exists := connection["name_tag"]; exists {
+		c.NameTag = val.(string)
 	}
 	if val, exists := connection["lang"]; exists {
 		c.Lang = val.(string)
