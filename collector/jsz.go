@@ -91,7 +91,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			serverLabels,
 			nil,
 		),
-		// jetstream_stream_total_messages
+		// jetstream_server_total_streams
 		streams: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "server", "total_streams"),
 			"Total number of streams in JetStream",
@@ -147,14 +147,14 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			streamLabels,
 			nil,
 		),
-		// jetstream_stream_state_first_seq
+		// jetstream_stream_first_seq
 		streamFirstSeq: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "first_seq"),
 			"First sequence from a stream",
 			streamLabels,
 			nil,
 		),
-		// jetstream_stream_state_last_seq
+		// jetstream_stream_last_seq
 		streamLastSeq: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "last_seq"),
 			"Last sequence from a stream",
