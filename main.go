@@ -20,8 +20,8 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/nats-io/prometheus-nats-exporter/collector"
@@ -91,6 +91,10 @@ func main() {
 	var debugAndTrace bool
 	var retryInterval int
 	var printVersion bool
+
+	// Setup the interrupt handler to gracefully exit.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 
 	opts := exporter.GetDefaultExporterOptions()
 
@@ -200,14 +204,6 @@ necessary.`)
 		collector.Fatalf("error starting the exporter: %v\n", err)
 	}
 
-	// Setup the interrupt handler to gracefully exit.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		exp.Stop()
-		os.Exit(0)
-	}()
-
-	runtime.Goexit()
+	<-c
+	exp.Stop()
 }
