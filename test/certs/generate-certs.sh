@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+rm -f -- ca.pem client.key client.pem server.key server.pem
+
 # Generate CA
 openssl req -nodes -new -x509 -days 3650 -extensions v3_ca -keyout ca.key -out ca.pem -config openssl.cnf
 
