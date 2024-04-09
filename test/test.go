@@ -63,7 +63,7 @@ func RunStreamingServer() *nss.StanServer {
 // RunGatewayzStaticServer starts an http server with static content
 func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
-	http.Handle("/gatewayz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/gatewayz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, GatewayzTestResponse())
 	}))
 
@@ -77,7 +77,7 @@ func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 // RunAccstatzStaticServer starts an http server with static content
 func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
-	http.Handle("/accstatz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/accstatz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, AccstatzTestResponse())
 	}))
 
@@ -91,7 +91,7 @@ func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
 // RunLeafzStaticServer runs a leafz static server.
 func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
-	http.Handle("/leafz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/leafz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, leafzTestResponse())
 	}))
 
@@ -220,7 +220,7 @@ func CreateClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
 	}
 
 	ch := make(chan bool)
-	if _, err = nc.Subscribe("foo", func(m *nats.Msg) { ch <- true }); err != nil {
+	if _, err = nc.Subscribe("foo", func(_ *nats.Msg) { ch <- true }); err != nil {
 		t.Fatalf("unable to subscribe: %v", err)
 	}
 	if err := nc.Publish("foo", []byte("Hello")); err != nil {
