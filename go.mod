@@ -39,5 +39,5 @@ require (
 	go.etcd.io/bbolt v1.3.7 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )
