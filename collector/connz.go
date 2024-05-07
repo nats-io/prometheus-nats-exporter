@@ -138,8 +138,8 @@ func createConnzCollector(system string) *connzCollector {
 
 func createConnzDetailedCollector(system string) *connzCollector {
 	connzCollector := createConnzCollector(system)
-	detailLabels := []string{"server_id", "cid", "kind", "type", "ip", "port", "name", "name_tag", "lang",
-		"version", "tls_version", "tls_cipher_suite"}
+	detailLabels := []string{"server_id", "cid", "kind", "type", "ip", "port", "name", "name_tag",
+		"account", "lang", "version", "tls_version", "tls_cipher_suite"}
 	connzCollector.pendingBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(system, connzEndpoint, "pending_bytes"),
 		"pending_bytes",
@@ -254,7 +254,7 @@ func (nc *connzCollector) Collect(ch chan<- prometheus.Metric) {
 			outMsgs += conn.OutMsgs
 			if nc.detailed {
 				detailLabelValues := []string{server.ID, conn.Cid, conn.Kind, conn.Type, conn.IP, conn.Port,
-					conn.Name, conn.NameTag, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
+					conn.Name, conn.NameTag, conn.Account, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
 				ch <- prometheus.MustNewConstMetric(nc.pendingBytes, prometheus.GaugeValue, conn.PendingBytes, detailLabelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subscriptions, prometheus.GaugeValue, conn.Subscriptions,
 					detailLabelValues...)
@@ -313,6 +313,7 @@ type ConnzConnection struct {
 	Subscriptions  float64 `json:"subscriptions"`
 	Name           string  `json:"name"`
 	NameTag        string  `json:"name_tag"`
+	Account        string  `json:"account"`
 	Lang           string  `json:"lang"`
 	Version        string  `json:"version"`
 	TLSVersion     string  `json:"tls_version"`
@@ -385,6 +386,9 @@ func (c *ConnzConnection) UnmarshalJSON(data []byte) error {
 	}
 	if val, exists := connection["name_tag"]; exists {
 		c.NameTag = val.(string)
+	}
+	if val, exists := connection["account"]; exists {
+		c.Account = val.(string)
 	}
 	if val, exists := connection["lang"]; exists {
 		c.Lang = val.(string)
