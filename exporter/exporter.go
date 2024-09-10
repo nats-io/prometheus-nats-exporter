@@ -44,33 +44,35 @@ const (
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
-	ListenAddress        string
-	ListenPort           int
-	ScrapePath           string
-	GetHealthz           bool
-	GetConnz             bool
-	GetConnzDetailed     bool
-	GetVarz              bool
-	GetSubz              bool
-	GetRoutez            bool
-	GetGatewayz          bool
-	GetAccstatz          bool
-	GetLeafz             bool
-	GetReplicatorVarz    bool
-	GetStreamingChannelz bool
-	GetStreamingServerz  bool
-	GetJszFilter         string
-	RetryInterval        time.Duration
-	CertFile             string
-	KeyFile              string
-	CaFile               string
-	NATSServerURL        string
-	NATSServerTag        string
-	HTTPUser             string // User in metrics scrape by prometheus.
-	HTTPPassword         string
-	Prefix               string
-	UseInternalServerID  bool
-	UseServerName        bool
+	ListenAddress           string
+	ListenPort              int
+	ScrapePath              string
+	GetHealthz              bool
+	GetHealthzJsEnabledOnly bool
+	GetHealthzJsServerOnly  bool
+	GetConnz                bool
+	GetConnzDetailed        bool
+	GetVarz                 bool
+	GetSubz                 bool
+	GetRoutez               bool
+	GetGatewayz             bool
+	GetAccstatz             bool
+	GetLeafz                bool
+	GetReplicatorVarz       bool
+	GetStreamingChannelz    bool
+	GetStreamingServerz     bool
+	GetJszFilter            string
+	RetryInterval           time.Duration
+	CertFile                string
+	KeyFile                 string
+	CaFile                  string
+	NATSServerURL           string
+	NATSServerTag           string
+	HTTPUser                string // User in metrics scrape by prometheus.
+	HTTPPassword            string
+	Prefix                  string
+	UseInternalServerID     bool
+	UseServerName           bool
 }
 
 // NATSExporter collects NATS metrics
@@ -192,6 +194,12 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetHealthz {
 		ne.createCollector(collector.CoreSystem, "healthz")
+	}
+	if opts.GetHealthzJsEnabledOnly {
+		ne.createCollector(collector.CoreSystem, "healthz_js_enabled_only")
+	}
+	if opts.GetHealthzJsServerOnly {
+		ne.createCollector(collector.CoreSystem, "healthz_js_server_only")
 	}
 	if opts.GetConnzDetailed {
 		ne.createCollector(collector.CoreSystem, "connz_detailed")
