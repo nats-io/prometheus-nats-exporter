@@ -157,6 +157,9 @@ func (lm *leafMetrics) Describe(ch chan<- *prometheus.Desc) {
 // Collect collects all the metrics about the a leafnode connection.
 func (lm *leafMetrics) Collect(server *CollectedServer, lf *Leaf, ch chan<- prometheus.Metric) {
 
+	ch <- prometheus.MustNewConstMetric(lm.info, prometheus.GaugeValue, float64(1.0),
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+
 	rtt, _ := time.ParseDuration(lf.RTT)
 	ch <- prometheus.MustNewConstMetric(lm.connRtt, prometheus.GaugeValue, rtt.Seconds(),
 		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
