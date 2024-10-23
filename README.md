@@ -58,6 +58,10 @@ prometheus-nats-exporter <flags> url
     	Get detailed connection metrics for each client. Enables flag "-connz" implicitly.
   -healthz
         Get health metrics.
+  -healthz_js_enabled_only
+        Get health metrics with js-enabled-only=true flag.
+  -healthz_js_server_only
+        Get health metrics with js-server-only=true flag.
   -gatewayz
     	Get gateway metrics.
   -accstatz

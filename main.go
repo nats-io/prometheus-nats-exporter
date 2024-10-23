@@ -77,6 +77,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 	}
 
 	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetHealthz ||
+		opts.GetHealthzJsEnabledOnly || opts.GetHealthzJsServerOnly ||
 		opts.GetRoutez || opts.GetGatewayz || opts.GetAccstatz || opts.GetLeafz || opts.GetStreamingChannelz ||
 		opts.GetStreamingServerz || opts.GetReplicatorVarz || opts.GetJszFilter == ""
 	if !metricsSpecified {
@@ -120,6 +121,8 @@ func main() {
 	flag.BoolVar(&opts.GetConnzDetailed, "connz_detailed", false,
 		"Get detailed connection metrics for each client. Enables flag `connz` implicitly.")
 	flag.BoolVar(&opts.GetHealthz, "healthz", false, "Get health metrics.")
+	flag.BoolVar(&opts.GetHealthzJsEnabledOnly, "healthz_js_enabled_only", false, "Get health metrics with js-enabled-only=true.")
+	flag.BoolVar(&opts.GetHealthzJsServerOnly, "healthz_js_server_only", false, "Get health metrics with js-server-only=true.")
 	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetGatewayz, "gatewayz", false, "Get gateway metrics.")
 	flag.BoolVar(&opts.GetAccstatz, "accstatz", false, "Get accstatz metrics.")
