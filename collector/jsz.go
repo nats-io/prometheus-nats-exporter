@@ -79,6 +79,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	consumerLabels = append(consumerLabels, "consumer_leader")
 	consumerLabels = append(consumerLabels, "is_consumer_leader")
 	consumerLabels = append(consumerLabels, "consumer_desc")
+	consumerLabels = append(consumerLabels, "consumer_created")
 
 	nc := &jszCollector{
 		httpClient: &http.Client{
@@ -299,7 +300,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
 		var streamName, streamLeader string
-		var consumerName, consumerDesc, consumerLeader string
+		var consumerName, consumerDesc, consumerLeader, consumerCreated string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
 		var accountID string
@@ -368,6 +369,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				// Now with the consumers.
 				for _, consumer := range stream.Consumer {
 					consumerName = consumer.Name
+					consumerCreated = consumer.Created.Local().Format(time.RFC3339)
 					if consumer.Config != nil {
 						consumerDesc = consumer.Config.Description
 					}
@@ -388,7 +390,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Stream Labels
 							accountName, accountID, streamName, streamLeader, isStreamLeader,
 							// Consumer Labels
-							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
+							consumerName, consumerLeader, isConsumerLeader, consumerDesc, consumerCreated,
 						)
 					}
 					ch <- consumerMetric(nc.consumerDeliveredConsumerSeq, float64(consumer.Delivered.Consumer))
