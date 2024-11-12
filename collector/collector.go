@@ -486,7 +486,16 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
 	}
 	if isJszEndpoint(system) {
-		return newJszCollector(getSystem(system, prefix), endpoint, servers)
+		return newJszCollector(getSystem(system, prefix), endpoint, servers, []string{}, []string{})
 	}
 	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
+}
+
+// NewJszCollector creates a new NATS JetStream Collector.
+func NewJszCollector(
+	endpoint, prefix string,
+	servers []*CollectedServer,
+	streamMetaKeys, consumerMetaKeys []string,
+) prometheus.Collector {
+	return newJszCollector(getSystem(JetStreamSystem, prefix), endpoint, servers, streamMetaKeys, consumerMetaKeys)
 }
