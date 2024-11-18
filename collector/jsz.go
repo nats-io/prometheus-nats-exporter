@@ -72,6 +72,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	streamLabels = append(streamLabels, "stream_name")
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
+	streamLabels = append(streamLabels, "stream_raft_group")
 
 	var consumerLabels []string
 	consumerLabels = append(consumerLabels, streamLabels...)
@@ -282,7 +283,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		case "account", "accounts":
 			suffix = "/jsz?accounts=true"
 		case "consumer", "consumers", "all":
-			suffix = "/jsz?consumers=true&config=true"
+			suffix = "/jsz?consumers=true&config=true&raft=true"
 		case "stream", "streams":
 			suffix = "/jsz?streams=true"
 		default:
@@ -298,7 +299,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
-		var streamName, streamLeader string
+		var streamName, streamLeader, streamRaftGroup string
 		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
@@ -351,12 +352,14 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				} else {
 					isStreamLeader = "true"
 				}
+				streamRaftGroup = stream.RaftGroup
+
 				streamMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
 					return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
 						// Server Labels
 						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 						// Stream Labels
-						accountName, accountID, streamName, streamLeader, isStreamLeader)
+						accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -386,7 +389,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, accountID, streamName, streamLeader, isStreamLeader,
+							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 							// Consumer Labels
 							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
