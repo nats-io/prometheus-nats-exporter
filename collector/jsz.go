@@ -80,6 +80,7 @@ func newJszCollector(
 	streamLabels = append(streamLabels, "stream_name")
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
+	streamLabels = append(streamLabels, "stream_raft_group")
 	for _, k := range streamMetaKeys {
 		streamLabels = append(streamLabels, "stream_meta_"+k)
 	}
@@ -316,7 +317,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		case "account", "accounts":
 			suffix = "/jsz?accounts=true"
 		case "consumer", "consumers", "all":
-			suffix = "/jsz?consumers=true&config=true"
+			suffix = "/jsz?consumers=true&config=true&raft=true"
 		case "stream", "streams":
 			suffix = "/jsz?streams=true"
 		default:
@@ -332,7 +333,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
-		var streamName, streamLeader string
+		var streamName, streamLeader, streamRaftGroup string
 		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
@@ -385,11 +386,13 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				} else {
 					isStreamLeader = "true"
 				}
+				streamRaftGroup = stream.RaftGroup
+
 				streamLabelValues := []string{
 					// Server Labels
 					serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 					// Stream Labels
-					accountName, accountID, streamName, streamLeader, isStreamLeader,
+					accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 				}
 				for _, extractor := range nc.streamMetricExtractors {
 					value := extractor(stream)
