@@ -39,6 +39,12 @@ type jszCollector struct {
 	maxMemory  *prometheus.Desc
 	maxStorage *prometheus.Desc
 
+	// Account stats
+	maxAccountMemory  *prometheus.Desc
+	maxAccountStorage *prometheus.Desc
+	accountStorage    *prometheus.Desc
+	accountMemory     *prometheus.Desc
+
 	// Stream stats
 	streamMessages      *prometheus.Desc
 	streamBytes         *prometheus.Desc
@@ -73,6 +79,11 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
 	streamLabels = append(streamLabels, "stream_raft_group")
+
+	var accountLabels []string
+	accountLabels = append(accountLabels, serverLabels...)
+	accountLabels = append(accountLabels, "account")
+	accountLabels = append(accountLabels, "account_id")
 
 	var consumerLabels []string
 	consumerLabels = append(consumerLabels, streamLabels...)
@@ -133,6 +144,34 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			prometheus.BuildFQName(system, "server", "max_storage"),
 			"JetStream Max Storage",
 			serverLabels,
+			nil,
+		),
+		// jetstream_account_max_memory
+		maxAccountMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "max_memory"),
+			"JetStream Account Max Memory in bytes",
+			accountLabels,
+			nil,
+		),
+		// jetstream_account_max_storage
+		maxAccountStorage: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "max_storage"),
+			"JetStream Account Max Storage in bytes",
+			accountLabels,
+			nil,
+		),
+		// jetstream_account_storage_used
+		accountStorage: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "storage_used"),
+			"Total number of bytes used by JetStream storage",
+			accountLabels,
+			nil,
+		),
+		// jetstream_account_memory_used
+		accountMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "memory_used"),
+			"Total number of bytes used by JetStream memory",
+			accountLabels,
 			nil,
 		),
 		// jetstream_stream_total_messages
@@ -340,6 +379,20 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		for _, account := range resp.AccountDetails {
 			accountName = account.Name
 			accountID = account.Id
+
+			accountMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
+				return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
+					// Server Labels
+					serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+					// Account Labels
+					accountName, accountID)
+			}
+
+			ch <- accountMetric(nc.maxAccountStorage, float64(account.ReservedStore))
+			ch <- accountMetric(nc.maxAccountMemory, float64(account.ReservedMemory))
+			ch <- accountMetric(nc.accountStorage, float64(account.Store))
+			ch <- accountMetric(nc.accountMemory, float64(account.Memory))
+
 			for _, stream := range account.Streams {
 				streamName = stream.Name
 				if stream.Cluster != nil {
