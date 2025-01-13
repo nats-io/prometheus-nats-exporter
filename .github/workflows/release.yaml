@@ -38,7 +38,7 @@ jobs:
           echo tags="latest,${version}" >> $GITHUB_OUTPUT
 
       - name: Build and Push
-        uses: docker/bake-action@v5
+        uses: docker/bake-action@v6
         env:
           TAGS: "${{ steps.tags.outputs.tags }}"
           REGISTRY: "natsio"
