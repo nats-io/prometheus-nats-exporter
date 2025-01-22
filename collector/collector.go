@@ -31,9 +31,8 @@ var (
 	// use gnatsd for backward compatibility. Changing would require users to
 	// change their dashboards or other applications that rely on the
 	// prometheus metric names.
-	CoreSystem       = "gnatsd"
-	ReplicatorSystem = "replicator"
-	JetStreamSystem  = "jetstream"
+	CoreSystem      = "gnatsd"
+	JetStreamSystem = "jetstream"
 )
 
 // CollectedServer is a NATS server polled by this collector
