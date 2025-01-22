@@ -79,7 +79,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetHealthz ||
 		opts.GetHealthzJsEnabledOnly || opts.GetHealthzJsServerOnly ||
 		opts.GetRoutez || opts.GetGatewayz || opts.GetAccstatz || opts.GetLeafz ||
-		opts.GetReplicatorVarz || opts.GetJszFilter == ""
+		opts.GetJszFilter == ""
 	if !metricsSpecified {
 		// No logger setup yet, so use fmt
 		fmt.Printf("No metrics specified.  Defaulting to varz.\n")
@@ -123,7 +123,6 @@ func main() {
 	flag.BoolVar(&opts.GetHealthz, "healthz", false, "Get health metrics.")
 	flag.BoolVar(&opts.GetHealthzJsEnabledOnly, "healthz_js_enabled_only", false, "Get health metrics with js-enabled-only=true.")
 	flag.BoolVar(&opts.GetHealthzJsServerOnly, "healthz_js_server_only", false, "Get health metrics with js-server-only=true.")
-	flag.BoolVar(&opts.GetReplicatorVarz, "replicatorVarz", false, "Get replicator general metrics.")
 	flag.BoolVar(&opts.GetGatewayz, "gatewayz", false, "Get gateway metrics.")
 	flag.BoolVar(&opts.GetAccstatz, "accstatz", false, "Get accstatz metrics.")
 	flag.BoolVar(&opts.GetLeafz, "leafz", false, "Get leaf metrics.")
