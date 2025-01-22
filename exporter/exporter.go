@@ -59,8 +59,6 @@ type NATSExporterOptions struct {
 	GetAccstatz             bool
 	GetLeafz                bool
 	GetReplicatorVarz       bool
-	GetStreamingChannelz    bool
-	GetStreamingServerz     bool
 	GetJszFilter            string
 	RetryInterval           time.Duration
 	CertFile                string
@@ -217,12 +215,6 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetRoutez {
 		ne.createCollector(collector.CoreSystem, "routez")
-	}
-	if opts.GetStreamingChannelz {
-		ne.createCollector(collector.StreamingSystem, "channelsz")
-	}
-	if opts.GetStreamingServerz {
-		ne.createCollector(collector.StreamingSystem, "serverz")
 	}
 	if opts.GetReplicatorVarz {
 		ne.createCollector(collector.ReplicatorSystem, "varz")

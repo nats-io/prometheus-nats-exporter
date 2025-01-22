@@ -145,8 +145,6 @@ func TestExporter(t *testing.T) {
 	opts.GetGatewayz = true
 	opts.GetLeafz = true
 	opts.GetRoutez = true
-	opts.GetStreamingChannelz = true
-	opts.GetStreamingServerz = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
@@ -173,8 +171,6 @@ func TestExporterRestart(t *testing.T) {
 	opts.GetGatewayz = true
 	opts.GetLeafz = true
 	opts.GetRoutez = true
-	opts.GetStreamingChannelz = true
-	opts.GetStreamingServerz = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
