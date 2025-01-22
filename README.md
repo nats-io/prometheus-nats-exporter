@@ -9,6 +9,7 @@ The exporter aggregates metrics from the NATS server server [monitoring endpoint
 routez, healthz...) into a single Prometheus exporter endpoint.
 
 # Build
+
 ``` bash
 make build
 ```
@@ -24,6 +25,7 @@ make lint
 ```
 
 # Run
+
 Start the prometheus-nats-exporter executable, and poll the `varz` metrics
 endpoints of the NATS server located on `localhost` configured with a monitor
 port of `5555`.
@@ -42,84 +44,87 @@ docker run natsio/prometheus-nats-exporter:latest
 
 ```bash
 prometheus-nats-exporter <flags> url
-  -D	Enable debug log level.
+# ./prometheus-nats-exporter
+Usage:  ./prometheus-nats-exporter <flags> url
+  -D    Enable debug log level.
   -DV
-    	Enable debug and trace log levels.
-  -V	Enable trace log level.
+        Enable debug and trace log levels.
+  -V    Enable trace log level.
   -a string
-    	Network host to listen on. (default "0.0.0.0")
+        Network host to listen on. (default "0.0.0.0")
+  -accstatz
+        Get accstatz metrics.
   -addr string
-    	Network host to listen on. (default "0.0.0.0")
+        Network host to listen on. (default "0.0.0.0")
   -channelz
-    	Get streaming channel metrics.
+        Get streaming channel metrics.
   -connz
-    	Get connection metrics.
-  -connz_detailed
-    	Get detailed connection metrics for each client. Enables flag "-connz" implicitly.
+        Get connection metrics.
+  -connz_detailed connz
+        Get detailed connection metrics for each client. Enables flag connz implicitly.
+  -gatewayz
+        Get gateway metrics.
   -healthz
         Get health metrics.
   -healthz_js_enabled_only
-        Get health metrics with js-enabled-only=true flag.
+        Get health metrics with js-enabled-only=true.
   -healthz_js_server_only
-        Get health metrics with js-server-only=true flag.
-  -gatewayz
-    	Get gateway metrics.
-  -accstatz
-    	Get accstatz metrics.
-  -leafz
-    	Get leaf metrics.
+        Get health metrics with js-server-only=true.
   -http_pass string
-    	Set the password for HTTP scrapes. NATS bcrypt supported.
+        Set the password for HTTP scrapes. NATS bcrypt supported.
   -http_user string
-    	Enable basic auth and set user name for HTTP scrapes.
+        Enable basic auth and set user name for HTTP scrapes.
   -jsz string
-    	Select JetStream metrics to filter (e.g streams, accounts, consumers, all)
+        Select JetStream metrics to filter (e.g streams, accounts, consumers)
   -l string
-    	Log file name.
+        Log file name.
+  -leafz
+        Get leaf metrics.
   -log string
-    	Log file name.
+        Log file name.
   -p int
-    	Port to listen on. (default 7777)
+        Port to listen on. (default 7777)
   -path string
-    	URL path from which to serve scrapes. (default "/metrics")
+        URL path from which to serve scrapes. (default "/metrics")
   -port int
-    	Port to listen on. (default 7777)
+        Port to listen on. (default 7777)
   -prefix string
-    	Replace the default prefix for all the metrics.
+        Replace the default prefix for all the metrics.
   -r string
-    	Remote syslog address to write log statements.
+        Remote syslog address to write log statements.
   -remote_syslog string
-    	Write log statements to a remote syslog.
+        Write log statements to a remote syslog.
   -replicatorVarz
-    	Get replicator general metrics.
+        Get replicator general metrics.
   -ri int
-    	Interval in seconds to retry NATS Server monitor URL. (default 30)
+        Interval in seconds to retry NATS Server monitor URL. (default 30)
   -routez
-    	Get route metrics.
-  -s	Write log statements to the syslog.
+        Get route metrics.
+  -s    Write log statements to the syslog.
   -serverz
-    	Get streaming server metrics.
+        Get streaming server metrics.
   -subz
-    	Get subscription metrics.
+        Get subscription metrics.
   -syslog
-    	Write log statements to the syslog.
+        Write log statements to the syslog.
   -tlscacert string
-    	Client certificate CA for verification (used with HTTPS).
+        Client certificate CA for verification (used with HTTPS).
   -tlscert string
-    	Server certificate file (Enables HTTPS).
+        Server certificate file (Enables HTTPS).
   -tlskey string
-    	Private key for server certificate (used with HTTPS).
+        Private key for server certificate (used with HTTPS).
   -use_internal_server_id
-    	Enables using ServerID from /varz
+        Enables using ServerID from /varz
   -use_internal_server_name
         Enables using ServerName from /varz
   -varz
-    	Get general metrics.
+        Get general metrics.
   -version
-    	Show exporter version and exit.
+        Show exporter version and exit.
+
 ```
 
-###  The URL parameter
+### The URL parameter
 
 The url parameter is a standard url.  Both `http` and `https` (when TLS is
 configured) is supported.
@@ -141,6 +146,7 @@ occur frequently.
 It will return output that is readable by Prometheus.
 
 The returned data looks like this:
+
 ```text
 # HELP gnatsd_varz_in_bytes in_bytes
 # TYPE gnatsd_varz_in_bytes gauge
@@ -172,32 +178,31 @@ allows it to run embedded in your code.
 In just a few lines of code, configure and launch an instance of the exporter.
 
 ```go
-	// Get the default options, and set what you need to.  The listen address and port
-	// is how prometheus can poll for collected data.
-	opts := exporter.GetDefaultExporterOptions()
-	opts.ListenAddress = "localhost"
-	opts.ListenPort = 8888
-	opts.GetVarz = true
-	opts.NATSServerURL = "http://localhost:8222"
+ // Get the default options, and set what you need to.  The listen address and port
+ // is how prometheus can poll for collected data.
+ opts := exporter.GetDefaultExporterOptions()
+ opts.ListenAddress = "localhost"
+ opts.ListenPort = 8888
+ opts.GetVarz = true
+ opts.NATSServerURL = "http://localhost:8222"
 
-	// create an exporter instance, ready to be launched.
-	exp := exporter.NewExporter(opts)
+ // create an exporter instance, ready to be launched.
+ exp := exporter.NewExporter(opts)
 
-	// start collecting data
-	exp.Start()
+ // start collecting data
+ exp.Start()
 
-	// when done, simply call Stop()
-	exp.Stop()
+ // when done, simply call Stop()
+ exp.Stop()
 
-	// For convenience, you can block until the exporter is stopped
-	exp.WaitUntilDone()
+ // For convenience, you can block until the exporter is stopped
+ exp.WaitUntilDone()
 ```
 
 # Monitoring Walkthrough
+
 For additional information, refer to the [walkthrough](walkthrough/README.md) of
-monitoring NATS with Prometheus and Grafana. The NATS Prometheus Exporter can be
-used to monitor NATS Streaming as well. Refer to the
-[walkthrough/streaming](walkthrough/streaming.md) documentation.
+monitoring NATS with Prometheus and Grafana.
 
 [License-Url]: https://www.apache.org/licenses/LICENSE-2.0
 [License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg
