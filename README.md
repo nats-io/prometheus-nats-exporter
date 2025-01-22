@@ -56,8 +56,6 @@ Usage:  ./prometheus-nats-exporter <flags> url
         Get accstatz metrics.
   -addr string
         Network host to listen on. (default "0.0.0.0")
-  -channelz
-        Get streaming channel metrics.
   -connz
         Get connection metrics.
   -connz_detailed connz
@@ -94,15 +92,11 @@ Usage:  ./prometheus-nats-exporter <flags> url
         Remote syslog address to write log statements.
   -remote_syslog string
         Write log statements to a remote syslog.
-  -replicatorVarz
-        Get replicator general metrics.
   -ri int
         Interval in seconds to retry NATS Server monitor URL. (default 30)
   -routez
         Get route metrics.
   -s    Write log statements to the syslog.
-  -serverz
-        Get streaming server metrics.
   -subz
         Get subscription metrics.
   -syslog
