@@ -32,7 +32,6 @@ var (
 	// change their dashboards or other applications that rely on the
 	// prometheus metric names.
 	CoreSystem       = "gnatsd"
-	StreamingSystem  = "nss"
 	ReplicatorSystem = "replicator"
 	JetStreamSystem  = "jetstream"
 )

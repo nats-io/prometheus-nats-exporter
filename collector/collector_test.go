@@ -68,41 +68,6 @@ func verifyCollector(system, url string, endpoint string, cases map[string]float
 	}
 }
 
-func verifyStreamingCollector(url string, endpoint string, cases map[string]float64, t *testing.T) {
-	// create a new collector.
-	servers := make([]*CollectedServer, 1)
-	servers[0] = &CollectedServer{
-		ID:  "id",
-		URL: url,
-	}
-	coll := NewCollector(StreamingSystem, endpoint, "", servers)
-
-	// now collect the metrics
-	c := make(chan prometheus.Metric)
-	go coll.Collect(c)
-	for {
-		select {
-		case metric := <-c:
-			pb := &dto.Metric{}
-			if err := metric.Write(pb); err != nil {
-				t.Fatalf("Unable to write metric: %v", err)
-			}
-			gauge := pb.GetGauge()
-			val := gauge.GetValue()
-
-			name := parseDesc(metric.Desc().String())
-			expected, ok := cases[name]
-			if ok {
-				if val != expected {
-					t.Fatalf("Expected %s=%v, got %v", name, expected, val)
-				}
-			}
-		case <-time.After(10 * time.Millisecond):
-			return
-		}
-	}
-}
-
 // To account for the metrics that share the same descriptor but differ in their variable label values,
 // return a list of lists of label pairs for each of the supplied metric names.
 func getLabelValues(system, url, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
