@@ -487,9 +487,6 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isLeafzEndpoint(system, endpoint) {
 		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
 	}
-	if isReplicatorEndpoint(system, endpoint) {
-		return newReplicatorCollector(getSystem(system, prefix), servers)
-	}
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers)
 	}
