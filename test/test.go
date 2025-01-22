@@ -33,7 +33,6 @@ import (
 
 	rconf "github.com/nats-io/nats-replicator/server/conf"
 	rcore "github.com/nats-io/nats-replicator/server/core"
-	nss "github.com/nats-io/nats-streaming-server/server"
 )
 
 // ClientPort is the default port for clients to connect
@@ -53,11 +52,6 @@ func RunServer() *server.Server {
 // RunServerWithName runs the NATS server in a go routine
 func RunServerWithName(name string) *server.Server {
 	return RunServerWithPortsAndName(ClientPort, MonitorPort, name)
-}
-
-// RunStreamingServer runs the STAN server in a go routine.
-func RunStreamingServer() *nss.StanServer {
-	return RunStreamingServerWithPorts(nss.DefaultClusterID, ClientPort, MonitorPort)
 }
 
 // RunGatewayzStaticServer starts an http server with static content
@@ -100,28 +94,6 @@ func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
 		srv.ListenAndServe()
 	}()
 	return srv
-}
-
-// RunStreamingServerWithPorts runs the STAN server in a go routine allowing
-// the clusterID and ports to be specified..
-func RunStreamingServerWithPorts(clusterID string, port, monitorPort int) *nss.StanServer {
-	resetPreviousHTTPConnections()
-
-	sopts := nss.GetDefaultOptions()
-	sopts.ID = clusterID
-
-	nopts := nss.DefaultNatsServerOptions
-	nopts.NoLog = true
-	nopts.NoSigs = true
-	nopts.Host = "127.0.0.1"
-	nopts.Port = port
-	nopts.HTTPHost = "127.0.0.1"
-	nopts.HTTPPort = monitorPort
-	s, err := nss.RunServerWithOpts(sopts, &nopts)
-	if err != nil {
-		panic(err)
-	}
-	return s
 }
 
 // RunServerWithPortsAndName runs the NATS server with a monitor port and a name in a go routine
