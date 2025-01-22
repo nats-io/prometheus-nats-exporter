@@ -472,9 +472,6 @@ func boolToFloat(b bool) float64 {
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, healthz, subsz, or routez)
 func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
-	if isStreamingEndpoint(system, endpoint) {
-		return newStreamingCollector(getSystem(system, prefix), endpoint, servers)
-	}
 	if isHealthzEndpoint(system, endpoint) {
 		return newHealthzCollector(getSystem(system, prefix), endpoint, servers)
 	}
