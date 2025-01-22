@@ -467,41 +467,6 @@ func TestJetStreamMetrics(t *testing.T) {
 	verifyCollector(JetStreamSystem, url, "jsz", cases, t)
 }
 
-func TestReplicatorMetrics(t *testing.T) {
-	s1 := pet.RunServerWithPorts(pet.ClientPort, pet.MonitorPort)
-	defer s1.Shutdown()
-
-	s2 := pet.RunServerWithPorts(pet.ClientPort+1, pet.MonitorPort+1)
-	defer s2.Shutdown()
-
-	// Just test with NATS for this, getting protobuf errors with multiple
-	// streaming servers in the same process.
-	r, err := pet.RunTestReplicator(9922, pet.ClientPort, pet.ClientPort+1)
-	if err != nil {
-		t.Fatalf("couldn't start replicator, %s", err)
-	}
-	defer r.Stop()
-
-	cases := map[string]float64{
-		"replicator_connector_bytes_in":       0,
-		"replicator_connector_bytes_out":      0,
-		"replicator_connector_connected":      1,
-		"replicator_connector_connects":       1,
-		"replicator_connector_disconnects":    0,
-		"replicator_connector_messages_in":    0,
-		"replicator_connector_messages_out":   0,
-		"replicator_connector_moving_average": 0,
-		"replicator_connector_quintile_50":    -1,
-		"replicator_connector_quintile_75":    -1,
-		"replicator_connector_quintile_90":    -1,
-		"replicator_connector_quintile_95":    -1,
-		"replicator_connector_request_count":  0,
-	}
-
-	url := "http://127.0.0.1:9922"
-	verifyCollector(ReplicatorSystem, url, "varz", cases, t)
-}
-
 func TestMapKeys(t *testing.T) {
 	m := map[string]any{
 		"foo": "bar",

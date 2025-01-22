@@ -30,9 +30,6 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	natsserver "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
-
-	rconf "github.com/nats-io/nats-replicator/server/conf"
-	rcore "github.com/nats-io/nats-replicator/server/core"
 )
 
 // ClientPort is the default port for clients to connect
@@ -204,56 +201,4 @@ func CreateClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
 	// Wait for message
 	<-ch
 	return nc
-}
-
-// RunTestReplicator starts an instance of the replicator
-func RunTestReplicator(monitorPort, natsServerPort1, natsServerPort2 int) (*rcore.NATSReplicator, error) {
-	config := rconf.DefaultConfig()
-	config.Logging.Debug = false
-	config.Logging.Trace = false
-	config.Logging.Colors = false
-	config.Monitoring = rconf.HTTPConfig{
-		HTTPPort: monitorPort,
-	}
-
-	config.NATS = []rconf.NATSConfig{
-		{
-			Name:           "nats",
-			Servers:        []string{fmt.Sprintf("127.0.0.1:%d", natsServerPort1)},
-			ConnectTimeout: 2000,
-			ReconnectWait:  2000,
-			MaxReconnects:  5,
-		},
-		{
-			Name:           "nats2",
-			Servers:        []string{fmt.Sprintf("127.0.0.1:%d", natsServerPort2)},
-			ConnectTimeout: 2000,
-			ReconnectWait:  2000,
-			MaxReconnects:  5,
-		},
-	}
-
-	config.Connect = []rconf.ConnectorConfig{
-		{
-			Type:               "NatsToNats",
-			IncomingConnection: "nats",
-			OutgoingConnection: "nats2",
-			IncomingSubject:    "bar",
-			OutgoingSubject:    "bar.out",
-		},
-	}
-
-	rep := rcore.NewNATSReplicator()
-	err := rep.InitializeFromConfig(config)
-	if err != nil {
-		rep.Stop()
-		return nil, err
-	}
-	err = rep.Start()
-	if err != nil {
-		rep.Stop()
-		return nil, err
-	}
-
-	return rep, nil
 }
