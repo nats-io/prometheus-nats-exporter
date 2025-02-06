@@ -145,8 +145,6 @@ func TestExporter(t *testing.T) {
 	opts.GetGatewayz = true
 	opts.GetLeafz = true
 	opts.GetRoutez = true
-	opts.GetStreamingChannelz = true
-	opts.GetStreamingServerz = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
@@ -173,8 +171,6 @@ func TestExporterRestart(t *testing.T) {
 	opts.GetGatewayz = true
 	opts.GetLeafz = true
 	opts.GetRoutez = true
-	opts.GetStreamingChannelz = true
-	opts.GetStreamingServerz = true
 
 	s := pet.RunServer()
 	defer s.Shutdown()
@@ -725,41 +721,5 @@ func TestExporterLeafz(t *testing.T) {
 	_, err := checkExporterForResult(exp.addr, "gnatsd_leafz_conn_in_msgs")
 	if err != nil {
 		t.Fatalf("%v", err)
-	}
-}
-
-func TestExporterReplicator(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
-	opts.ListenAddress = "localhost"
-	opts.ListenPort = 0
-	opts.GetReplicatorVarz = true
-	opts.NATSServerURL = "http://127.0.0.1:9999"
-
-	s1 := pet.RunServerWithPorts(pet.ClientPort, pet.MonitorPort)
-	defer s1.Shutdown()
-
-	s2 := pet.RunServerWithPorts(pet.ClientPort+1, pet.MonitorPort+1)
-	defer s2.Shutdown()
-
-	// Just test with NATS for this, getting protobuf errors with multiple
-	// streaming servers in the same process.
-	r, err := pet.RunTestReplicator(9999, pet.ClientPort, pet.ClientPort+1)
-	if err != nil {
-		t.Fatalf("couldn't start replicator, %s", err)
-	}
-	defer r.Stop()
-
-	// Give the replicator time to setup and connect.
-	time.Sleep(2 * time.Second)
-
-	exp := NewExporter(opts)
-	if err := exp.Start(); err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer exp.Stop()
-
-	resp, err := checkExporterForResult(exp.addr, "replicator_server_start_time")
-	if err != nil {
-		t.Fatalf("%v:\n%s", err, resp)
 	}
 }
