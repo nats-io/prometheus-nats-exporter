@@ -31,10 +31,8 @@ var (
 	// use gnatsd for backward compatibility. Changing would require users to
 	// change their dashboards or other applications that rely on the
 	// prometheus metric names.
-	CoreSystem       = "gnatsd"
-	StreamingSystem  = "nss"
-	ReplicatorSystem = "replicator"
-	JetStreamSystem  = "jetstream"
+	CoreSystem      = "gnatsd"
+	JetStreamSystem = "jetstream"
 )
 
 // CollectedServer is a NATS server polled by this collector
@@ -472,9 +470,6 @@ func boolToFloat(b bool) float64 {
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, healthz, subsz, or routez)
 func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
-	if isStreamingEndpoint(system, endpoint) {
-		return newStreamingCollector(getSystem(system, prefix), endpoint, servers)
-	}
 	if isHealthzEndpoint(system, endpoint) {
 		return newHealthzCollector(getSystem(system, prefix), endpoint, servers)
 	}
@@ -489,9 +484,6 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	}
 	if isLeafzEndpoint(system, endpoint) {
 		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
-	}
-	if isReplicatorEndpoint(system, endpoint) {
-		return newReplicatorCollector(getSystem(system, prefix), servers)
 	}
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers)
