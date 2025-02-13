@@ -28,7 +28,9 @@ const (
 )
 
 func isHealthzEndpoint(system, endpoint string) bool {
-	return system == CoreSystem && (endpoint == healthzEndpoint || endpoint == healthzJsEnabledOnlyEndpoint || endpoint == healthzJsServerOnlyEndpoint)
+	return system == CoreSystem && (endpoint == healthzEndpoint ||
+		endpoint == healthzJsEnabledOnlyEndpoint ||
+		endpoint == healthzJsServerOnlyEndpoint)
 }
 
 type healthzCollector struct {

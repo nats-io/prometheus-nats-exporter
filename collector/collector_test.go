@@ -331,11 +331,6 @@ func TestAllEndpoints(t *testing.T) {
 	verifyCollector(CoreSystem, url, "healthz", cases, t)
 }
 
-const (
-	stanClusterName = "test-cluster"
-	stanClientName  = "sample"
-)
-
 func TestLeafzMetricLabels(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
