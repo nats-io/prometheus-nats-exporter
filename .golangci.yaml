@@ -4,7 +4,7 @@ issues:
 linters:
   enable:
     - dupl
-    - exportloopref
+    - copyloopvar
     - gochecknoinits
     - gocritic
     - gocyclo
