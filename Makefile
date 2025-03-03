@@ -27,10 +27,10 @@ test-cov:
 
 .PHONY: lint
 lint:
-	@PATH=$(shell go env GOPATH)/bin:$(PATH)
+	@PATH=$(shell go env GOBIN):$(PATH)
 	@if ! which  golangci-lint >/dev/null; then \
 		echo "golangci-lint is required and was not found"; \
 		exit 1; \
 	fi
 	go vet ./...
-	$(shell go env GOPATH)/bin/golangci-lint run ./...
+	$(shell go env GOBIN)/golangci-lint run ./...
