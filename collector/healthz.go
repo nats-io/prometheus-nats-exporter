@@ -22,11 +22,15 @@ import (
 )
 
 const (
-	healthzEndpoint = "healthz"
+	healthzEndpoint              = "healthz"
+	healthzJsEnabledOnlyEndpoint = "healthz_js_enabled_only"
+	healthzJsServerOnlyEndpoint  = "healthz_js_server_only"
 )
 
 func isHealthzEndpoint(system, endpoint string) bool {
-	return system == CoreSystem && endpoint == healthzEndpoint
+	return system == CoreSystem && (endpoint == healthzEndpoint ||
+		endpoint == healthzJsEnabledOnlyEndpoint ||
+		endpoint == healthzJsServerOnlyEndpoint)
 }
 
 type healthzCollector struct {
@@ -49,11 +53,19 @@ func newHealthzCollector(system, endpoint string, servers []*CollectedServer) pr
 		),
 	}
 
+	healthzURLPathAndQuerryArgs := healthzEndpoint
+	switch endpoint {
+	case healthzJsEnabledOnlyEndpoint:
+		healthzURLPathAndQuerryArgs = healthzEndpoint + "?js-enabled-only=true"
+	case healthzJsServerOnlyEndpoint:
+		healthzURLPathAndQuerryArgs = healthzEndpoint + "?js-server-only=true"
+	}
+
 	nc.servers = make([]*CollectedServer, len(servers))
 	for i, s := range servers {
 		nc.servers[i] = &CollectedServer{
 			ID:  s.ID,
-			URL: s.URL + "/" + healthzEndpoint,
+			URL: s.URL + "/" + healthzURLPathAndQuerryArgs,
 		}
 	}
 

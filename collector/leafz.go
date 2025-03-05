@@ -99,42 +99,42 @@ func newLeafMetrics(system, endpoint string) *leafMetrics {
 		info: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "info"),
 			"info",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connRtt: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_rtt"),
 			"rtt",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connInMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_in_msgs"),
 			"in_msgs",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connOutMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_out_msgs"),
 			"out_msgs",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connInBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_in_bytes"),
 			"in_bytes",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connOutBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_out_bytes"),
 			"out_bytes",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connSubscriptionsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_subscriptions_total"),
 			"subscriptions_total",
-			[]string{"server_id", "account", "ip", "port"},
+			[]string{"server_id", "account", "ip", "port", "name"},
 			nil),
 		connSubscriptions: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_subscriptions"),
 			"subscriptions",
-			[]string{"server_id", "account", "ip", "port", "subscription"},
+			[]string{"server_id", "account", "ip", "port", "subscription", "name"},
 			nil),
 	}
 
@@ -157,28 +157,31 @@ func (lm *leafMetrics) Describe(ch chan<- *prometheus.Desc) {
 // Collect collects all the metrics about the a leafnode connection.
 func (lm *leafMetrics) Collect(server *CollectedServer, lf *Leaf, ch chan<- prometheus.Metric) {
 
+	ch <- prometheus.MustNewConstMetric(lm.info, prometheus.GaugeValue, float64(1.0),
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+
 	rtt, _ := time.ParseDuration(lf.RTT)
 	ch <- prometheus.MustNewConstMetric(lm.connRtt, prometheus.GaugeValue, rtt.Seconds(),
-		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port))
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
 
 	ch <- prometheus.MustNewConstMetric(lm.connInMsgs, prometheus.GaugeValue, float64(lf.InMsgs),
-		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port))
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
 
 	ch <- prometheus.MustNewConstMetric(lm.connOutMsgs, prometheus.GaugeValue, float64(lf.OutMsgs),
-		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port))
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
 
 	ch <- prometheus.MustNewConstMetric(lm.connInBytes, prometheus.GaugeValue, float64(lf.InBytes),
-		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port))
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
 
 	ch <- prometheus.MustNewConstMetric(lm.connOutBytes, prometheus.GaugeValue, float64(lf.OutBytes),
-		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port))
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
 
 	ch <- prometheus.MustNewConstMetric(lm.connSubscriptionsTotal, prometheus.GaugeValue, float64(lf.Subscriptions),
-		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port))
+		server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
 
 	for _, sub := range lf.SubscriptionsList {
 		ch <- prometheus.MustNewConstMetric(lm.connSubscriptions, prometheus.GaugeValue, float64(0.0),
-			server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), sub)
+			server.ID, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name, sub)
 	}
 }
 
@@ -190,6 +193,7 @@ type Leafz struct {
 
 // Leaf output
 type Leaf struct {
+	Name              string   `json:"name"`
 	Account           string   `json:"account"`
 	IP                string   `json:"ip"`
 	Port              int      `json:"port"`

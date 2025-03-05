@@ -168,6 +168,7 @@ func leafzTestResponse() string {
 	"leafnodes": 1,
 	"leafs": [
 		{
+			"name": "leafz_server",
 			"account": "$G",
 			"ip": "127.0.0.1",
 			"port": 6223,

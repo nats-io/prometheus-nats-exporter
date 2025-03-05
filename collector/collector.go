@@ -17,6 +17,7 @@ package collector
 import (
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -30,10 +31,8 @@ var (
 	// use gnatsd for backward compatibility. Changing would require users to
 	// change their dashboards or other applications that rely on the
 	// prometheus metric names.
-	CoreSystem       = "gnatsd"
-	StreamingSystem  = "nss"
-	ReplicatorSystem = "replicator"
-	JetStreamSystem  = "jetstream"
+	CoreSystem      = "gnatsd"
+	JetStreamSystem = "jetstream"
 )
 
 // CollectedServer is a NATS server polled by this collector
@@ -45,16 +44,18 @@ type CollectedServer struct {
 type metric struct {
 	path   []string
 	metric interface{}
+	time   bool
 }
 
 // NATSCollector collects NATS metrics
 type NATSCollector struct {
 	sync.Mutex
-	Stats      map[string]metric
-	httpClient *http.Client
-	endpoint   string
-	system     string
-	servers    []*CollectedServer
+	Stats          map[string]metric
+	httpClient     *http.Client
+	endpoint       string
+	system         string
+	servers        []*CollectedServer
+	serverRespKeys map[string]struct{}
 }
 
 // newPrometheusGaugeVec creates a custom GaugeVec
@@ -212,6 +213,14 @@ func (nc *NATSCollector) makeRequests() map[string]map[string]interface{} {
 			Debugf("ignoring server %s: %v", u.ID, err)
 			delete(resps, u.ID)
 		}
+
+		// verify if there are any new keys in the response that we haven't seen before
+		keys := mapKeys(response, "")
+		if !maps.Equal(keys, nc.serverRespKeys) {
+			Debugf("new keys found in the response from %s, updating metrics", u.URL)
+			nc.objectToMetrics(response, nc.system)
+			nc.serverRespKeys = keys
+		}
 		resps[u.ID] = response
 	}
 	return resps
@@ -240,8 +249,12 @@ func (nc *NATSCollector) collectStatsFromRequests(
 			case float64: // json only has floats
 				m.WithLabelValues(id).Set(v)
 			case string:
-				m.Reset()
-				m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
+				if stat.time {
+					m.WithLabelValues(id).Set(parseDateString(v))
+				} else {
+					m.Reset()
+					m.With(prometheus.Labels{"server_id": id, "value": v}).Set(1)
+				}
 			default:
 				Debugf("value %s no longer a float", key, id, v)
 			}
@@ -302,6 +315,7 @@ func (nc *NATSCollector) initMetricsFromServers(namespace string) {
 		}
 	}
 
+	nc.serverRespKeys = mapKeys(response, "")
 	nc.objectToMetrics(response, namespace)
 }
 
@@ -332,14 +346,18 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 		"gateway_tls_timeout":     {},
 		"gateway_connect_retries": {},
 	}
+
 	labelKeys := map[string]struct{}{
-		"server_id":   {},
-		"server_name": {},
-		"version":     {},
-		"domain":      {},
-		"leader":      {},
-		"name":        {},
+		"server_id":        {},
+		"server_name":      {},
+		"version":          {},
+		"domain":           {},
+		"leader":           {},
+		"name":             {},
+		"start":            {},
+		"config_load_time": {},
 	}
+
 	for k := range response {
 		fqn, path := fqName(k, prefix...)
 		if _, ok := skipFQN[fqn]; ok {
@@ -360,9 +378,21 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 			if _, ok := labelKeys[k]; !ok {
 				break
 			}
-			nc.Stats[fqn] = metric{
-				path:   path,
-				metric: newLabelGauge(nc.system, nc.endpoint, fqn, "", namespace, "value"),
+
+			// Check if the value is a valid time string.
+			// Go JSONMarshal time.Time in RFC3339Nano format.
+			_, err := time.Parse(time.RFC3339Nano, v)
+			if err == nil {
+				nc.Stats[fqn] = metric{
+					path:   path,
+					metric: newPrometheusGaugeVec(nc.system, nc.endpoint, fqn, "", namespace),
+					time:   true,
+				}
+			} else {
+				nc.Stats[fqn] = metric{
+					path:   path,
+					metric: newLabelGauge(nc.system, nc.endpoint, fqn, "", namespace, "value"),
+				}
 			}
 		case map[string]interface{}:
 			// recurse and flatten
@@ -372,6 +402,30 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 			Tracef("Unknown type:  %v %v, %v", fqn, k, v)
 		}
 	}
+}
+
+// mapKeys returns a map of all keys in a map, including nested maps.
+// The keys from nested maps are prefixed with the parent key.
+func mapKeys(input map[string]any, prefix string) map[string]struct{} {
+	keys := make(map[string]struct{})
+
+	for k, v := range input {
+		fullKey := k
+		if prefix != "" {
+			fullKey = prefix + "_" + k
+		}
+
+		if nestedMap, ok := v.(map[string]any); ok {
+			nestedKeys := mapKeys(nestedMap, fullKey)
+			for nestedKey := range nestedKeys {
+				keys[nestedKey] = struct{}{}
+			}
+		} else {
+			keys[fullKey] = struct{}{}
+		}
+	}
+
+	return keys
 }
 
 func newNatsCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
@@ -416,9 +470,6 @@ func boolToFloat(b bool) float64 {
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, healthz, subsz, or routez)
 func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
-	if isStreamingEndpoint(system, endpoint) {
-		return newStreamingCollector(getSystem(system, prefix), endpoint, servers)
-	}
 	if isHealthzEndpoint(system, endpoint) {
 		return newHealthzCollector(getSystem(system, prefix), endpoint, servers)
 	}
@@ -433,9 +484,6 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	}
 	if isLeafzEndpoint(system, endpoint) {
 		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
-	}
-	if isReplicatorEndpoint(system, endpoint) {
-		return newReplicatorCollector(getSystem(system, prefix), servers)
 	}
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers)

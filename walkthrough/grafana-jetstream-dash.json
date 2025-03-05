@@ -760,7 +760,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "sum(rate(jetstream_stream_total_messages{server_id=~\"$server\",stream_name=~\"$stream\"}[$__rate_interval])) by (stream_name)",
+          "expr": "sum(rate(jetstream_stream_last_seq{server_id=~\"$server\",stream_name=~\"$stream\"}[$__rate_interval])) by (stream_name)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{stream_name}}",

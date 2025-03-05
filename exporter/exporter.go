@@ -1,4 +1,4 @@
-// Copyright 2017-2018 The NATS Authors
+// Copyright 2017-2024 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,9 +15,11 @@
 package exporter
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -29,6 +31,7 @@ import (
 
 	"github.com/nats-io/prometheus-nats-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -41,41 +44,42 @@ const (
 // NATSExporterOptions are options to configure the NATS collector
 type NATSExporterOptions struct {
 	collector.LoggerOptions
-	ListenAddress        string
-	ListenPort           int
-	ScrapePath           string
-	GetHealthz           bool
-	GetConnz             bool
-	GetConnzDetailed     bool
-	GetVarz              bool
-	GetSubz              bool
-	GetRoutez            bool
-	GetGatewayz          bool
-	GetAccstatz          bool
-	GetLeafz             bool
-	GetReplicatorVarz    bool
-	GetStreamingChannelz bool
-	GetStreamingServerz  bool
-	GetJszFilter         string
-	RetryInterval        time.Duration
-	CertFile             string
-	KeyFile              string
-	CaFile               string
-	NATSServerURL        string
-	NATSServerTag        string
-	HTTPUser             string // User in metrics scrape by prometheus.
-	HTTPPassword         string
-	Prefix               string
-	UseInternalServerID  bool
-	UseServerName        bool
+	ListenAddress           string
+	ListenPort              int
+	ScrapePath              string
+	GetHealthz              bool
+	GetHealthzJsEnabledOnly bool
+	GetHealthzJsServerOnly  bool
+	GetConnz                bool
+	GetConnzDetailed        bool
+	GetVarz                 bool
+	GetSubz                 bool
+	GetRoutez               bool
+	GetGatewayz             bool
+	GetAccstatz             bool
+	GetLeafz                bool
+	GetJszFilter            string
+	RetryInterval           time.Duration
+	CertFile                string
+	KeyFile                 string
+	CaFile                  string
+	NATSServerURL           string
+	NATSServerTag           string
+	HTTPUser                string // User in metrics scrape by prometheus.
+	HTTPPassword            string
+	Prefix                  string
+	UseInternalServerID     bool
+	UseServerName           bool
 }
 
 // NATSExporter collects NATS metrics
 type NATSExporter struct {
 	sync.Mutex
+	registry   *prometheus.Registry
 	opts       *NATSExporterOptions
 	doneWg     sync.WaitGroup
-	http       net.Listener
+	http       *http.Server
+	addr       string
 	Collectors []prometheus.Collector
 	servers    []*collector.CollectedServer
 	mode       uint8
@@ -131,7 +135,7 @@ func (ne *NATSExporter) createCollector(system, endpoint string) {
 }
 
 func (ne *NATSExporter) registerCollector(system, endpoint string, nc prometheus.Collector) {
-	if err := prometheus.Register(nc); err != nil {
+	if err := ne.registry.Register(nc); err != nil {
 		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
 			collector.Errorf("A collector for this server's metrics has already been registered.")
 		} else {
@@ -176,9 +180,6 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		return fmt.Errorf("no servers configured to obtain metrics")
 	}
 
-	if opts.GetReplicatorVarz && opts.GetVarz {
-		return fmt.Errorf("replicatorVarz cannot be used with varz")
-	}
 	if opts.GetSubz {
 		ne.createCollector(collector.CoreSystem, "subsz")
 	}
@@ -187,6 +188,12 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetHealthz {
 		ne.createCollector(collector.CoreSystem, "healthz")
+	}
+	if opts.GetHealthzJsEnabledOnly {
+		ne.createCollector(collector.CoreSystem, "healthz_js_enabled_only")
+	}
+	if opts.GetHealthzJsServerOnly {
+		ne.createCollector(collector.CoreSystem, "healthz_js_server_only")
 	}
 	if opts.GetConnzDetailed {
 		ne.createCollector(collector.CoreSystem, "connz_detailed")
@@ -204,15 +211,6 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetRoutez {
 		ne.createCollector(collector.CoreSystem, "routez")
-	}
-	if opts.GetStreamingChannelz {
-		ne.createCollector(collector.StreamingSystem, "channelsz")
-	}
-	if opts.GetStreamingServerz {
-		ne.createCollector(collector.StreamingSystem, "serverz")
-	}
-	if opts.GetReplicatorVarz {
-		ne.createCollector(collector.ReplicatorSystem, "varz")
 	}
 	if opts.GetJszFilter != "" {
 		switch strings.ToLower(opts.GetJszFilter) {
@@ -234,7 +232,7 @@ func (ne *NATSExporter) InitializeCollectors() error {
 func (ne *NATSExporter) ClearCollectors() {
 	if ne.Collectors != nil {
 		for _, c := range ne.Collectors {
-			prometheus.Unregister(c)
+			ne.registry.Unregister(c)
 		}
 		ne.Collectors = nil
 	}
@@ -246,6 +244,27 @@ func (ne *NATSExporter) Start() error {
 	defer ne.Unlock()
 	if ne.mode == modeStarted {
 		return nil
+	}
+	// Since we are adding metrics in runtime, we need to use a custom registry
+	// instead of the default one. This is because the default registry is
+	// global and collectors cannot be properly re-registered after being
+	// modified.
+	if ne.registry == nil {
+		ne.registry = prometheus.NewRegistry()
+	}
+	if err := ne.registry.Register(collectors.NewGoCollector()); err != nil {
+		if errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			collector.Debugf("GoCollector already registered")
+		} else {
+			return fmt.Errorf("error registering GoCollector: %v", err)
+		}
+	}
+	if err := ne.registry.Register(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{})); err != nil {
+		if errors.As(err, &prometheus.AlreadyRegisteredError{}) {
+			collector.Debugf("ProcessCollector already registered")
+		} else {
+			return fmt.Errorf("error registering GoCollector: %v", err)
+		}
 	}
 
 	if err := ne.InitializeCollectors(); err != nil {
@@ -323,7 +342,9 @@ func (ne *NATSExporter) isValidUserPass(user, password string) bool {
 // auhtorization has been specificed.  Otherwise, it checks
 // basic authorization.
 func (ne *NATSExporter) getScrapeHandler() http.Handler {
-	h := promhttp.Handler()
+	h := promhttp.InstrumentMetricHandler(
+		ne.registry, promhttp.HandlerFor(ne.registry, promhttp.HandlerOpts{}),
+	)
 
 	if ne.opts.HTTPUser != "" {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -369,6 +390,7 @@ func (ne *NATSExporter) startHTTP() error {
 		path = "/" + path
 	}
 
+	var listener net.Listener
 	// If a certificate file has been specified, setup TLS with the
 	// key provided.
 	if ne.opts.CertFile != "" {
@@ -378,11 +400,11 @@ func (ne *NATSExporter) startHTTP() error {
 		if err != nil {
 			return err
 		}
-		ne.http, err = tls.Listen("tcp", hp, config)
+		listener, err = tls.Listen("tcp", hp, config)
 	} else {
 		proto = "http"
 		collector.Debugf("No certificate file specified; using http.")
-		ne.http, err = net.Listen("tcp", hp)
+		listener, err = net.Listen("tcp", hp)
 	}
 
 	collector.Noticef("Prometheus exporter listening at %s://%s%s", proto, hp, path)
@@ -401,12 +423,13 @@ func (ne *NATSExporter) startHTTP() error {
 		MaxHeaderBytes: 1 << 20,
 		TLSConfig:      config,
 	}
+	ne.http = srv
+	ne.addr = listener.Addr().String()
 
-	sHTTP := ne.http
 	go func() {
 		for i := 0; i < 10; i++ {
 			var err error
-			if err = srv.Serve(sHTTP); err != nil {
+			if err = srv.Serve(listener); err != nil {
 				// In a test environment, this can fail because the server is
 				// already running.
 
@@ -451,10 +474,13 @@ func (ne *NATSExporter) Stop() {
 		return
 	}
 
-	if err := ne.http.Close(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := ne.http.Shutdown(ctx); err != nil {
 		collector.Debugf("Did not close HTTP: %v", err)
 	}
 	ne.ClearCollectors()
+	ne.registry = nil
 	ne.doneWg.Done()
 	ne.mode = modeStopped
 }
