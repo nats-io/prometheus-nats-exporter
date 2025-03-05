@@ -242,7 +242,8 @@ func TestHealthz(t *testing.T) {
 	// just for our monitoring_port
 
 	cases := map[string]float64{
-		"gnatsd_healthz_status": 0,
+		"gnatsd_healthz_status":       0,
+		"gnatsd_healthz_status_value": 1,
 	}
 
 	verifyCollector(CoreSystem, url, "healthz", cases, t)
@@ -251,7 +252,7 @@ func TestHealthz(t *testing.T) {
 	s.Shutdown()
 
 	cases = map[string]float64{
-		"gnatsd_healthz_status": 1,
+		"gnatsd_healthz_status_value": 0,
 	}
 
 	verifyCollector(CoreSystem, url, "healthz", cases, t)
