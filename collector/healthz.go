@@ -39,7 +39,8 @@ type healthzCollector struct {
 	httpClient *http.Client
 	servers    []*CollectedServer
 
-	status *prometheus.Desc
+	status      *prometheus.Desc
+	statusValue *prometheus.Desc
 }
 
 func newHealthzCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
@@ -47,6 +48,12 @@ func newHealthzCollector(system, endpoint string, servers []*CollectedServer) pr
 		httpClient: http.DefaultClient,
 		status: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "status"),
+			"status",
+			[]string{"server_id"},
+			nil,
+		),
+		statusValue: prometheus.NewDesc(
+			prometheus.BuildFQName(system, endpoint, "status_value"),
 			"status",
 			[]string{"server_id", "value"},
 			nil,
@@ -79,23 +86,36 @@ func (nc *healthzCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect gathers the server healthz metrics.
 func (nc *healthzCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, server := range nc.servers {
+		var httpGetError bool = false
 		var health Healthz
 		if err := getMetricURL(nc.httpClient, server.URL, &health); err != nil {
 			Debugf("error collecting server %s: %v", server.ID, err)
 			health.Error = err.Error()
+			httpGetError = true
 		}
 
-		var (
-			status float64 = 1
-			value          = health.Error
-		)
-
-		if health.Status == "ok" {
-			status = 0
-			value = health.Status
+		// keep the existing metric behaving the same
+		if !httpGetError {
+			var status float64 = 1
+			if health.Status == "ok" {
+				status = 0
+			}
+			ch <- prometheus.MustNewConstMetric(nc.status, prometheus.GaugeValue, status, server.ID)
 		}
 
-		ch <- prometheus.MustNewConstMetric(nc.status, prometheus.GaugeValue, status, server.ID, value)
+		// additional metric to provide more information even if the server connection has issues
+		{
+			var status float64
+			var value string
+			if health.Status == "ok" {
+				status = 1
+				value = health.Status
+			} else {
+				status = 0
+				value = health.Error
+			}
+			ch <- prometheus.MustNewConstMetric(nc.statusValue, prometheus.GaugeValue, status, server.ID, value)
+		}
 	}
 }
 
