@@ -113,7 +113,7 @@ func (nc *healthzCollector) Collect(ch chan<- prometheus.Metric) {
 
 			var value string
 			if httpGetError {
-				value = "unavailable"
+				value = "unreachable"
 			} else {
 				value = health.Status
 			}
