@@ -90,7 +90,6 @@ func (nc *healthzCollector) Collect(ch chan<- prometheus.Metric) {
 		var health Healthz
 		if err := getMetricURL(nc.httpClient, server.URL, &health); err != nil {
 			Debugf("error collecting server %s: %v", server.ID, err)
-			health.Error = err.Error()
 			httpGetError = true
 		}
 
@@ -106,14 +105,19 @@ func (nc *healthzCollector) Collect(ch chan<- prometheus.Metric) {
 		// additional metric to provide more information even if the server connection has issues
 		{
 			var status float64
-			var value string
 			if health.Status == "ok" {
 				status = 1
-				value = health.Status
 			} else {
 				status = 0
-				value = health.Error
 			}
+
+			var value string
+			if httpGetError {
+				value = "unavailable"
+			} else {
+				value = health.Status
+			}
+
 			ch <- prometheus.MustNewConstMetric(nc.statusValue, prometheus.GaugeValue, status, server.ID, value)
 		}
 	}
