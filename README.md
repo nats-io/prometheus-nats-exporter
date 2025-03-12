@@ -8,6 +8,8 @@ to [Prometheus](https://prometheus.io/) for monitoring.
 The exporter aggregates metrics from the NATS server server [monitoring endpoints](https://docs.nats.io/running-a-nats-service/nats_admin/monitoring#monitoring-endpoints) you choose (varz, connz, subz,
 routez, healthz...) into a single Prometheus exporter endpoint.
 
+For an alternative approach that uses a System account instead of HTTP monitoring endpoints, see also: [NATS Surveyor](https://github.com/nats-io/nats-surveyor)
+
 # Build
 
 ``` bash
