@@ -349,7 +349,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					maxBytes := stream.Config.MaxBytes
 
 					if maxBytes > 0 {
-						usage = fmt.Sprintf("%.2f%%", (float64(stream.State.Bytes)/float64(maxBytes))*100)
+						usage = fmt.Sprintf("%.2f", (float64(stream.State.Bytes)/float64(maxBytes))*100)
 					} else if maxBytes == 0 {
 						usage = "No Space"
 					} else {
