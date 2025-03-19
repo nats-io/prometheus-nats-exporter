@@ -153,7 +153,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 		// jetstream_stream_usage
 		streamUsage: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "usage"),
-			"Total used bytes from a stream",
+			"Represents the usage ratio of a JetStream stream as a fraction of its maximum configured storage.",
 			streamLabels,
 			nil,
 		),
