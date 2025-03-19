@@ -15,7 +15,6 @@
 package collector
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -47,6 +46,7 @@ type jszCollector struct {
 	streamLastSeq       *prometheus.Desc
 	streamConsumerCount *prometheus.Desc
 	streamSubjectCount  *prometheus.Desc
+	streamUsage         *prometheus.Desc
 
 	// Consumer stats
 	consumerDeliveredConsumerSeq *prometheus.Desc
@@ -74,7 +74,6 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
 	streamLabels = append(streamLabels, "stream_raft_group")
-	streamLabels = append(streamLabels, "usage")
 
 	var consumerLabels []string
 	consumerLabels = append(consumerLabels, streamLabels...)
@@ -148,6 +147,13 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 		streamBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "total_bytes"),
 			"Total stored bytes from a stream",
+			streamLabels,
+			nil,
+		),
+		// jetstream_stream_usage
+		streamUsage: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "usage"),
+			"Total used bytes from a stream",
 			streamLabels,
 			nil,
 		),
@@ -265,6 +271,7 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.streamLastSeq
 	ch <- nc.streamConsumerCount
 	ch <- nc.streamSubjectCount
+	ch <- nc.streamUsage
 
 	// Consumer state
 	ch <- nc.consumerDeliveredConsumerSeq
@@ -301,7 +308,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
-		var streamName, streamLeader, streamRaftGroup, usage string
+		var streamName, streamLeader, streamRaftGroup string
 		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
@@ -345,18 +352,6 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			for _, stream := range account.Streams {
 				streamName = stream.Name
 
-				if stream.Config != nil {
-					maxBytes := stream.Config.MaxBytes
-
-					if maxBytes > 0 {
-						usage = fmt.Sprintf("%.2f", (float64(stream.State.Bytes)/float64(maxBytes))*100)
-					} else if maxBytes == 0 {
-						usage = "No Space"
-					} else {
-						usage = "Unlimited"
-					}
-				}
-
 				if stream.Cluster != nil {
 					streamLeader = stream.Cluster.Leader
 					if streamLeader == serverName {
@@ -374,7 +369,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						// Server Labels
 						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 						// Stream Labels
-						accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup, usage)
+						accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -382,6 +377,16 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- streamMetric(nc.streamLastSeq, float64(stream.State.LastSeq))
 				ch <- streamMetric(nc.streamConsumerCount, float64(stream.State.Consumers))
 				ch <- streamMetric(nc.streamSubjectCount, float64(stream.State.NumSubjects))
+
+				if stream.Config != nil {
+					if stream.Config.MaxBytes == -1 {
+						ch <- streamMetric(nc.streamUsage, float64(-1))
+					} else if stream.Config.MaxBytes == 0 {
+						ch <- streamMetric(nc.streamUsage, float64(0))
+					} else {
+						ch <- streamMetric(nc.streamUsage, float64(stream.State.Bytes)/float64(stream.Config.MaxBytes))
+					}
+				}
 
 				// Now with the consumers.
 				for _, consumer := range stream.Consumer {
@@ -404,7 +409,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup, usage,
+							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 							// Consumer Labels
 							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
