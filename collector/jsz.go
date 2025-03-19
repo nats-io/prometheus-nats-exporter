@@ -16,6 +16,7 @@ package collector
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -73,6 +74,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
 	streamLabels = append(streamLabels, "stream_raft_group")
+	streamLabels = append(streamLabels, "limit_bytes")
 
 	var consumerLabels []string
 	consumerLabels = append(consumerLabels, streamLabels...)
@@ -299,7 +301,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			continue
 		}
 		var serverID, serverName, clusterName, jsDomain, clusterLeader string
-		var streamName, streamLeader, streamRaftGroup string
+		var streamName, streamLeader, streamRaftGroup, limitBytes string
 		var consumerName, consumerDesc, consumerLeader string
 		var isMetaLeader, isStreamLeader, isConsumerLeader string
 		var accountName string
@@ -342,6 +344,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			accountID = account.Id
 			for _, stream := range account.Streams {
 				streamName = stream.Name
+				limitBytes = strconv.FormatInt(stream.Config.MaxBytes, 10)
 				if stream.Cluster != nil {
 					streamLeader = stream.Cluster.Leader
 					if streamLeader == serverName {
@@ -359,7 +362,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						// Server Labels
 						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 						// Stream Labels
-						accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup)
+						accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup, limitBytes)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -389,7 +392,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup, limitBytes,
 							// Consumer Labels
 							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
