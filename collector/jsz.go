@@ -379,12 +379,10 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- streamMetric(nc.streamSubjectCount, float64(stream.State.NumSubjects))
 
 				if stream.Config != nil {
-					if stream.Config.MaxBytes == -1 {
-						ch <- streamMetric(nc.streamUsage, float64(-1))
-					} else if stream.Config.MaxBytes == 0 {
-						ch <- streamMetric(nc.streamUsage, float64(0))
-					} else {
+					if stream.Config.MaxBytes > 0 {
 						ch <- streamMetric(nc.streamUsage, float64(stream.State.Bytes)/float64(stream.Config.MaxBytes))
+					} else {
+						ch <- streamMetric(nc.streamUsage, float64(stream.Config.MaxBytes))
 					}
 				}
 
