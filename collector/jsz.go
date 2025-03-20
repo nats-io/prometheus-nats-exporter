@@ -46,6 +46,7 @@ type jszCollector struct {
 	streamLastSeq       *prometheus.Desc
 	streamConsumerCount *prometheus.Desc
 	streamSubjectCount  *prometheus.Desc
+	streamLimitBytes    *prometheus.Desc
 
 	// Consumer stats
 	consumerDeliveredConsumerSeq *prometheus.Desc
@@ -146,6 +147,13 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 		streamBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "total_bytes"),
 			"Total stored bytes from a stream",
+			streamLabels,
+			nil,
+		),
+		// jetstream_stream_limit_bytes
+		streamLimitBytes: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "limit_bytes"),
+			"The maximum configured storage limit (in bytes) for a JetStream stream. A value of -1 indicates no limit.",
 			streamLabels,
 			nil,
 		),
@@ -263,6 +271,7 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.streamLastSeq
 	ch <- nc.streamConsumerCount
 	ch <- nc.streamSubjectCount
+	ch <- nc.streamLimitBytes
 
 	// Consumer state
 	ch <- nc.consumerDeliveredConsumerSeq
@@ -342,6 +351,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			accountID = account.Id
 			for _, stream := range account.Streams {
 				streamName = stream.Name
+
 				if stream.Cluster != nil {
 					streamLeader = stream.Cluster.Leader
 					if streamLeader == serverName {
@@ -367,6 +377,10 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- streamMetric(nc.streamLastSeq, float64(stream.State.LastSeq))
 				ch <- streamMetric(nc.streamConsumerCount, float64(stream.State.Consumers))
 				ch <- streamMetric(nc.streamSubjectCount, float64(stream.State.NumSubjects))
+
+				if stream.Config != nil {
+					ch <- streamMetric(nc.streamLimitBytes, float64(stream.Config.MaxBytes))
+				}
 
 				// Now with the consumers.
 				for _, consumer := range stream.Consumer {
