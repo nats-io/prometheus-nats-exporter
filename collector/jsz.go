@@ -47,6 +47,7 @@ type jszCollector struct {
 	streamConsumerCount *prometheus.Desc
 	streamSubjectCount  *prometheus.Desc
 	streamLimitBytes    *prometheus.Desc
+	streamLimitMessages *prometheus.Desc
 
 	// Consumer stats
 	consumerDeliveredConsumerSeq *prometheus.Desc
@@ -140,6 +141,13 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 		streamMessages: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "total_messages"),
 			"Total number of messages from a stream",
+			streamLabels,
+			nil,
+		),
+		// jetstream_stream_limit_messages
+		streamLimitMessages: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "limit_messages"),
+			"The maximum number of messages allowed in a JetStream stream as per its configuration. A value of -1 indicates no limit.",
 			streamLabels,
 			nil,
 		),
@@ -272,6 +280,7 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.streamConsumerCount
 	ch <- nc.streamSubjectCount
 	ch <- nc.streamLimitBytes
+	ch <- nc.streamLimitMessages
 
 	// Consumer state
 	ch <- nc.consumerDeliveredConsumerSeq
@@ -380,6 +389,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 
 				if stream.Config != nil {
 					ch <- streamMetric(nc.streamLimitBytes, float64(stream.Config.MaxBytes))
+					ch <- streamMetric(nc.streamLimitMessages, float64(stream.Config.MaxMsgs))
 				}
 
 				// Now with the consumers.
