@@ -170,7 +170,7 @@ func RunJetStreamServerWithPorts(port, monitorPort int, domain string) *server.S
 	opts.JetStream = true
 	opts.JetStreamDomain = domain
 	tdir, _ := os.MkdirTemp(tempRoot, "js-storedir-")
-	opts.StoreDir = filepath.Dir(tdir)
+	opts.StoreDir = tdir
 	opts.HTTPHost = "127.0.0.1"
 	opts.HTTPPort = monitorPort
 
