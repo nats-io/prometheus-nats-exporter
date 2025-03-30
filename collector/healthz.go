@@ -86,7 +86,8 @@ func (nc *healthzCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect gathers the server healthz metrics.
 func (nc *healthzCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, server := range nc.servers {
-		var httpGetError bool = false
+		httpGetError := false
+
 		var health Healthz
 		if err := getMetricURL(nc.httpClient, server.URL, &health); err != nil {
 			Debugf("error collecting server %s: %v", server.ID, err)

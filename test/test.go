@@ -16,6 +16,7 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -113,9 +114,9 @@ func RunServerWithPortsAndName(cport, mport int, serverName string) *server.Serv
 		NoSigs:     true,
 	}
 
-	s := server.New(opts)
-	if s == nil {
-		panic("No NATS Server object returned.")
+	s, err := server.NewServer(opts)
+	if err != nil {
+		panic(fmt.Sprintf("No NATS Server object returned (%v)", err))
 	}
 
 	if enableLogging {
@@ -164,17 +165,32 @@ func RunServerWithPorts(cport, mport int) *server.Server {
 var tempRoot = filepath.Join(os.TempDir(), "exporter")
 
 // RunJetStreamServerWithPorts starts a JetStream server.
-func RunJetStreamServerWithPorts(port, monitorPort int, domain string) *server.Server {
+func RunJetStreamServerWithPorts(port, monitorPort int, domain string) (*server.Server, error) {
 	opts := natsserver.DefaultTestOptions
 	opts.Port = port
 	opts.JetStream = true
 	opts.JetStreamDomain = domain
-	tdir, _ := os.MkdirTemp(tempRoot, "js-storedir-")
+
+	if _, err := os.Stat(tempRoot); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			if err := os.MkdirAll(tempRoot, 0o755); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	tdir, err := os.MkdirTemp(tempRoot, "js-storedir-")
+	if err != nil {
+		return nil, err
+	}
+
 	opts.StoreDir = filepath.Dir(tdir)
 	opts.HTTPHost = "127.0.0.1"
 	opts.HTTPPort = monitorPort
 
-	return natsserver.RunServer(&opts)
+	return natsserver.RunServer(&opts), nil
 }
 
 func resetPreviousHTTPConnections() {

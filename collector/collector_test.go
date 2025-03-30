@@ -16,6 +16,7 @@ package collector
 import (
 	"fmt"
 	"maps"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -143,7 +144,7 @@ func TestServerIDFromVarz(t *testing.T) {
 }
 
 func TestServerNameFromVarz(t *testing.T) {
-	serverName := "My Awesome Server Name"
+	serverName := "nats-server"
 	s := pet.RunServerWithName(serverName)
 	defer s.Shutdown()
 
@@ -173,7 +174,7 @@ func TestVarz(t *testing.T) {
 		"gnatsd_varz_out_msgs":          1,
 		"gnatsd_varz_in_bytes":          5,
 		"gnatsd_varz_out_bytes":         5,
-		"gnatsd_varz_subscriptions":     57,
+		"gnatsd_varz_subscriptions":     61,
 	}
 
 	verifyCollector(CoreSystem, url, "varz", cases, t)
@@ -341,7 +342,7 @@ func TestAllEndpoints(t *testing.T) {
 	verifyCollector(CoreSystem, url, "routez", cases, t)
 
 	cases = map[string]float64{
-		"gnatsd_subsz_num_subscriptions": 57,
+		"gnatsd_subsz_num_subscriptions": 61,
 	}
 	verifyCollector(CoreSystem, url, "subsz", cases, t)
 
@@ -412,8 +413,14 @@ func TestLeafzMetricLabels(t *testing.T) {
 func TestJetStreamMetrics(t *testing.T) {
 	clientPort := 4229
 	monitorPort := 8229
-	s := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
-	defer s.Shutdown()
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
 	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
