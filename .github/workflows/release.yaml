@@ -43,6 +43,7 @@ jobs:
           TAGS: "${{ steps.tags.outputs.tags }}"
           REGISTRY: "natsio"
         with:
+          source: .
           files: docker-bake.hcl
           push: true
           set:
