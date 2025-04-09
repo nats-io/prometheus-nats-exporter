@@ -3,7 +3,7 @@ module github.com/nats-io/prometheus-nats-exporter
 go 1.24.1
 
 require (
-	github.com/nats-io/nats-server/v2 v2.11.0
+	github.com/nats-io/nats-server/v2 v2.11.1
 	github.com/nats-io/nats.go v1.40.1
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
