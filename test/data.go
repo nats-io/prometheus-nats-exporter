@@ -200,3 +200,46 @@ func leafzTestResponse() string {
 	]
 }`
 }
+
+// JszAccountsTestResponse is static data for testing JetStream account metrics
+func JszAccountsTestResponse() string {
+	return `{
+	"server_id": "SERVER_ID",
+	"now": "2025-04-08T11:48:45.890609686Z",
+	"config": {
+		"max_memory": 1073741824,
+		"max_storage": 10737418240,
+		"store_dir": "/data/jetstream",
+		"domain": "test-domain"
+	},
+	"memory": 0,
+	"storage": 1488595,
+	"streams": 8,
+	"consumers": 0,
+	"messages": 603,
+	"bytes": 1488595,
+	"meta_cluster": {
+		"name": "test-cluster",
+		"leader": "test-leader",
+		"cluster_size": 9
+	},
+	"account_details": [
+		{
+			"name": "account1",
+			"id": "ACC1",
+			"memory": 234567890,
+			"storage": 3456789012,
+			"reserved_memory": 1073741824,
+			"reserved_storage": 10737418240
+		},
+		{
+			"name": "account2",
+			"id": "ACC2",
+			"memory": 123456789,
+			"storage": 1356789012,
+			"reserved_memory": 536870912,
+			"reserved_storage": 5368709120
+		}
+	]
+}`
+}
