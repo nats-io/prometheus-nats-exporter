@@ -59,6 +59,8 @@ type NATSExporterOptions struct {
 	GetAccstatz             bool
 	GetLeafz                bool
 	GetJszFilter            string
+	JszSteamMetaKeys        string
+	JszConsumerMetaKeys     string
 	RetryInterval           time.Duration
 	CertFile                string
 	KeyFile                 string
@@ -132,6 +134,15 @@ func (ne *NATSExporter) createCollector(system, endpoint string) {
 		collector.NewCollector(system, endpoint,
 			ne.opts.Prefix,
 			ne.servers))
+}
+
+func (ne *NATSExporter) createJszCollector(endpoint string, streamMetaKeys, consumerMetaKeys []string) {
+	ne.registerCollector(collector.JetStreamSystem, endpoint,
+		collector.NewJszCollector(endpoint,
+			ne.opts.Prefix,
+			ne.servers,
+			streamMetaKeys,
+			consumerMetaKeys))
 }
 
 func (ne *NATSExporter) registerCollector(system, endpoint string, nc prometheus.Collector) {
@@ -218,7 +229,15 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		default:
 			return fmt.Errorf("invalid jsz filter %q", opts.GetJszFilter)
 		}
-		ne.createCollector(collector.JetStreamSystem, opts.GetJszFilter)
+		splitOrEmpty := func(s string) []string {
+			if s == "" {
+				return []string{}
+			}
+			return strings.Split(s, ",")
+		}
+		streamMetaKeys := splitOrEmpty(opts.JszSteamMetaKeys)
+		consumerMetaKeys := splitOrEmpty(opts.JszConsumerMetaKeys)
+		ne.createJszCollector(opts.GetJszFilter, streamMetaKeys, consumerMetaKeys)
 	}
 	if len(ne.Collectors) == 0 {
 		return fmt.Errorf("no Collectors specified")
