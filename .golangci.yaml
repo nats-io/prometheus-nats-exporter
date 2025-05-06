@@ -1,22 +1,36 @@
-issues:
-  exclude-use-default: false
-  max-same-issues: 0
+version: "2"
 linters:
   enable:
-    - dupl
     - copyloopvar
+    - dupl
     - gochecknoinits
     - gocritic
     - gocyclo
-    - gofmt
-    - goimports
     - lll
     - misspell
     - nakedret
     - prealloc
     - revive
-    - stylecheck
+    - staticcheck
     - unconvert
     - unparam
   disable:
     - errcheck
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
