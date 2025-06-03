@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -229,8 +230,19 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		default:
 			return fmt.Errorf("invalid jsz filter %q", opts.GetJszFilter)
 		}
+		keyRegex := regexp.MustCompile("[a-zA-Z0-9_]+")
 		streamMetaKeys := strings.Split(opts.JszSteamMetaKeys, ",")
+		for _, k := range streamMetaKeys {
+			if !keyRegex.MatchString(k) {
+				return fmt.Errorf("invalid jsz stream meta key: '%s'", k)
+			}
+		}
 		consumerMetaKeys := strings.Split(opts.JszConsumerMetaKeys, ",")
+		for _, k := range consumerMetaKeys {
+			if !keyRegex.MatchString(k) {
+				return fmt.Errorf("invalid jsz consumer meta key: '%s'", k)
+			}
+		}
 		ne.createJszCollector(opts.GetJszFilter, streamMetaKeys, consumerMetaKeys)
 	}
 	if len(ne.Collectors) == 0 {
