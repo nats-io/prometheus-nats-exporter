@@ -22,7 +22,7 @@ jobs:
         run: go install github.com/mattn/goveralls@v0.0.12
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
           skip-pkg-cache: true
 

@@ -39,6 +39,12 @@ type jszCollector struct {
 	maxMemory  *prometheus.Desc
 	maxStorage *prometheus.Desc
 
+	// Account stats
+	maxAccountMemory  *prometheus.Desc
+	maxAccountStorage *prometheus.Desc
+	accountStorage    *prometheus.Desc
+	accountMemory     *prometheus.Desc
+
 	// Stream stats
 	streamMessages      *prometheus.Desc
 	streamBytes         *prometheus.Desc
@@ -47,6 +53,7 @@ type jszCollector struct {
 	streamConsumerCount *prometheus.Desc
 	streamSubjectCount  *prometheus.Desc
 	streamLimitBytes    *prometheus.Desc
+	streamLimitMessages *prometheus.Desc
 
 	// Consumer stats
 	consumerDeliveredConsumerSeq *prometheus.Desc
@@ -94,6 +101,11 @@ func newJszCollector(
 			return s.Config.Metadata[k] // defaults to empty string
 		}
 	}
+
+	var accountLabels []string
+	accountLabels = append(accountLabels, serverLabels...)
+	accountLabels = append(accountLabels, "account")
+	accountLabels = append(accountLabels, "account_id")
 
 	var consumerLabels []string
 	consumerLabels = append(consumerLabels, streamLabels...)
@@ -168,10 +180,45 @@ func newJszCollector(
 			serverLabels,
 			nil,
 		),
+		// jetstream_account_max_memory
+		maxAccountMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "max_memory"),
+			"JetStream Account Max Memory in bytes",
+			accountLabels,
+			nil,
+		),
+		// jetstream_account_max_storage
+		maxAccountStorage: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "max_storage"),
+			"JetStream Account Max Storage in bytes",
+			accountLabels,
+			nil,
+		),
+		// jetstream_account_storage_used
+		accountStorage: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "storage_used"),
+			"Total number of bytes used by JetStream storage",
+			accountLabels,
+			nil,
+		),
+		// jetstream_account_memory_used
+		accountMemory: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "account", "memory_used"),
+			"Total number of bytes used by JetStream memory",
+			accountLabels,
+			nil,
+		),
 		// jetstream_stream_total_messages
 		streamMessages: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "total_messages"),
 			"Total number of messages from a stream",
+			streamLabels,
+			nil,
+		),
+		// jetstream_stream_limit_messages
+		streamLimitMessages: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "limit_messages"),
+			"The maximum number of messages allowed in a JetStream stream as per its configuration. A value of -1 indicates no limit.",
 			streamLabels,
 			nil,
 		),
@@ -306,6 +353,7 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.streamConsumerCount
 	ch <- nc.streamSubjectCount
 	ch <- nc.streamLimitBytes
+	ch <- nc.streamLimitMessages
 
 	// Consumer state
 	ch <- nc.consumerDeliveredConsumerSeq
@@ -383,6 +431,20 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 		for _, account := range resp.AccountDetails {
 			accountName = account.Name
 			accountID = account.Id
+
+			accountMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
+				return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
+					// Server Labels
+					serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+					// Account Labels
+					accountName, accountID)
+			}
+
+			ch <- accountMetric(nc.maxAccountStorage, float64(account.ReservedStore))
+			ch <- accountMetric(nc.maxAccountMemory, float64(account.ReservedMemory))
+			ch <- accountMetric(nc.accountStorage, float64(account.Store))
+			ch <- accountMetric(nc.accountMemory, float64(account.Memory))
+
 			for _, stream := range account.Streams {
 				streamName = stream.Name
 
@@ -420,6 +482,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 
 				if stream.Config != nil {
 					ch <- streamMetric(nc.streamLimitBytes, float64(stream.Config.MaxBytes))
+					ch <- streamMetric(nc.streamLimitMessages, float64(stream.Config.MaxMsgs))
 				}
 
 				// Now with the consumers.
