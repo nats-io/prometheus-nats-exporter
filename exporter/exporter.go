@@ -229,14 +229,8 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		default:
 			return fmt.Errorf("invalid jsz filter %q", opts.GetJszFilter)
 		}
-		splitOrEmpty := func(s string) []string {
-			if s == "" {
-				return []string{}
-			}
-			return strings.Split(s, ",")
-		}
-		streamMetaKeys := splitOrEmpty(opts.JszSteamMetaKeys)
-		consumerMetaKeys := splitOrEmpty(opts.JszConsumerMetaKeys)
+		streamMetaKeys := strings.Split(opts.JszSteamMetaKeys, ",")
+		consumerMetaKeys := strings.Split(opts.JszConsumerMetaKeys, ",")
 		ne.createJszCollector(opts.GetJszFilter, streamMetaKeys, consumerMetaKeys)
 	}
 	if len(ne.Collectors) == 0 {
