@@ -65,9 +65,9 @@ type jszCollector struct {
 	consumerAckFloorStreamSeq    *prometheus.Desc
 	consumerAckFloorConsumerSeq  *prometheus.Desc
 
-	// metadata extractors
-	streamMetricExtractors   []func(nats.StreamDetail) string
-	consumerMetricExtractors []func(*nats.ConsumerInfo) string
+	// metadata keys to extract
+	streamMetaKeys   []string
+	consumerMetaKeys []string
 }
 
 func isJszEndpoint(system string) bool {
@@ -92,15 +92,6 @@ func newJszCollector(
 	for _, k := range streamMetaKeys {
 		streamLabels = append(streamLabels, "stream_meta_"+k)
 	}
-	var streamMetricExtractors = make([]func(nats.StreamDetail) string, len(streamMetaKeys))
-	for i, k := range streamMetaKeys {
-		streamMetricExtractors[i] = func(s nats.StreamDetail) string {
-			if s.Config == nil {
-				return ""
-			}
-			return s.Config.Metadata[k] // defaults to empty string
-		}
-	}
 
 	var accountLabels []string
 	accountLabels = append(accountLabels, serverLabels...)
@@ -115,15 +106,6 @@ func newJszCollector(
 	consumerLabels = append(consumerLabels, "consumer_desc")
 	for _, k := range consumerMetaKeys {
 		consumerLabels = append(consumerLabels, "consumer_meta_"+k)
-	}
-	var consumerMetricExtractors = make([]func(*nats.ConsumerInfo) string, len(consumerMetaKeys))
-	for i, k := range consumerMetaKeys {
-		consumerMetricExtractors[i] = func(c *nats.ConsumerInfo) string {
-			if c == nil || c.Config == nil {
-				return ""
-			}
-			return c.Config.Metadata[k] // defaults to empty string
-		}
 	}
 
 	nc := &jszCollector{
@@ -318,8 +300,8 @@ func newJszCollector(
 			consumerLabels,
 			nil,
 		),
-		streamMetricExtractors:   streamMetricExtractors,
-		consumerMetricExtractors: consumerMetricExtractors,
+		streamMetaKeys:   streamMetaKeys,
+		consumerMetaKeys: consumerMetaKeys,
 	}
 
 	// Use the endpoint
@@ -466,9 +448,12 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					// Stream Labels
 					accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 				}
-				for _, extractor := range nc.streamMetricExtractors {
-					value := extractor(stream)
-					streamLabelValues = append(streamLabelValues, value)
+				for _, k := range nc.streamMetaKeys {
+					var v string
+					if stream.Config != nil {
+						v = stream.Config.Metadata[k]
+					}
+					streamLabelValues = append(streamLabelValues, v)
 				}
 				streamMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
 					return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value, streamLabelValues...)
@@ -506,9 +491,12 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						// Consumer Labels
 						consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 					)
-					for _, extractor := range nc.consumerMetricExtractors {
-						value := extractor(consumer)
-						consumerLabelValues = append(consumerLabelValues, value)
+					for _, k := range nc.consumerMetaKeys {
+						var v string
+						if consumer.Config != nil {
+							v = consumer.Config.Metadata[k]
+						}
+						consumerLabelValues = append(consumerLabelValues, v)
 					}
 					consumerMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
 						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value, consumerLabelValues...)
