@@ -89,47 +89,47 @@ func newAccountMetrics(system, endpoint string) *accountMetrics {
 		connections: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "current_connections"),
 			"current_connections",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "account_name"},
 			nil),
 		totalConnections: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "total_connections"),
 			"total_connections",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		numSubs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "subscriptions"),
 			"subscriptions",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		leafNodes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "leaf_nodes"),
 			"leaf_nodes",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		sentMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "sent_messages"),
 			"sent_messages",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		sentBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "sent_bytes"),
 			"sent_bytes",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		receivedMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "received_messages"),
 			"received_messages",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		receivedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "received_bytes"),
 			"received_bytes",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 		slowConsumers: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "slow_consumers"),
 			"slow_consumers",
-			[]string{"server_id", "account", "name"},
+			[]string{"server_id", "account", "account_id", "name"},
 			nil),
 	}
 
@@ -153,31 +153,31 @@ func (am *accountMetrics) Describe(ch chan<- *prometheus.Desc) {
 func (am *accountMetrics) Collect(server *CollectedServer, acc *Account, ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(am.connections, prometheus.GaugeValue, float64(acc.Conns),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.totalConnections, prometheus.GaugeValue, float64(acc.TotalConns),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.numSubs, prometheus.GaugeValue, float64(acc.NumSubs),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.leafNodes, prometheus.GaugeValue, float64(acc.LeafNodes),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.sentMsgs, prometheus.GaugeValue, float64(acc.Sent.Msgs),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.sentBytes, prometheus.GaugeValue, float64(acc.Sent.Bytes),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.receivedMsgs, prometheus.GaugeValue, float64(acc.Received.Msgs),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.receivedBytes, prometheus.GaugeValue, float64(acc.Received.Bytes),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 
 	ch <- prometheus.MustNewConstMetric(am.slowConsumers, prometheus.GaugeValue, float64(acc.SlowConsumers),
-		server.ID, acc.Account, acc.Name)
+		server.ID, acc.Account, acc.Account, acc.Name)
 }
 
 // Accstatz output
