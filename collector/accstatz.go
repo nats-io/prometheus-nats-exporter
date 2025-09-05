@@ -85,51 +85,55 @@ type accountMetrics struct {
 
 // newAccountMetrics initializes a new instance of accountMetrics.
 func newAccountMetrics(system, endpoint string) *accountMetrics {
+
+	// Base labels that are common to all metrics
+	baseLabels := []string{"server_id", "account", "account_id", "account_name"}
+
 	account := &accountMetrics{
 		connections: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "current_connections"),
 			"current_connections",
-			[]string{"server_id", "account", "account_id", "account_name"},
+			baseLabels,
 			nil),
 		totalConnections: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "total_connections"),
 			"total_connections",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		numSubs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "subscriptions"),
 			"subscriptions",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		leafNodes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "leaf_nodes"),
 			"leaf_nodes",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		sentMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "sent_messages"),
 			"sent_messages",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		sentBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "sent_bytes"),
 			"sent_bytes",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		receivedMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "received_messages"),
 			"received_messages",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		receivedBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "received_bytes"),
 			"received_bytes",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 		slowConsumers: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "slow_consumers"),
 			"slow_consumers",
-			[]string{"server_id", "account", "account_id", "name"},
+			baseLabels,
 			nil),
 	}
 
@@ -152,32 +156,35 @@ func (am *accountMetrics) Describe(ch chan<- *prometheus.Desc) {
 // Collect collects all the metrics about an account.
 func (am *accountMetrics) Collect(server *CollectedServer, acc *Account, ch chan<- prometheus.Metric) {
 
+	// Base labels that are common to all metrics
+	baseLabels := []string{server.ID, acc.Account, acc.Account, acc.Name}
+
 	ch <- prometheus.MustNewConstMetric(am.connections, prometheus.GaugeValue, float64(acc.Conns),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.totalConnections, prometheus.GaugeValue, float64(acc.TotalConns),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.numSubs, prometheus.GaugeValue, float64(acc.NumSubs),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.leafNodes, prometheus.GaugeValue, float64(acc.LeafNodes),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.sentMsgs, prometheus.GaugeValue, float64(acc.Sent.Msgs),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.sentBytes, prometheus.GaugeValue, float64(acc.Sent.Bytes),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.receivedMsgs, prometheus.GaugeValue, float64(acc.Received.Msgs),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.receivedBytes, prometheus.GaugeValue, float64(acc.Received.Bytes),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(am.slowConsumers, prometheus.GaugeValue, float64(acc.SlowConsumers),
-		server.ID, acc.Account, acc.Account, acc.Name)
+		baseLabels...)
 }
 
 // Accstatz output
