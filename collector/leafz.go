@@ -95,46 +95,50 @@ type leafMetrics struct {
 
 // newLeafMetrics initializes a new instance of leafMetrics.
 func newLeafMetrics(system, endpoint string) *leafMetrics {
+
+	// Base labels that are common to all metrics
+	baseLabels := []string{"server_id", "account", "account_id", "ip", "port", "name"}
+
 	leaf := &leafMetrics{
 		info: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "info"),
 			"info",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connRtt: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_rtt"),
 			"rtt",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connInMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_in_msgs"),
 			"in_msgs",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connOutMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_out_msgs"),
 			"out_msgs",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connInBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_in_bytes"),
 			"in_bytes",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connOutBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_out_bytes"),
 			"out_bytes",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connSubscriptionsTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_subscriptions_total"),
 			"subscriptions_total",
-			[]string{"server_id", "account", "account_id", "ip", "port", "name"},
+			baseLabels,
 			nil),
 		connSubscriptions: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_subscriptions"),
 			"subscriptions",
-			[]string{"server_id", "account", "account_id", "ip", "port", "subscription", "name"},
+			baseLabels,
 			nil),
 	}
 
@@ -157,27 +161,29 @@ func (lm *leafMetrics) Describe(ch chan<- *prometheus.Desc) {
 // Collect collects all the metrics about the a leafnode connection.
 func (lm *leafMetrics) Collect(server *CollectedServer, lf *Leaf, ch chan<- prometheus.Metric) {
 
+	// Base labels that are common to all metrics
+	baseLabels := []string{server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name}
+
 	ch <- prometheus.MustNewConstMetric(lm.info, prometheus.GaugeValue, float64(1.0),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+		baseLabels...)
 
 	rtt, _ := time.ParseDuration(lf.RTT)
 	ch <- prometheus.MustNewConstMetric(lm.connRtt, prometheus.GaugeValue, rtt.Seconds(),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(lm.connInMsgs, prometheus.GaugeValue, float64(lf.InMsgs),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(lm.connOutMsgs, prometheus.GaugeValue, float64(lf.OutMsgs),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(lm.connInBytes, prometheus.GaugeValue, float64(lf.InBytes),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
-
+		baseLabels...)
 	ch <- prometheus.MustNewConstMetric(lm.connOutBytes, prometheus.GaugeValue, float64(lf.OutBytes),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+		baseLabels...)
 
 	ch <- prometheus.MustNewConstMetric(lm.connSubscriptionsTotal, prometheus.GaugeValue, float64(lf.Subscriptions),
-		server.ID, lf.Account, lf.Account, lf.IP, fmt.Sprint(lf.Port), lf.Name)
+		baseLabels...)
 
 	for _, sub := range lf.SubscriptionsList {
 		ch <- prometheus.MustNewConstMetric(lm.connSubscriptions, prometheus.GaugeValue, float64(0.0),
