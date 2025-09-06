@@ -2,20 +2,20 @@
   "__inputs": [
     {
       "name": "DS__NATS-PROMETHEUS",
-      "label": " NATS-Prometheus",
+      "label": "Prometheus",
       "description": "",
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
     }
   ],
-  "__elements": [],
+  "__elements": {},
   "__requires": [
     {
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "8.3.4"
+      "version": "11.0.0"
     },
     {
       "type": "datasource",
@@ -34,7 +34,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -52,7 +55,7 @@
   "description": "NATS Server Dashboard",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 2,
   "id": null,
   "links": [],
   "liveNow": false,
@@ -81,6 +84,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -92,6 +98,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
@@ -127,13 +134,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 6,
         "w": 12,
         "x": 0,
         "y": 1
       },
       "id": 1,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -142,21 +148,30 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_cpu",
+          "editorMode": "code",
+          "expr": "nats_varz_cpu{namespace=\"$namespace\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_cpu",
+          "range": true,
           "refId": "A",
-          "step": 4
+          "step": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Server CPU",
@@ -173,6 +188,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -184,6 +202,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
@@ -219,13 +238,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 6,
         "w": 12,
         "x": 12,
         "y": 1
       },
       "id": 3,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -234,21 +252,30 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_mem",
+          "editorMode": "code",
+          "expr": "nats_varz_mem{namespace=\"$namespace\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_mem",
+          "range": true,
           "refId": "A",
-          "step": 4
+          "step": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Server Memory",
@@ -260,7 +287,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 7
       },
       "id": 11,
       "panels": [],
@@ -278,6 +305,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -289,6 +319,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
@@ -324,34 +355,44 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 6,
         "x": 0,
-        "y": 9
+        "y": 8
       },
       "id": 7,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "lastNotNull",
+            "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_in_bytes",
+          "editorMode": "code",
+          "expr": "nats_varz_in_bytes{namespace=\"$namespace\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_in_bytes",
+          "range": true,
           "refId": "A",
-          "step": 10
+          "step": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Bytes In",
@@ -368,6 +409,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -379,6 +423,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
@@ -414,34 +459,44 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 6,
         "x": 6,
-        "y": 9
+        "y": 8
       },
       "id": 8,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "lastNotNull",
+            "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_in_msgs",
+          "editorMode": "code",
+          "expr": "nats_varz_in_msgs{namespace=\"$namespace\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_in_msgs",
+          "range": true,
           "refId": "A",
-          "step": 10
+          "step": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "NATS Msgs In",
@@ -458,6 +513,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -469,6 +527,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
@@ -504,34 +563,44 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 6,
         "x": 12,
-        "y": 9
+        "y": 8
       },
       "id": 5,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "lastNotNull",
+            "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_out_bytes",
+          "editorMode": "code",
+          "expr": "nats_varz_out_bytes{namespace=\"$namespace\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_out_bytes",
+          "range": true,
           "refId": "A",
-          "step": 10
+          "step": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Bytes Out",
@@ -548,6 +617,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -559,6 +631,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 5,
@@ -594,34 +667,44 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 6,
         "x": 18,
-        "y": 9
+        "y": 8
       },
       "id": 6,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull"
+            "mean",
+            "lastNotNull",
+            "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_out_msgs",
+          "editorMode": "code",
+          "expr": "nats_varz_out_msgs{namespace=\"$namespace\"}",
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_out_msgs",
+          "range": true,
           "refId": "A",
-          "step": 10
+          "step": 10,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "NATS Msgs Out",
@@ -633,7 +716,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 17
       },
       "id": 12,
       "panels": [],
@@ -651,6 +734,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -662,6 +748,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 6,
@@ -698,13 +785,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 18
       },
       "id": 2,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -713,21 +799,30 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_connections",
+          "editorMode": "code",
+          "expr": "nats_varz_connections{namespace=\"$namespace\"}",
           "intervalFactor": 1,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_connections",
+          "range": true,
           "refId": "A",
-          "step": 2
+          "step": 2,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Connections",
@@ -744,6 +839,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -755,6 +853,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 6,
@@ -791,13 +890,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 18
       },
       "id": 4,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -806,22 +904,31 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_subscriptions",
+          "editorMode": "code",
+          "expr": "nats_varz_subscriptions{namespace=\"$namespace\"}",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_subscriptions",
+          "range": true,
           "refId": "A",
-          "step": 4
+          "step": 4,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Subscriptions",
@@ -838,6 +945,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -849,6 +959,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 2,
             "pointSize": 6,
@@ -885,13 +996,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 9,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 18
       },
       "id": 9,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -900,21 +1010,30 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "maxHeight": 600,
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_slow_consumers",
+          "editorMode": "code",
+          "expr": "nats_varz_slow_consumers{namespace=\"$namespace\"}",
           "intervalFactor": 1,
-          "legendFormat": "{{server_id}}",
+          "legendFormat": "{{pod}}",
           "metric": "nats_varz_slow_consumers",
+          "range": true,
           "refId": "A",
-          "step": 2
+          "step": 2,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS__NATS-PROMETHEUS}"
+          }
         }
       ],
       "title": "Slow Consumers",
@@ -922,16 +1041,41 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 34,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS__NATS-PROMETHEUS}"
+        },
+        "definition": "label_values(nats_varz_cpu,namespace)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "namespace",
+        "multi": false,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(nats_varz_cpu,namespace)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-1h",
     "to": "now"
   },
+  "timeRangeUpdatedDuringEditOrView": false,
   "timepicker": {
     "refresh_intervals": [
       "5s",
