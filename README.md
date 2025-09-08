@@ -1,6 +1,6 @@
 [![License][License-Image]][License-Url] ![Build][Build-Status-Image] [![Coverage][Coverage-Image]][Coverage-Url]
 
-# The Prometheus NATS Exporter
+# The Prometheus NATS Exporter.
 
 The Prometheus NATS Exporter consists of both a package and an application that
 exports [NATS server](https://docs.nats.io/nats-concepts/overview) metrics
