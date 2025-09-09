@@ -76,6 +76,10 @@ Usage:  ./prometheus-nats-exporter <flags> url
         Enable basic auth and set user name for HTTP scrapes.
   -jsz string
         Select JetStream metrics to filter (e.g streams, accounts, consumers)
+  -jsz_stream_meta_keys
+        Select JetStream stream metadata to output (comma separated)
+  -jsz_consumer_meta_keys
+        Select JetStream consumer metadata to output (comma separated)
   -l string
         Log file name.
   -leafz
