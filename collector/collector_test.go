@@ -459,6 +459,53 @@ func TestJetStreamMetrics(t *testing.T) {
 	verifyCollector(JetStreamSystem, url, "jsz", cases, t)
 }
 
+func TestJetStreamStreamStateMetrics(t *testing.T) {
+	clientPort := 4239
+	monitorPort := 8239
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "TEST")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a stream with multiple subjects
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "test_stream",
+		Subjects: []string{"test.>", "other.>"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Publish some messages to different subjects
+	js.Publish("test.foo", []byte("message1"))
+	js.Publish("test.bar", []byte("message2"))
+	js.Publish("other.baz", []byte("message3"))
+	time.Sleep(2 * time.Second)
+
+	// Test with streams endpoint to get detailed stream info
+	cases := map[string]float64{
+		"jetstream_stream_num_subjects": 3, // Should track unique subjects
+		"jetstream_stream_num_deleted":  0, // No deleted messages initially
+	}
+	verifyCollector(JetStreamSystem, url, "streams", cases, t)
+}
+
 func TestMapKeys(t *testing.T) {
 	m := map[string]any{
 		"foo": "bar",

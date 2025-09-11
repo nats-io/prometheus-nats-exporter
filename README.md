@@ -155,6 +155,66 @@ gnatsd_varz_in_msgs{server_id="http://localhost:8222"} 0
 gnatsd_varz_max_connections{server_id="http://localhost:8222"} 65536
 ```
 
+## JetStream Replica Metrics
+
+The exporter now collects detailed metrics about JetStream stream replicas when using the `-jsz streams` flag:
+
+### Stream Replica Health
+- `jetstream_stream_replica_lag` - Number of messages a replica is behind the leader
+- `jetstream_stream_replica_current` - Whether replica is current with leader (1=current, 0=behind)  
+- `jetstream_stream_replica_active_duration_ns` - How long replica has been active in nanoseconds
+- `jetstream_stream_replica_info` - Information about replica (name, peer, cluster)
+
+### Additional Stream State
+- `jetstream_stream_num_subjects` - Number of unique subjects in stream
+- `jetstream_stream_num_deleted` - Number of deleted messages in stream
+
+### Usage Example
+To collect JetStream replica metrics:
+```bash
+prometheus-nats-exporter -jsz streams "http://localhost:8222"
+```
+
+### Monitoring Use Cases
+
+#### Alerting Rules
+```yaml
+# High replica lag
+- alert: JetStreamReplicaLag
+  expr: jetstream_stream_replica_lag > 1000
+  for: 2m
+  labels:
+    severity: warning
+  annotations:
+    summary: "JetStream replica lagging behind"
+    description: "Replica {{ $labels.replica_name }} is {{ $value }} messages behind leader"
+
+# Replica not current
+- alert: JetStreamReplicaNotCurrent  
+  expr: jetstream_stream_replica_current == 0
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: "JetStream replica not current"
+    description: "Replica {{ $labels.replica_name }} is not current with leader"
+```
+
+#### Grafana Queries
+```promql
+# Average replica lag per stream
+avg by (stream_name, account) (jetstream_stream_replica_lag)
+
+# Replica current status
+sum by (stream_name, account) (jetstream_stream_replica_current)
+
+# Maximum lag across all replicas
+max(jetstream_stream_replica_lag)
+
+# Streams with lagging replicas
+jetstream_stream_replica_lag > 0
+```
+
 # The NATS Prometheus Exporter API
 
 The NATS prometheus exporter also provides a simple and easy to use API that
