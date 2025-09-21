@@ -132,6 +132,49 @@ func getLabelValues(system, url, endpoint string, metricNames []string) (map[str
 	}
 }
 
+func verifyLabels(system, url, endpoint string, expectedLabels map[string]map[string]string, t *testing.T) {
+	metricNames := make([]string, 0, len(expectedLabels))
+	for metricName := range expectedLabels {
+		metricNames = append(metricNames, metricName)
+	}
+
+	labelValues, err := getLabelValues(system, url, endpoint, metricNames)
+	if err != nil {
+		t.Fatalf("Failed to get label values: %v", err)
+	}
+
+	for metricName, expectedLabelSet := range expectedLabels {
+		actualLabelSets, ok := labelValues[metricName]
+		if !ok {
+			t.Fatalf("Metric %s not found in collected metrics", metricName)
+		}
+
+		if len(actualLabelSets) == 0 {
+			t.Fatalf("No label sets found for metric %s", metricName)
+		}
+
+		// Check if any of the actual label sets contains the expected labels
+		found := false
+		for _, actualLabelSet := range actualLabelSets {
+			matches := true
+			for expectedKey, expectedValue := range expectedLabelSet {
+				if actualValue, ok := actualLabelSet[expectedKey]; !ok || actualValue != expectedValue {
+					matches = false
+					break
+				}
+			}
+			if matches {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Fatalf("Expected labels %v not found in any label set for metric %s. Actual label sets: %v", expectedLabelSet, metricName, actualLabelSets)
+		}
+	}
+}
+
 func TestServerIDFromVarz(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
@@ -365,24 +408,20 @@ func TestLeafzMetricLabels(t *testing.T) {
 
 	url := fmt.Sprintf("http://localhost:%d", pet.StaticPort)
 
-	outmsgs := "gnatsd_leafz_conn_out_msgs"
-	labelValues, err := getLabelValues(CoreSystem, url, "leafz", []string{outmsgs})
-	if err != nil {
-		t.Fatalf("Unexpected error getting labels for %s metrics: %v", outmsgs, err)
-	}
-	labelMaps, found := labelValues[outmsgs]
-	if !found || len(labelMaps) != 2 {
-		t.Fatalf("No info found for metric %s", outmsgs)
-	}
-	expectedLabelMaps := []map[string]string{
-		{
+	// Test first expected label set
+	expectedLabels1 := map[string]map[string]string{
+		"gnatsd_leafz_conn_out_msgs": {
 			"name":      "leafz_server",
 			"account":   "$G",
 			"ip":        "127.0.0.1",
 			"port":      "6223",
 			"server_id": "id",
 		},
-		{
+	}
+
+	// Test second expected label set
+	expectedLabels2 := map[string]map[string]string{
+		"gnatsd_leafz_conn_out_msgs": {
 			"name":      "",
 			"account":   "$G",
 			"ip":        "127.0.0.2",
@@ -390,24 +429,9 @@ func TestLeafzMetricLabels(t *testing.T) {
 			"server_id": "id",
 		},
 	}
-	expectedLabelsNotFound := make(map[string]string, 0)
-	for _, expLabelMap := range expectedLabelMaps {
-		for expLabel, expValue := range expLabelMap {
-			flag := false
-			for _, labelMap := range labelMaps {
-				if value, ok := labelMap[expLabel]; ok && value == expValue {
-					flag = true
-					break
-				}
-			}
-			if !flag {
-				expectedLabelsNotFound[expLabel] = expValue
-			}
-		}
-	}
-	if len(expectedLabelsNotFound) > 0 {
-		t.Fatalf("the following expected labels were missing: %v", expectedLabelsNotFound)
-	}
+
+	verifyLabels(CoreSystem, url, "leafz", expectedLabels1, t)
+	verifyLabels(CoreSystem, url, "leafz", expectedLabels2, t)
 }
 
 func TestJetStreamMetrics(t *testing.T) {
@@ -504,6 +528,152 @@ func TestJetStreamStreamStateMetrics(t *testing.T) {
 		"jetstream_stream_num_deleted":  0, // No deleted messages initially
 	}
 	verifyCollector(JetStreamSystem, url, "streams", cases, t)
+}
+
+func TestJetStreamSourceMetrics(t *testing.T) {
+	clientPort := 4230
+	monitorPort := 8230
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a source stream
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "source-stream",
+		Subjects: []string{"source.*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a stream with sources
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "target-stream",
+		Subjects: []string{"target.*"},
+		Sources: []*nats.StreamSource{
+			{
+				Name: "source-stream",
+				External: &nats.ExternalStream{
+					APIPrefix:     "$JS.EXT.API",
+					DeliverPrefix: "$JS.EXT.DELIVER",
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Publish some messages to the source stream
+	js.Publish("source.test", []byte("message1"))
+	js.Publish("source.test", []byte("message2"))
+	time.Sleep(2 * time.Second)
+
+	// Test WITH external map
+	expectedLabels := map[string]map[string]string{
+		"jetstream_stream_source_lag": {
+			"source_name":    "source-stream",
+			"source_api":     "$JS.EXT.API",
+			"source_deliver": "$JS.EXT.DELIVER",
+			"stream_name":    "target-stream",
+		},
+		"jetstream_stream_source_active_duration_ns": {
+			"source_name":    "source-stream",
+			"source_api":     "$JS.EXT.API",
+			"source_deliver": "$JS.EXT.DELIVER",
+			"stream_name":    "target-stream",
+		},
+	}
+
+	verifyLabels(JetStreamSystem, url, "streams", expectedLabels, t)
+}
+
+func TestJetStreamSourceMetricsWithoutExternal(t *testing.T) {
+	clientPort := 4231
+	monitorPort := 8231
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a source stream
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "source-stream-no-ext",
+		Subjects: []string{"source.*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a stream with sources (no external config)
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "target-stream-no-ext",
+		Subjects: []string{"target.*"},
+		Sources: []*nats.StreamSource{
+			{
+				Name: "source-stream-no-ext",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Publish some messages to the source stream
+	js.Publish("source.test", []byte("message1"))
+	js.Publish("source.test", []byte("message2"))
+	time.Sleep(2 * time.Second)
+
+	// Test WITHOUT external map (empty strings for source_api and source_deliver)
+	expectedLabels := map[string]map[string]string{
+		"jetstream_stream_source_lag": {
+			"source_name":    "source-stream-no-ext",
+			"source_api":     "",
+			"source_deliver": "",
+			"stream_name":    "target-stream-no-ext",
+		},
+		"jetstream_stream_source_active_duration_ns": {
+			"source_name":    "source-stream-no-ext",
+			"source_api":     "",
+			"source_deliver": "",
+			"stream_name":    "target-stream-no-ext",
+		},
+	}
+
+	verifyLabels(JetStreamSystem, url, "streams", expectedLabels, t)
 }
 
 func TestMapKeys(t *testing.T) {
