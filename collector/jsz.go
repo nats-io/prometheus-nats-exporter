@@ -64,6 +64,10 @@ type jszCollector struct {
 	consumerNumPending           *prometheus.Desc
 	consumerAckFloorStreamSeq    *prometheus.Desc
 	consumerAckFloorConsumerSeq  *prometheus.Desc
+
+	// Stream source stats
+	streamSourceLag    *prometheus.Desc
+	streamSourceActive *prometheus.Desc
 }
 
 func isJszEndpoint(system string) bool {
@@ -95,6 +99,12 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	consumerLabels = append(consumerLabels, "consumer_leader")
 	consumerLabels = append(consumerLabels, "is_consumer_leader")
 	consumerLabels = append(consumerLabels, "consumer_desc")
+
+	var sourceLabels []string
+	sourceLabels = append(sourceLabels, streamLabels...)
+	sourceLabels = append(sourceLabels, "source_name")
+	sourceLabels = append(sourceLabels, "source_api")
+	sourceLabels = append(sourceLabels, "source_deliver")
 
 	nc := &jszCollector{
 		httpClient: &http.Client{
@@ -288,6 +298,20 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			consumerLabels,
 			nil,
 		),
+		// jetstream_stream_source_lag
+		streamSourceLag: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "source_lag"),
+			"Number of messages a stream source is behind",
+			sourceLabels,
+			nil,
+		),
+		// jetstream_stream_source_active_duration_ns
+		streamSourceActive: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "source_active_duration_ns"),
+			"Stream source active duration in nanoseconds (-1 indicates inactive)",
+			sourceLabels,
+			nil,
+		),
 	}
 
 	// Use the endpoint
@@ -330,6 +354,10 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.consumerNumRedelivered
 	ch <- nc.consumerNumWaiting
 	ch <- nc.consumerNumPending
+
+	// Source state
+	ch <- nc.streamSourceLag
+	ch <- nc.streamSourceActive
 }
 
 // Collect gathers the server jsz metrics.
@@ -445,6 +473,28 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				if stream.Config != nil {
 					ch <- streamMetric(nc.streamLimitBytes, float64(stream.Config.MaxBytes))
 					ch <- streamMetric(nc.streamLimitMessages, float64(stream.Config.MaxMsgs))
+				}
+
+				// Now with the sources.
+				for _, source := range stream.Sources {
+					sourceName := source.Name
+					var sourceAPI, sourceDeliver string
+					if source.External != nil {
+						sourceAPI = source.External.ApiPrefix
+						sourceDeliver = source.External.DeliverPrefix
+					}
+					sourceMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
+						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
+							// Server Labels
+							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+							// Stream Labels
+							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+							// Source Labels
+							sourceName, sourceAPI, sourceDeliver,
+						)
+					}
+					ch <- sourceMetric(nc.streamSourceLag, float64(source.Lag))
+					ch <- sourceMetric(nc.streamSourceActive, float64(source.Active))
 				}
 
 				// Now with the consumers.
