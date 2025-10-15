@@ -488,7 +488,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 							// Source Labels
 							sourceName, sourceAPI, sourceDeliver,
 						)
