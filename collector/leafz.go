@@ -98,6 +98,7 @@ func newLeafMetrics(system, endpoint string) *leafMetrics {
 
 	// Base labels that are common to all metrics
 	baseLabels := []string{"server_id", "account", "account_id", "ip", "port", "name"}
+	baseLabels_sub := []string{"server_id", "account", "account_id", "ip", "port", "name", "subscription"}
 
 	leaf := &leafMetrics{
 		info: prometheus.NewDesc(
@@ -138,7 +139,7 @@ func newLeafMetrics(system, endpoint string) *leafMetrics {
 		connSubscriptions: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, "conn_subscriptions"),
 			"subscriptions",
-			baseLabels,
+			baseLabels_sub,
 			nil),
 	}
 
