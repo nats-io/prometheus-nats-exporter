@@ -139,6 +139,10 @@ func verifyLabels(system, url, endpoint string, expectedLabels map[string]map[st
 	}
 
 	labelValues, err := getLabelValues(system, url, endpoint, metricNames)
+	fmt.Println(url)
+	fmt.Println(endpoint)
+	fmt.Println(labelValues)
+
 	if err != nil {
 		t.Fatalf("Failed to get label values: %v", err)
 	}
@@ -398,6 +402,13 @@ func TestAllEndpoints(t *testing.T) {
 		"gnatsd_healthz_status": 0,
 	}
 	verifyCollector(CoreSystem, url, "healthz", cases, t)
+
+	cases = map[string]float64{
+		"gnatsd_accountz_expired":       0,
+		"gnatsd_accountz_limit_exports": 0,
+	}
+	verifyCollector(CoreSystem, url, "accountz", cases, t)
+
 }
 
 func TestLeafzMetricLabels(t *testing.T) {
@@ -432,6 +443,51 @@ func TestLeafzMetricLabels(t *testing.T) {
 
 	verifyLabels(CoreSystem, url, "leafz", expectedLabels1, t)
 	verifyLabels(CoreSystem, url, "leafz", expectedLabels2, t)
+}
+
+func TestAccountzMetricLabels(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
+
+	// Test first expected label set
+	expectedLabels1 := map[string]map[string]string{
+		"gnatsd_accountz_client_connections": {
+			"account_id":   "$G",
+			"account_name": "$G",
+			"server_id":    "id",
+		},
+	}
+
+	expectedLabels2 := map[string]map[string]string{
+		"gnatsd_accountz_client_connections": {
+			"account_id":   "$SYS",
+			"account_name": "$SYS",
+			"server_id":    "id",
+		},
+	}
+
+	expectedLabels3 := map[string]map[string]string{
+		"gnatsd_accountz_limit_exports": {
+			"account_id":   "$SYS",
+			"account_name": "$SYS",
+			"server_id":    "id",
+		},
+	}
+
+	expectedLabels4 := map[string]map[string]string{
+		"gnatsd_accountz_subscriptions": {
+			"account_id":   "$SYS",
+			"account_name": "$SYS",
+			"server_id":    "id",
+		},
+	}
+
+	verifyLabels(CoreSystem, url, "accountz", expectedLabels1, t)
+	verifyLabels(CoreSystem, url, "accountz", expectedLabels2, t)
+	verifyLabels(CoreSystem, url, "accountz", expectedLabels3, t)
+	verifyLabels(CoreSystem, url, "accountz", expectedLabels4, t)
 }
 
 func TestJetStreamMetrics(t *testing.T) {
