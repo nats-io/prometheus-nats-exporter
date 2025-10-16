@@ -80,6 +80,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	var streamLabels []string
 	streamLabels = append(streamLabels, serverLabels...)
 	streamLabels = append(streamLabels, "account")
+	streamLabels = append(streamLabels, "account_name")
 	streamLabels = append(streamLabels, "account_id")
 	streamLabels = append(streamLabels, "stream_name")
 	streamLabels = append(streamLabels, "stream_leader")
@@ -89,6 +90,7 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	var accountLabels []string
 	accountLabels = append(accountLabels, serverLabels...)
 	accountLabels = append(accountLabels, "account")
+	accountLabels = append(accountLabels, "account_name")
 	accountLabels = append(accountLabels, "account_id")
 
 	var consumerLabels []string
@@ -431,7 +433,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					// Server Labels
 					serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 					// Account Labels
-					accountName, accountID)
+					accountName, accountName, accountID)
 			}
 
 			ch <- accountMetric(nc.maxAccountStorage, float64(account.ReservedStore))
@@ -459,7 +461,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						// Server Labels
 						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 						// Stream Labels
-						accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup)
+						accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -486,7 +488,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 							// Source Labels
 							sourceName, sourceAPI, sourceDeliver,
 						)
@@ -516,7 +518,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Server Labels
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
-							accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 							// Consumer Labels
 							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 						)
