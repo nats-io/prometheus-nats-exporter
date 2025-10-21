@@ -139,9 +139,6 @@ func verifyLabels(system, url, endpoint string, expectedLabels map[string]map[st
 	}
 
 	labelValues, err := getLabelValues(system, url, endpoint, metricNames)
-	fmt.Println(url)
-	fmt.Println(endpoint)
-	fmt.Println(labelValues)
 
 	if err != nil {
 		t.Fatalf("Failed to get label values: %v", err)
