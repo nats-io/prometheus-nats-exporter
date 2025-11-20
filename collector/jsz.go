@@ -383,7 +383,7 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.streamSourceLag
 	ch <- nc.streamSourceActive
 
-	// MIrror state
+	// Mirror state
 	ch <- nc.streamMirrorLag
 	ch <- nc.streamMirrorActive
 }
