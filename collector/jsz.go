@@ -68,6 +68,10 @@ type jszCollector struct {
 	// Stream source stats
 	streamSourceLag    *prometheus.Desc
 	streamSourceActive *prometheus.Desc
+
+	// Stream mirror stats
+	streamMirrorLag    *prometheus.Desc
+	streamMirrorActive *prometheus.Desc
 }
 
 func isJszEndpoint(system string) bool {
@@ -105,6 +109,12 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	sourceLabels = append(sourceLabels, "source_name")
 	sourceLabels = append(sourceLabels, "source_api")
 	sourceLabels = append(sourceLabels, "source_deliver")
+
+	var mirrorLabels []string
+	mirrorLabels = append(mirrorLabels, streamLabels...)
+	mirrorLabels = append(mirrorLabels, "mirror_name")
+	mirrorLabels = append(mirrorLabels, "mirror_api")
+	mirrorLabels = append(mirrorLabels, "mirror_deliver")
 
 	nc := &jszCollector{
 		httpClient: &http.Client{
@@ -312,6 +322,20 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			sourceLabels,
 			nil,
 		),
+		// jetstream_stream_mirror_lag
+		streamMirrorLag: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "mirror_lag"),
+			"Number of messages a stream mirror is behind",
+			mirrorLabels,
+			nil,
+		),
+		// jetstream_stream_mirror_active_duration_ns
+		streamMirrorActive: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "mirror_active_duration_ns"),
+			"Stream mirror active duration in nanoseconds (-1 indicates inactive)",
+			mirrorLabels,
+			nil,
+		),
 	}
 
 	// Use the endpoint
@@ -358,6 +382,10 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	// Source state
 	ch <- nc.streamSourceLag
 	ch <- nc.streamSourceActive
+
+	// Mirror state
+	ch <- nc.streamMirrorLag
+	ch <- nc.streamMirrorActive
 }
 
 // Collect gathers the server jsz metrics.
@@ -495,6 +523,29 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					}
 					ch <- sourceMetric(nc.streamSourceLag, float64(source.Lag))
 					ch <- sourceMetric(nc.streamSourceActive, float64(source.Active))
+				}
+
+				// Now with the mirror. There can be only one.
+				if stream.Mirror != nil {
+					mirror := stream.Mirror
+					mirrorName := mirror.Name
+					var mirrorAPI, mirrorDeliver string
+					if mirror.External != nil {
+						mirrorAPI = mirror.External.ApiPrefix
+						mirrorDeliver = mirror.External.DeliverPrefix
+					}
+					mirrorMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
+						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
+							// Server Labels
+							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+							// Stream Labels
+							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+							// Mirror Labels
+							mirrorName, mirrorAPI, mirrorDeliver,
+						)
+					}
+					ch <- mirrorMetric(nc.streamMirrorLag, float64(mirror.Lag))
+					ch <- mirrorMetric(nc.streamMirrorActive, float64(mirror.Active))
 				}
 
 				// Now with the consumers.
