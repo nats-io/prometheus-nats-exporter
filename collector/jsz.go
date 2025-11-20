@@ -525,8 +525,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					ch <- sourceMetric(nc.streamSourceActive, float64(source.Active))
 				}
 
-				// Now with the mirror.
-				// TODO
+				// Now with the mirror. There can be only one.
 				if stream.Mirror != nil {
 					mirror := stream.Mirror
 					mirrorName := mirror.Name
