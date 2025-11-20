@@ -540,7 +540,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
 							// Stream Labels
 							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
-							// Source Labels
+							// Mirror Labels
 							mirrorName, mirrorAPI, mirrorDeliver,
 						)
 					}
