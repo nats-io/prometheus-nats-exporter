@@ -212,56 +212,67 @@ func newAccountDetailsMetrics(system, endpoint string) *accountDetailsMetrics {
 }
 
 // Collect collects all the metrics about an account.
-func (am *accountDetailsMetrics) Collect(server *CollectedServer, acc *AccountzDetail, ch chan<- prometheus.Metric) {
+func (adm *accountDetailsMetrics) Collect(
+	server *CollectedServer, acc *AccountzDetail, ch chan<- prometheus.Metric) {
 
 	// Base labels that are common to all metrics
 	baseLabels := []string{server.ID, acc.AccountDetail.AccountName, acc.AccountDetail.NameTag}
 
-	ch <- prometheus.MustNewConstMetric(am.connections, prometheus.GaugeValue, float64(acc.AccountDetail.ClientConnections),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.connections, prometheus.GaugeValue, float64(acc.AccountDetail.ClientConnections), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.leafnodeConnections, prometheus.GaugeValue, float64(acc.AccountDetail.LeafnodeConnections),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.leafnodeConnections, prometheus.GaugeValue,
+		float64(acc.AccountDetail.LeafnodeConnections), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.subscriptions, prometheus.GaugeValue, float64(acc.AccountDetail.Subscriptions),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.subscriptions, prometheus.GaugeValue, float64(acc.AccountDetail.Subscriptions), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.isSystem, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.IsSystem),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.isSystem, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.IsSystem), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.expired, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.Expired),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.expired, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.Expired), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.complete, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.Complete),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.complete, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.Complete), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.jetstreamEnabled, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.JetstreamEnabled),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.jetstreamEnabled, prometheus.GaugeValue,
+		boolToFloat64(acc.AccountDetail.JetstreamEnabled), baseLabels...)
 
 	// Collect new Limits metrics
-	ch <- prometheus.MustNewConstMetric(am.limitSubs, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Subs),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitSubs, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Subs), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitData, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Data),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitData, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Data), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitPayload, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Payload),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitPayload, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Payload), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitImports, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Imports),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitImports, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Imports), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitExports, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Exports),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitExports, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Exports), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitWildcards, prometheus.GaugeValue, boolToFloat64(acc.AccountDetail.DecodedJWT.NATS.Limits.Wildcards),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitWildcards, prometheus.GaugeValue,
+		boolToFloat64(acc.AccountDetail.DecodedJWT.NATS.Limits.Wildcards), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitConn, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Conn),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitConn, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Conn), baseLabels...)
 
-	ch <- prometheus.MustNewConstMetric(am.limitLeaf, prometheus.GaugeValue, float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Leaf),
-		baseLabels...)
+	ch <- prometheus.MustNewConstMetric(
+		adm.limitLeaf, prometheus.GaugeValue,
+		float64(acc.AccountDetail.DecodedJWT.NATS.Limits.Leaf), baseLabels...)
 }
 
 // Helper function to convert boolean to float64
