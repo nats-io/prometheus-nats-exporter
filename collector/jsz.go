@@ -65,6 +65,16 @@ type jszCollector struct {
 	consumerAckFloorStreamSeq    *prometheus.Desc
 	consumerAckFloorConsumerSeq  *prometheus.Desc
 
+	// Stream replica metrics
+	streamReplicaLag     *prometheus.Desc
+	streamReplicaCurrent *prometheus.Desc
+	streamReplicaActive  *prometheus.Desc
+	streamReplicaInfo    *prometheus.Desc
+
+	// Additional stream state metrics (addressing issue #352)
+	streamNumSubjects *prometheus.Desc
+	streamNumDeleted  *prometheus.Desc
+
 	// Stream source stats
 	streamSourceLag    *prometheus.Desc
 	streamSourceActive *prometheus.Desc
@@ -103,6 +113,11 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	consumerLabels = append(consumerLabels, "consumer_leader")
 	consumerLabels = append(consumerLabels, "is_consumer_leader")
 	consumerLabels = append(consumerLabels, "consumer_desc")
+
+	var replicaLabels []string
+	replicaLabels = append(replicaLabels, streamLabels...)
+	replicaLabels = append(replicaLabels, "replica_name")
+	replicaLabels = append(replicaLabels, "replica_peer")
 
 	var sourceLabels []string
 	sourceLabels = append(sourceLabels, streamLabels...)
@@ -255,6 +270,48 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			streamLabels,
 			nil,
 		),
+		// jetstream_stream_num_subjects
+		streamNumSubjects: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "num_subjects"),
+			"Number of unique subjects in a stream",
+			streamLabels,
+			nil,
+		),
+		// jetstream_stream_num_deleted
+		streamNumDeleted: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream", "num_deleted"),
+			"Number of deleted messages in a stream",
+			streamLabels,
+			nil,
+		),
+		// jetstream_stream_replica_lag
+		streamReplicaLag: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream_replica", "lag"),
+			"Number of messages this replica is behind the leader",
+			replicaLabels,
+			nil,
+		),
+		// jetstream_stream_replica_current
+		streamReplicaCurrent: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream_replica", "current"),
+			"Whether this replica is current with the leader (1=current, 0=behind)",
+			replicaLabels,
+			nil,
+		),
+		// jetstream_stream_replica_active
+		streamReplicaActive: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream_replica", "active_duration_ns"),
+			"How long this replica has been active in nanoseconds",
+			replicaLabels,
+			nil,
+		),
+		// jetstream_stream_replica_info
+		streamReplicaInfo: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "stream_replica", "info"),
+			"Information about stream replica",
+			replicaLabels,
+			nil,
+		),
 		// jetstream_consumer_delivered_consumer_seq
 		consumerDeliveredConsumerSeq: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "consumer", "delivered_consumer_seq"),
@@ -380,6 +437,16 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.consumerNumWaiting
 	ch <- nc.consumerNumPending
 
+	// Stream replica metrics
+	ch <- nc.streamReplicaLag
+	ch <- nc.streamReplicaCurrent
+	ch <- nc.streamReplicaActive
+	ch <- nc.streamReplicaInfo
+
+	// Additional stream state metrics
+	ch <- nc.streamNumSubjects
+	ch <- nc.streamNumDeleted
+
 	// Source state
 	ch <- nc.streamSourceLag
 	ch <- nc.streamSourceActive
@@ -502,6 +569,30 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				if stream.Config != nil {
 					ch <- streamMetric(nc.streamLimitBytes, float64(stream.Config.MaxBytes))
 					ch <- streamMetric(nc.streamLimitMessages, float64(stream.Config.MaxMsgs))
+				}
+
+				// Additional stream state metrics (addressing issue #352)
+				ch <- streamMetric(nc.streamNumSubjects, float64(stream.State.NumSubjects))
+				ch <- streamMetric(nc.streamNumDeleted, float64(stream.State.NumDeleted))
+
+				// Collect replica metrics if cluster information exists
+				if stream.Cluster != nil && len(stream.Cluster.Replicas) > 0 {
+					for _, replica := range stream.Cluster.Replicas {
+						replicaMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
+							return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
+								// Server Labels
+								serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+								// Stream Labels
+								accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+								// Replica Labels
+								replica.Name, replica.Peer)
+						}
+
+						ch <- replicaMetric(nc.streamReplicaLag, float64(replica.Lag))
+						ch <- replicaMetric(nc.streamReplicaCurrent, boolToFloat(replica.Current))
+						ch <- replicaMetric(nc.streamReplicaActive, float64(replica.Active))
+						ch <- replicaMetric(nc.streamReplicaInfo, 1.0) // Info metric always 1
+					}
 				}
 
 				// Now with the sources.
