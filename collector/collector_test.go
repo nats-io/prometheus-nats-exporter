@@ -171,7 +171,9 @@ func verifyLabels(system, url, endpoint string, expectedLabels map[string]map[st
 		}
 
 		if !found {
-			t.Fatalf("Expected labels %v not found in any label set for metric %s. Actual label sets: %v", expectedLabelSet, metricName, actualLabelSets)
+			t.Fatalf(
+				"Expected labels %v not found in any label set for metric %s. Actual label sets: %v",
+				expectedLabelSet, metricName, actualLabelSets)
 		}
 	}
 }

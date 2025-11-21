@@ -208,7 +208,8 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 		// jetstream_stream_limit_messages
 		streamLimitMessages: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "limit_messages"),
-			"The maximum number of messages allowed in a JetStream stream as per its configuration. A value of -1 indicates no limit.",
+			"The maximum number of messages allowed in a JetStream stream as per its configuration. "+
+				"A value of -1 indicates no limit.",
 			streamLabels,
 			nil,
 		),
