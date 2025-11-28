@@ -590,8 +590,9 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					} else {
 						isConsumerLeader = "true"
 					}
-					consumerLabelValues := streamLabelValues
-					consumerLabelValues = append(consumerLabelValues,
+					consumerLabelValues := append(
+						// (same labels as stream)
+						streamLabelValues,
 						// Consumer Labels
 						consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 					)
