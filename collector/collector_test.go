@@ -599,36 +599,40 @@ func TestJetStreamMetricLabels(t *testing.T) {
 	}
 
 	streamName := "myStr"
-	streamK := "streamFoo"
+	existingStreamK := "streamFoo"
 	streamV := "bar"
+	missingStreamK := "missingStreamFoo"
 	_, err = js.AddStream(&nats.StreamConfig{
 		Name:     streamName,
-		Metadata: map[string]string{streamK: streamV},
+		Metadata: map[string]string{existingStreamK: streamV},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	consumerName := "myCon"
-	consumerK := "consFoo"
+	existingConsumerK := "consFoo"
 	consumerV := "baz"
-	consumerConfig := nats.ConsumerConfig{Name: consumerName, Metadata: map[string]string{consumerK: consumerV}}
+	missingConsumerK := "missingConsFoo"
+	consumerConfig := nats.ConsumerConfig{Name: consumerName, Metadata: map[string]string{existingConsumerK: consumerV}}
 	_, err = js.AddConsumer(streamName, &consumerConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// expected label keys
-	streamLabelKey := "stream_meta_" + streamK
-	consumerLabelKey := "consumer_meta_" + consumerK
+	existingStreamLabelKey := "stream_meta_" + existingStreamK
+	missingStreamLabelKey := "stream_meta_" + missingStreamK
+	existingConsumerLabelKey := "consumer_meta_" + existingConsumerK
+	missingConsumerLabelKey := "consumer_meta_" + missingConsumerK
 
 	streamMetric := "jetstream_stream_total_bytes"
 	consumerMetric := "jetstream_consumer_num_ack_pending"
 	labelValues, err := getJszLabelValues(
 		url,
 		"all",
-		[]string{streamK},
-		[]string{consumerK},
+		[]string{existingStreamK, missingStreamK},
+		[]string{existingConsumerK, missingConsumerK},
 		[]string{streamMetric, consumerMetric},
 	)
 	if err != nil {
@@ -640,8 +644,14 @@ func TestJetStreamMetricLabels(t *testing.T) {
 		t.Fatalf("No info found for metric: %v", streamMetric)
 	}
 	streamLabels := streamMaps[0]
-	if streamLabels[streamLabelKey] != streamV {
-		t.Fatalf("Value of stream label %s has unexpected value \"%s\"", streamLabelKey, streamLabels[streamLabelKey])
+	if val := streamLabels[existingStreamLabelKey]; val != streamV {
+		t.Fatalf("Unexpected value of stream label %s: \"%s\"", existingStreamLabelKey, val)
+	}
+	if _, ok := streamLabels[missingStreamLabelKey]; !ok {
+		t.Fatalf("Stream label %s for missing metadata value is missing", missingStreamLabelKey)
+	}
+	if val := streamLabels[missingStreamLabelKey]; val != "" {
+		t.Fatalf("Unexpected value of stream label %s: \"%s\"", missingStreamLabelKey, val)
 	}
 
 	consumerMaps, found := labelValues[consumerMetric]
@@ -650,11 +660,23 @@ func TestJetStreamMetricLabels(t *testing.T) {
 	}
 	consumerLabels := consumerMaps[0]
 
-	if consumerLabels[streamLabelKey] != streamV {
-		t.Fatalf("Value of consumer label %s has unexpected value \"%s\"", streamLabelKey, consumerLabels[streamLabelKey])
+	if val := consumerLabels[existingStreamLabelKey]; val != streamV {
+		t.Fatalf("Value of consumer label %s has unexpected value \"%s\"", existingStreamLabelKey, val)
 	}
-	if consumerLabels[consumerLabelKey] != consumerV {
-		t.Fatalf("Value of consumer label %s has unexpected value \"%s\"", consumerLabelKey, consumerLabels[consumerLabelKey])
+	if _, ok := consumerLabels[missingStreamLabelKey]; !ok {
+		t.Fatalf("Consumer label %s for missing stream metadata value is missing", missingStreamLabelKey)
+	}
+	if val := consumerLabels[missingStreamLabelKey]; val != "" {
+		t.Fatalf("Unexpected value of consumer label %s: \"%s\"", missingStreamLabelKey, val)
+	}
+	if val := consumerLabels[existingConsumerLabelKey]; val != consumerV {
+		t.Fatalf("Value of consumer label %s has unexpected value \"%s\"", existingConsumerLabelKey, val)
+	}
+	if _, ok := consumerLabels[missingConsumerLabelKey]; !ok {
+		t.Fatalf("Consumer label %s for missing consumer metadata value is missing", missingConsumerLabelKey)
+	}
+	if val := consumerLabels[missingConsumerLabelKey]; val != "" {
+		t.Fatalf("Unexpected value of consumer label %s: \"%s\"", missingConsumerLabelKey, val)
 	}
 }
 
