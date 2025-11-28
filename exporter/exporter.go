@@ -58,6 +58,7 @@ type NATSExporterOptions struct {
 	GetRoutez               bool
 	GetGatewayz             bool
 	GetAccstatz             bool
+	GetAccountz             bool
 	GetLeafz                bool
 	GetJszFilter            string
 	JszSteamMetaKeys        string
@@ -217,6 +218,9 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetAccstatz {
 		ne.createCollector(collector.CoreSystem, "accstatz")
+	}
+	if opts.GetAccountz {
+		ne.createCollector(collector.CoreSystem, "accountz")
 	}
 	if opts.GetLeafz {
 		ne.createCollector(collector.CoreSystem, "leafz")

@@ -54,6 +54,8 @@ Usage:  ./prometheus-nats-exporter <flags> url
   -V    Enable trace log level.
   -a string
         Network host to listen on. (default "0.0.0.0")
+  -accountz
+        Get accountz metrics and limits.      
   -accstatz
         Get accstatz metrics.
   -addr string

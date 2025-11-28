@@ -139,7 +139,7 @@ func createConnzCollector(system string) *connzCollector {
 func createConnzDetailedCollector(system string) *connzCollector {
 	connzCollector := createConnzCollector(system)
 	detailLabels := []string{"server_id", "cid", "kind", "type", "ip", "port", "name", "name_tag",
-		"account", "lang", "version", "tls_version", "tls_cipher_suite"}
+		"account", "account_id", "lang", "version", "tls_version", "tls_cipher_suite"}
 	connzCollector.pendingBytes = prometheus.NewDesc(
 		prometheus.BuildFQName(system, connzEndpoint, "pending_bytes"),
 		"pending_bytes",
@@ -254,7 +254,7 @@ func (nc *connzCollector) Collect(ch chan<- prometheus.Metric) {
 			outMsgs += conn.OutMsgs
 			if nc.detailed {
 				detailLabelValues := []string{server.ID, conn.Cid, conn.Kind, conn.Type, conn.IP, conn.Port,
-					conn.Name, conn.NameTag, conn.Account, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
+					conn.Name, conn.NameTag, conn.Account, conn.Account, conn.Lang, conn.Version, conn.TLSVersion, conn.TLSCipherSuite}
 				ch <- prometheus.MustNewConstMetric(nc.pendingBytes, prometheus.GaugeValue, conn.PendingBytes, detailLabelValues...)
 				ch <- prometheus.MustNewConstMetric(nc.subscriptions, prometheus.GaugeValue, conn.Subscriptions,
 					detailLabelValues...)
