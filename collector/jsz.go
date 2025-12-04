@@ -72,13 +72,21 @@ type jszCollector struct {
 	// Stream mirror stats
 	streamMirrorLag    *prometheus.Desc
 	streamMirrorActive *prometheus.Desc
+
+	// metadata keys to extract
+	streamMetaKeys   []string
+	consumerMetaKeys []string
 }
 
 func isJszEndpoint(system string) bool {
 	return system == JetStreamSystem
 }
 
-func newJszCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
+func newJszCollector(
+	system, endpoint string,
+	servers []*CollectedServer,
+	streamMetaKeys, consumerMetaKeys []string,
+) prometheus.Collector {
 	serverLabels := []string{"server_id", "server_name", "cluster", "domain", "meta_leader", "is_meta_leader"}
 
 	var streamLabels []string
@@ -90,6 +98,9 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	streamLabels = append(streamLabels, "stream_leader")
 	streamLabels = append(streamLabels, "is_stream_leader")
 	streamLabels = append(streamLabels, "stream_raft_group")
+	for _, k := range streamMetaKeys {
+		streamLabels = append(streamLabels, "stream_meta_"+k)
+	}
 
 	var accountLabels []string
 	accountLabels = append(accountLabels, serverLabels...)
@@ -103,6 +114,9 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 	consumerLabels = append(consumerLabels, "consumer_leader")
 	consumerLabels = append(consumerLabels, "is_consumer_leader")
 	consumerLabels = append(consumerLabels, "consumer_desc")
+	for _, k := range consumerMetaKeys {
+		consumerLabels = append(consumerLabels, "consumer_meta_"+k)
+	}
 
 	var sourceLabels []string
 	sourceLabels = append(sourceLabels, streamLabels...)
@@ -337,6 +351,8 @@ func newJszCollector(system, endpoint string, servers []*CollectedServer) promet
 			mirrorLabels,
 			nil,
 		),
+		streamMetaKeys:   streamMetaKeys,
+		consumerMetaKeys: consumerMetaKeys,
 	}
 
 	// Use the endpoint
@@ -485,12 +501,21 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 				streamRaftGroup = stream.RaftGroup
 
+				streamLabelValues := []string{
+					// Server Labels
+					serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+					// Stream Labels
+					accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+				}
+				for _, k := range nc.streamMetaKeys {
+					var v string
+					if stream.Config != nil {
+						v = stream.Config.Metadata[k]
+					}
+					streamLabelValues = append(streamLabelValues, v)
+				}
 				streamMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
-					return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
-						// Server Labels
-						serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
-						// Stream Labels
-						accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup)
+					return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value, streamLabelValues...)
 				}
 				ch <- streamMetric(nc.streamMessages, float64(stream.State.Msgs))
 				ch <- streamMetric(nc.streamBytes, float64(stream.State.Bytes))
@@ -565,15 +590,21 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					} else {
 						isConsumerLeader = "true"
 					}
+					consumerLabelValues := append(
+						// (same labels as stream)
+						streamLabelValues,
+						// Consumer Labels
+						consumerName, consumerLeader, isConsumerLeader, consumerDesc,
+					)
+					for _, k := range nc.consumerMetaKeys {
+						var v string
+						if consumer.Config != nil {
+							v = consumer.Config.Metadata[k]
+						}
+						consumerLabelValues = append(consumerLabelValues, v)
+					}
 					consumerMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
-						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
-							// Server Labels
-							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
-							// Stream Labels
-							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
-							// Consumer Labels
-							consumerName, consumerLeader, isConsumerLeader, consumerDesc,
-						)
+						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value, consumerLabelValues...)
 					}
 					ch <- consumerMetric(nc.consumerDeliveredConsumerSeq, float64(consumer.Delivered.Consumer))
 					ch <- consumerMetric(nc.consumerDeliveredStreamSeq, float64(consumer.Delivered.Stream))

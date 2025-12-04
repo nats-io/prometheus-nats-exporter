@@ -133,6 +133,10 @@ func main() {
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
 	flag.BoolVar(&opts.GetVarz, "varz", false, "Get general metrics.")
 	flag.StringVar(&opts.GetJszFilter, "jsz", "", "Select JetStream metrics to filter (e.g streams, accounts, consumers)")
+	flag.StringVar(&opts.JszSteamMetaKeys, "jsz_stream_meta_keys", "",
+		"Select JetStream stream metadata to output (comma separated)")
+	flag.StringVar(&opts.JszConsumerMetaKeys, "jsz_consumer_meta_keys", "",
+		"Select JetStream consumer metadata to output (comma separated)")
 	flag.StringVar(&opts.CertFile, "tlscert", "", "Server certificate file (Enables HTTPS).")
 	flag.StringVar(&opts.KeyFile, "tlskey", "", "Private key for server certificate (used with HTTPS).")
 	flag.StringVar(&opts.CaFile, "tlscacert", "", "Client certificate CA for verification (used with HTTPS).")

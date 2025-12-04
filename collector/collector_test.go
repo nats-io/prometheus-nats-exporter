@@ -42,8 +42,22 @@ func verifyCollector(system, url string, endpoint string, cases map[string]float
 		URL: url,
 	}
 	coll := NewCollector(system, endpoint, "", servers)
+	verifySpecificCollector(cases, coll, t)
+}
 
-	// now collect the metrics
+func verifyJszCollector(url string, endpoint string, cases map[string]float64, t *testing.T) {
+	// create a new collector.
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "id",
+		URL: url,
+	}
+	coll := NewJszCollector(endpoint, "", servers, []string{}, []string{})
+
+	verifySpecificCollector(cases, coll, t)
+}
+
+func verifySpecificCollector(cases map[string]float64, coll prometheus.Collector, t *testing.T) {
 	c := make(chan prometheus.Metric)
 	go coll.Collect(c)
 	for {
@@ -72,6 +86,34 @@ func verifyCollector(system, url string, endpoint string, cases map[string]float
 // To account for the metrics that share the same descriptor but differ in their variable label values,
 // return a list of lists of label pairs for each of the supplied metric names.
 func getLabelValues(system, url, endpoint string, metricNames []string) (map[string][]map[string]string, error) {
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "id",
+		URL: url,
+	}
+	coll := NewCollector(system, endpoint, "", servers)
+	return getLabelValuesFromCollector(metricNames, coll)
+}
+
+// To account for the metrics that share the same descriptor but differ in their variable label values,
+// return a list of lists of label pairs for each of the supplied metric names.
+func getJszLabelValues(
+	url, endpoint string,
+	streamMetaKeys, consumerMetaKeys, metricNames []string,
+) (map[string][]map[string]string, error) {
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "id",
+		URL: url,
+	}
+	coll := NewJszCollector(endpoint, "", servers, streamMetaKeys, consumerMetaKeys)
+	return getLabelValuesFromCollector(metricNames, coll)
+}
+
+func getLabelValuesFromCollector(
+	metricNames []string,
+	coll prometheus.Collector,
+) (map[string][]map[string]string, error) {
 	labelValues := make(map[string][]map[string]string)
 	namesMap := make(map[string]bool)
 	for _, metricName := range metricNames {
@@ -113,13 +155,7 @@ func getLabelValues(system, url, endpoint string, metricNames []string) (map[str
 		}
 	}()
 
-	// create a new collector and collect
-	servers := make([]*CollectedServer, 1)
-	servers[0] = &CollectedServer{
-		ID:  "id",
-		URL: url,
-	}
-	coll := NewCollector(system, endpoint, "", servers)
+	// collect metrics
 	coll.Collect(metrics)
 	close(metrics)
 
@@ -535,7 +571,113 @@ func TestJetStreamMetrics(t *testing.T) {
 		"jetstream_server_total_streams":   1,
 		"jetstream_server_total_consumers": 1,
 	}
-	verifyCollector(JetStreamSystem, url, "jsz", cases, t)
+	verifyJszCollector(url, "all", cases, t)
+}
+
+func TestJetStreamMetricLabels(t *testing.T) {
+	clientPort := 4229
+	monitorPort := 8229
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	streamName := "myStr"
+	existingStreamK := "streamFoo"
+	streamV := "bar"
+	missingStreamK := "missingStreamFoo"
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     streamName,
+		Metadata: map[string]string{existingStreamK: streamV},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	consumerName := "myCon"
+	existingConsumerK := "consFoo"
+	consumerV := "baz"
+	missingConsumerK := "missingConsFoo"
+	consumerConfig := nats.ConsumerConfig{Name: consumerName, Metadata: map[string]string{existingConsumerK: consumerV}}
+	_, err = js.AddConsumer(streamName, &consumerConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// expected label keys
+	existingStreamLabelKey := "stream_meta_" + existingStreamK
+	missingStreamLabelKey := "stream_meta_" + missingStreamK
+	existingConsumerLabelKey := "consumer_meta_" + existingConsumerK
+	missingConsumerLabelKey := "consumer_meta_" + missingConsumerK
+
+	streamMetric := "jetstream_stream_total_bytes"
+	consumerMetric := "jetstream_consumer_num_ack_pending"
+	labelValues, err := getJszLabelValues(
+		url,
+		"all",
+		[]string{existingStreamK, missingStreamK},
+		[]string{existingConsumerK, missingConsumerK},
+		[]string{streamMetric, consumerMetric},
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error getting labels for %s metrics: %v", consumerMetric, err)
+	}
+
+	streamMaps, found := labelValues[streamMetric]
+	if !found || len(streamMaps) != 1 {
+		t.Fatalf("No info found for metric: %v", streamMetric)
+	}
+	streamLabels := streamMaps[0]
+	if val := streamLabels[existingStreamLabelKey]; val != streamV {
+		t.Fatalf("Unexpected value of stream label %s: \"%s\"", existingStreamLabelKey, val)
+	}
+	if _, ok := streamLabels[missingStreamLabelKey]; !ok {
+		t.Fatalf("Stream label %s for missing metadata value is missing", missingStreamLabelKey)
+	}
+	if val := streamLabels[missingStreamLabelKey]; val != "" {
+		t.Fatalf("Unexpected value of stream label %s: \"%s\"", missingStreamLabelKey, val)
+	}
+
+	consumerMaps, found := labelValues[consumerMetric]
+	if !found || len(consumerMaps) != 1 {
+		t.Fatalf("No info found for metric: %v", consumerMetric)
+	}
+	consumerLabels := consumerMaps[0]
+
+	if val := consumerLabels[existingStreamLabelKey]; val != streamV {
+		t.Fatalf("Value of consumer label %s has unexpected value \"%s\"", existingStreamLabelKey, val)
+	}
+	if _, ok := consumerLabels[missingStreamLabelKey]; !ok {
+		t.Fatalf("Consumer label %s for missing stream metadata value is missing", missingStreamLabelKey)
+	}
+	if val := consumerLabels[missingStreamLabelKey]; val != "" {
+		t.Fatalf("Unexpected value of consumer label %s: \"%s\"", missingStreamLabelKey, val)
+	}
+	if val := consumerLabels[existingConsumerLabelKey]; val != consumerV {
+		t.Fatalf("Value of consumer label %s has unexpected value \"%s\"", existingConsumerLabelKey, val)
+	}
+	if _, ok := consumerLabels[missingConsumerLabelKey]; !ok {
+		t.Fatalf("Consumer label %s for missing consumer metadata value is missing", missingConsumerLabelKey)
+	}
+	if val := consumerLabels[missingConsumerLabelKey]; val != "" {
+		t.Fatalf("Unexpected value of consumer label %s: \"%s\"", missingConsumerLabelKey, val)
+	}
 }
 
 func TestJetStreamSourceMetrics(t *testing.T) {
