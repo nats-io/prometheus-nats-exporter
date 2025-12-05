@@ -4,29 +4,44 @@ on:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
 
+permissions: {}
+
+# This would trigger if we ... move a release tag?  Ugh.  Would prefer to flag that as a poisoning error and kill all builds.
+# We'll settle for killing the prior one.
+# This should resolve a Zizmor v1.16+ "concurrency-limits" check.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # goreleaser (inside bake) release assets upload
+      # The images are pushed to DockerHub via static secret, so we don't need packages:write here
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: go.mod
+          cache: false
 
       - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Setup Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Setup Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_CLI_TOKEN }}
@@ -34,11 +49,11 @@ jobs:
       - name: Get Image Tags
         id: tags
         run: |
-          version=$(sed 's/^v//' <<< ${{ github.ref_name }})
+          version=$(sed 's/^v//' <<< "${GITHUB_REF_NAME}")
           echo tags="latest,${version}" >> $GITHUB_OUTPUT
 
       - name: Build and Push
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@5be5f02ff8819ecd3092ea6b2e6261c31774f2b4 # v6.10.0
         env:
           TAGS: "${{ steps.tags.outputs.tags }}"
           REGISTRY: "natsio"
