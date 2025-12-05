@@ -6,6 +6,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "docker"
     directory: "cicd"
     schedule:
@@ -13,6 +15,8 @@ updates:
     ignore:
       - dependency-name: "golang"
         update-types: ["version-update:semver-major"]
+    cooldown:
+      default-days: 7
 
   # version updates: disabled
   # security updates: enabled
@@ -22,3 +26,5 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 0
+    cooldown:
+      default-days: 7

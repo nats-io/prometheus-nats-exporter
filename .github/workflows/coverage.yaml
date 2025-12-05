@@ -6,15 +6,30 @@ on:
     paths-ignore:
       - '**.md'
 
+permissions: {}
+
+# We only run on the main branch, not candidates for merging, so coverage tests
+# are not gating factors where we should cancel the previous run, but a
+# historical record of coverage of main.  So we deliberately choose to leave
+# existing workflow invocations running.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   coverage:
     name: Test Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: go.mod
 
@@ -22,7 +37,7 @@ jobs:
         run: go install github.com/mattn/goveralls@v0.0.12
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
           skip-pkg-cache: true
 
