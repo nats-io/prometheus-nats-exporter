@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - sattwood/deps
     paths-ignore:
       - '**.md'
 
