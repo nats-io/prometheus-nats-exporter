@@ -89,8 +89,7 @@ func newJszCollector(
 ) prometheus.Collector {
 	serverLabels := []string{"server_id", "server_name", "cluster", "domain", "meta_leader", "is_meta_leader"}
 
-	var streamLabels []string
-	streamLabels = append(streamLabels, serverLabels...)
+	streamLabels := append([]string{}, serverLabels...)
 	streamLabels = append(streamLabels, "account")
 	streamLabels = append(streamLabels, "account_name")
 	streamLabels = append(streamLabels, "account_id")
@@ -102,14 +101,12 @@ func newJszCollector(
 		streamLabels = append(streamLabels, "stream_meta_"+k)
 	}
 
-	var accountLabels []string
-	accountLabels = append(accountLabels, serverLabels...)
+	accountLabels := append([]string{}, serverLabels...)
 	accountLabels = append(accountLabels, "account")
 	accountLabels = append(accountLabels, "account_name")
 	accountLabels = append(accountLabels, "account_id")
 
-	var consumerLabels []string
-	consumerLabels = append(consumerLabels, streamLabels...)
+	consumerLabels := append([]string{}, streamLabels...)
 	consumerLabels = append(consumerLabels, "consumer_name")
 	consumerLabels = append(consumerLabels, "consumer_leader")
 	consumerLabels = append(consumerLabels, "is_consumer_leader")
@@ -118,14 +115,12 @@ func newJszCollector(
 		consumerLabels = append(consumerLabels, "consumer_meta_"+k)
 	}
 
-	var sourceLabels []string
-	sourceLabels = append(sourceLabels, streamLabels...)
+	sourceLabels := append([]string{}, streamLabels...)
 	sourceLabels = append(sourceLabels, "source_name")
 	sourceLabels = append(sourceLabels, "source_api")
 	sourceLabels = append(sourceLabels, "source_deliver")
 
-	var mirrorLabels []string
-	mirrorLabels = append(mirrorLabels, streamLabels...)
+	mirrorLabels := append([]string{}, streamLabels...)
 	mirrorLabels = append(mirrorLabels, "mirror_name")
 	mirrorLabels = append(mirrorLabels, "mirror_api")
 	mirrorLabels = append(mirrorLabels, "mirror_deliver")
@@ -590,9 +585,12 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					} else {
 						isConsumerLeader = "true"
 					}
-					consumerLabelValues := append(
-						// (same labels as stream)
-						streamLabelValues,
+
+					// (same labels as stream)
+					consumerLabelValues := append([]string{}, streamLabelValues...)
+
+					consumerLabelValues = append(
+						consumerLabelValues,
 						// Consumer Labels
 						consumerName, consumerLeader, isConsumerLeader, consumerDesc,
 					)
