@@ -13,6 +13,12 @@
 
 package test
 
+import (
+	"time"
+
+	"github.com/nats-io/nats-server/v2/server"
+)
+
 // GatewayzTestResponse is static data for tests
 func GatewayzTestResponse() string {
 	return `{
@@ -199,4 +205,55 @@ func leafzTestResponse() string {
 		}
 	]
 }`
+}
+
+// JszInfoForTesting returns a JSInfo struct populated with test account data
+func JszAccountsTestResponse() server.JSInfo {
+	now, _ := time.Parse(time.RFC3339, "2025-04-08T11:48:45.890609686Z")
+
+	return server.JSInfo{
+		ID:       "SERVER_ID",
+		Now:      now,
+		Disabled: false,
+		Config: server.JetStreamConfig{
+			MaxMemory: 1073741824,  // 1 GB
+			MaxStore:  10737418240, // 10 GB
+			StoreDir:  "/data/jetstream",
+			Domain:    "test-domain",
+		},
+		Streams:   8,
+		Consumers: 0,
+		Messages:  603,
+		Bytes:     1488595,
+		Meta: &server.MetaClusterInfo{
+			Name:     "test-cluster",
+			Leader:   "test-leader",
+			Replicas: nil,
+			Size:     9,
+		},
+		AccountDetails: []*server.AccountDetail{
+			{
+				Name: "account1",
+				Id:   "ACC1",
+				JetStreamStats: server.JetStreamStats{
+					Memory:         234567890,
+					Store:          3456789012,
+					ReservedMemory: 1073741824,
+					ReservedStore:  10737418240,
+					Accounts:       1,
+				},
+			},
+			{
+				Name: "account2",
+				Id:   "ACC2",
+				JetStreamStats: server.JetStreamStats{
+					Memory:         123456789,
+					Store:          1356789012,
+					ReservedMemory: 536870912,
+					ReservedStore:  5368709120,
+					Accounts:       1,
+				},
+			},
+		},
+	}
 }
