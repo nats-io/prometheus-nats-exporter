@@ -64,6 +64,8 @@ type jszCollector struct {
 	consumerNumPending           *prometheus.Desc
 	consumerAckFloorStreamSeq    *prometheus.Desc
 	consumerAckFloorConsumerSeq  *prometheus.Desc
+	consumerLag                  *prometheus.Desc
+	consumerIdleSeconds          *prometheus.Desc
 
 	// Stream source stats
 	streamSourceLag    *prometheus.Desc
@@ -318,6 +320,20 @@ func newJszCollector(
 			consumerLabels,
 			nil,
 		),
+		// jetstream_consumer_lag
+		consumerLag: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "consumer", "lag"),
+			"Consumer lag in messages (stream_last_seq - consumer_delivered_stream_seq)",
+			consumerLabels,
+			nil,
+		),
+		// jetstream_consumer_idle_seconds
+		consumerIdleSeconds: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "consumer", "idle_seconds"),
+			"Seconds since last consumer activity",
+			consumerLabels,
+			nil,
+		),
 		// jetstream_stream_source_lag
 		streamSourceLag: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "stream", "source_lag"),
@@ -390,6 +406,10 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- nc.consumerNumRedelivered
 	ch <- nc.consumerNumWaiting
 	ch <- nc.consumerNumPending
+	ch <- nc.consumerAckFloorStreamSeq
+	ch <- nc.consumerAckFloorConsumerSeq
+	ch <- nc.consumerLag
+	ch <- nc.consumerIdleSeconds
 
 	// Source state
 	ch <- nc.streamSourceLag
@@ -612,6 +632,16 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					ch <- consumerMetric(nc.consumerNumPending, float64(consumer.NumPending))
 					ch <- consumerMetric(nc.consumerAckFloorStreamSeq, float64(consumer.AckFloor.Stream))
 					ch <- consumerMetric(nc.consumerAckFloorConsumerSeq, float64(consumer.AckFloor.Consumer))
+
+					// Calculate consumer lag: stream's last sequence - consumer's delivered stream sequence
+					consumerLag := float64(stream.State.LastSeq) - float64(consumer.Delivered.Stream)
+					ch <- consumerMetric(nc.consumerLag, consumerLag)
+
+					// Calculate idle time in seconds (time since last delivery timestamp)
+					if consumer.Delivered.Last != nil && !consumer.Delivered.Last.IsZero() {
+						idleSeconds := time.Since(*consumer.Delivered.Last).Seconds()
+						ch <- consumerMetric(nc.consumerIdleSeconds, idleSeconds)
+					}
 				}
 			}
 		}
