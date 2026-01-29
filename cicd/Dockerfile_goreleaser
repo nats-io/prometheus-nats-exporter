@@ -1,30 +1,45 @@
-#syntax=docker/dockerfile-upstream:1.5
-FROM --platform=$BUILDPLATFORM golang:1.24.6-bullseye as build
+#syntax=docker/dockerfile:1.13
+FROM --platform=$BUILDPLATFORM golang:1.25.6-trixie AS build
+
+ARG GITHUB_RUN_ID
 
 RUN <<EOT
-    set -e
+  set -e
 
-    echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sources.list.d/goreleaser.list
-    apt-get update
-    apt-get install -y goreleaser
-    rm -rf /var/lib/apt/lists/*
+  echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' > /etc/apt/sources.list.d/goreleaser.list
+  apt-get update
+  apt-get install -y goreleaser
+  rm -rf /var/lib/apt/lists/*
 EOT
 
 FROM build
 
 ARG CI
 ARG GITHUB_TOKEN
+ARG SNAPSHOT=true
 
 COPY --from=src . /go/src
 
-RUN <<EOT
+WORKDIR /go/src
+
+RUN --mount=type=cache,target=/go/pkg/mod <<EOT
   set -e
-  cd /go/src
+  go mod download
+EOT
+
+RUN --mount=type=cache,target=/go/pkg/mod <<EOT
+  set -e
+
   FLAGS="--clean"
-  if [ -z ${GITHUB_TOKEN} ]; then
-    if [ ${CI} != "true" ]; then FLAGS="${FLAGS} --skip=validate --single-target"; fi
-    goreleaser build ${FLAGS}
-  else
+  if [ -n "${GITHUB_TOKEN}" ]; then
     goreleaser release ${FLAGS}
+  else
+    if [ "${SNAPSHOT}" = "true" ]; then
+      FLAGS="${FLAGS} --snapshot"
+    fi
+    if [ "${CI}" != "true" ]; then
+      FLAGS="${FLAGS} --skip=validate --single-target"
+    fi
+    goreleaser build ${FLAGS}
   fi
 EOT

@@ -2,6 +2,14 @@
 ### Variables
 ###################
 
+variable CI {
+  default = false
+}
+
+variable GITHUB_RUN_ID {
+  default = ""
+}
+
 variable REGISTRY {
   default = ""
 }
@@ -11,8 +19,8 @@ variable TAGS {
   default = "latest"
 }
 
-variable CI {
-  default = false
+variable SNAPSHOT {
+  default = true
 }
 
 ###################
@@ -53,22 +61,24 @@ target "goreleaser" {
     src = "."
   }
   args = {
-    CI = CI
-    GITHUB_TOKEN = ""
+    CI            = CI
+    GITHUB_RUN_ID = GITHUB_RUN_ID
+    GITHUB_TOKEN  = ""
+    SNAPSHOT      = SNAPSHOT
   }
   dockerfile = "cicd/Dockerfile_goreleaser"
 }
 
 target "prometheus-nats-exporter" {
   contexts = {
-    build = "target:goreleaser"
+    build  = "target:goreleaser"
     assets = "cicd/assets"
   }
   args = {
     GO_APP = "prometheus-nats-exporter"
   }
-  dockerfile  = "cicd/Dockerfile"
-  platforms   = get_platforms_multiarch()
-  tags        = get_tags("prometheus-nats-exporter")
-  output      = get_output()
+  dockerfile = "cicd/Dockerfile"
+  platforms  = get_platforms_multiarch()
+  tags       = get_tags("prometheus-nats-exporter")
+  output     = get_output()
 }
