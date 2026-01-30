@@ -14,8 +14,11 @@
 package collector
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -27,6 +30,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
+
+// Enable/disable debug logging in tests
+var Debug bool
 
 // return fqName from parsing the Desc() field of a metric.
 func parseDesc(desc string) string {
@@ -850,5 +856,140 @@ func TestMapKeys(t *testing.T) {
 	keys := mapKeys(m, "")
 	if !maps.Equal(keys, expected) {
 		t.Fatalf("expected %v, got %v", expected, keys)
+	}
+}
+
+func TestJetStreamAccountMetricsWithJSInfo(t *testing.T) {
+	// Enable debug logging
+	Debug = true
+
+	// Create a test server to serve responses using JSInfo
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Logf("Test server received request for: %s", r.URL.Path)
+		switch r.URL.Path {
+		case "/varz":
+			w.Header().Set("Content-Type", "application/json")
+			response := `{"server_id":"SERVER_ID","name":"nats-server"}`
+			fmt.Fprintln(w, response)
+			t.Logf("Sending varz response: %s", response)
+		case "/jsz":
+			// Use the JSInfo struct directly
+			w.Header().Set("Content-Type", "application/json")
+			jsInfo := pet.JszAccountsTestResponse()
+
+			// Marshal the struct to JSON
+			data, err := json.Marshal(jsInfo)
+			if err != nil {
+				t.Fatalf("Error marshaling JSInfo: %v", err)
+			}
+
+			w.Write(data)
+			t.Logf("Sending JSInfo response with %d accounts", len(jsInfo.AccountDetails))
+		default:
+			t.Logf("Not found: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	// Create a new collector
+	servers := make([]*CollectedServer, 1)
+	servers[0] = &CollectedServer{
+		ID:  "SERVER_ID",
+		URL: ts.URL,
+	}
+	t.Logf("Server URL: %s", ts.URL)
+	coll := NewCollector(JetStreamSystem, "accounts", "", servers)
+	t.Logf("Collector created with system=%s, endpoint=%s", JetStreamSystem, "accounts")
+
+	// Collect the metrics
+	c := make(chan prometheus.Metric)
+	foundMetrics := make(map[string]bool)
+	expectedMetrics := []string{
+		"jetstream_account_max_memory",
+		"jetstream_account_max_storage",
+		"jetstream_account_memory_used",
+		"jetstream_account_storage_used",
+	}
+
+	// Expected values for each account based on the JSInfo struct
+	expectedValues := map[string]map[string]float64{
+		"account1": {
+			"jetstream_account_max_memory":   1073741824,  // 1 GB
+			"jetstream_account_max_storage":  10737418240, // 10 GB
+			"jetstream_account_memory_used":  234567890,   // ~223 MB
+			"jetstream_account_storage_used": 3456789012,  // ~3.2 GB
+		},
+		"account2": {
+			"jetstream_account_max_memory":   536870912,  // 512 MB
+			"jetstream_account_max_storage":  5368709120, // 5 GB
+			"jetstream_account_memory_used":  123456789,  // ~117 MB
+			"jetstream_account_storage_used": 1356789012, // ~1.3 GB
+		},
+	}
+
+	// Track which metrics were found with their account names
+	receivedCount := 0
+	go func() {
+		for metric := range c {
+			receivedCount++
+			pb := &dto.Metric{}
+			if err := metric.Write(pb); err != nil {
+				t.Errorf("Unable to write metric: %v", err)
+				continue
+			}
+
+			name := parseDesc(metric.Desc().String())
+			t.Logf("Received metric: %s", name)
+
+			// Find the account name from the labels
+			var accountName string
+			for _, label := range pb.GetLabel() {
+				if label.GetName() == "account" {
+					accountName = label.GetValue()
+					t.Logf("Found account label: %s", accountName)
+					break
+				}
+			}
+
+			// Check if this is one of the account metrics we're interested in
+			for _, metricName := range expectedMetrics {
+				if name == metricName {
+					// Verify metrics for the different accounts
+					var expected float64
+					switch accountName {
+					case "account1":
+						expected = expectedValues["account1"][name]
+						if pb.GetGauge().GetValue() != expected {
+							t.Errorf("For account %s, expected %s=%v, got %v",
+								accountName, name, expected, pb.GetGauge().GetValue())
+						}
+						foundMetrics[name+"_account1"] = true
+					case "account2":
+						expected = expectedValues["account2"][name]
+						if pb.GetGauge().GetValue() != expected {
+							t.Errorf("For account %s, expected %s=%v, got %v",
+								accountName, name, expected, pb.GetGauge().GetValue())
+						}
+						foundMetrics[name+"_account2"] = true
+					}
+				}
+			}
+		}
+	}()
+
+	// Collect the metrics
+	coll.Collect(c)
+	close(c)
+
+	// Wait for processing to complete
+	time.Sleep(100 * time.Millisecond)
+
+	t.Logf("Received %d metrics in total", receivedCount)
+	t.Logf("Found metrics: %v", foundMetrics)
+
+	// Verify that we found all expected metrics for both accounts
+	if len(foundMetrics) != len(expectedMetrics)*2 {
+		t.Errorf("Did not find all expected metrics. Found: %v", foundMetrics)
 	}
 }
