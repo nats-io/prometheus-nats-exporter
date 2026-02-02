@@ -9,7 +9,6 @@ linters:
     - lll
     - misspell
     - nakedret
-    - prealloc
     - revive
     - staticcheck
     - unconvert
