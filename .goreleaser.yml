@@ -1,4 +1,4 @@
----
+version: 2
 project_name: prometheus-nats-exporter
 
 release:
@@ -12,6 +12,8 @@ builds:
   - id: prometheus-nats-exporter
     binary: prometheus-nats-exporter
     main: .
+    flags:
+      - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}
     env:
@@ -34,6 +36,10 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
       - goos: freebsd
         goarch: arm
       - goos: freebsd
@@ -45,7 +51,7 @@ checksum:
   name_template: 'checksums.txt'
 
 archives:
-  - format: tar.gz
+  - formats: tar.gz
     name_template: >-
       {{ .ProjectName }}-v{{ .Version }}-
       {{- .Os }}-
@@ -55,7 +61,7 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
     - goos: windows
-      format: zip
+      formats: zip
 
 nfpms:
 - formats:
