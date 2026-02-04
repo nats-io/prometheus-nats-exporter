@@ -94,6 +94,20 @@ func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
 	return srv
 }
 
+// RunRoutezStaticServer runs a leafz static server.
+func RunRoutezStaticServer(wg *sync.WaitGroup) *http.Server {
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
+	http.Handle("/routez", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, RoutezTestResponse())
+	}))
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
 // RunServerWithPortsAndName runs the NATS server with a monitor port and a name in a go routine
 func RunServerWithPortsAndName(cport, mport int, serverName string) *server.Server {
 	var enableLogging bool

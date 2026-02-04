@@ -27,6 +27,7 @@ import (
 	"time"
 
 	pet "github.com/nats-io/prometheus-nats-exporter/test"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -722,4 +723,57 @@ func TestExporterLeafz(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+}
+
+func TestExporterRoutez(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetRoutez = true
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunRoutezStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	result, err := checkExporterForResult(exp.addr, "gnatsd_routez_route")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Check for top-level metrics
+	assert.Contains(t, result, "gnatsd_routez_server_id", "should export server_id metric")
+	assert.Contains(t, result, "gnatsd_routez_server_name", "should export server_name metric")
+	assert.Contains(t, result, `gnatsd_routez_num_routes{server_id="`, "should export num_routes metric")
+
+	// Check for route-specific metrics
+	assert.Contains(t, result, "gnatsd_routez_route_info", "should export route_info metric")
+	assert.Contains(t, result, "gnatsd_routez_route_subscriptions", "should export subscriptions metric")
+	assert.Contains(t, result, "gnatsd_routez_route_in_msgs", "should export in_msgs metric")
+	assert.Contains(t, result, "gnatsd_routez_route_out_msgs", "should export out_msgs metric")
+	assert.Contains(t, result, "gnatsd_routez_route_in_bytes", "should export in_bytes metric")
+	assert.Contains(t, result, "gnatsd_routez_route_out_bytes", "should export out_bytes metric")
+
+	// Check for optional metrics - both should be present in test data now
+	assert.Contains(t, result, "gnatsd_routez_route_rtt_seconds", "should export rtt_seconds metric")
+	assert.Contains(t, result, "gnatsd_routez_route_uptime_seconds", "should export uptime_seconds metric")
+
+	// Check for specific label values from test data
+	assert.Contains(t, result, `remote_name="server-b"`, "should have server-b route")
+	assert.Contains(t, result, `remote_name="server-c"`, "should have server-c route")
+	assert.Contains(t, result, `account="SYS"`, "should have SYS account label")
+	assert.Contains(t, result, `compression="off"`, "should have compression label")
+	assert.Contains(t, result, `rid="10"`, "should have rid 10")
+	assert.Contains(t, result, `rid="16"`, "should have rid 16")
+
+	// Check for actual metric values from test data
+	assert.Contains(t, result, `gnatsd_routez_route_in_msgs{rid="16",server_id="`, "should export in_msgs for rid 16")
+	assert.Contains(t, result, `gnatsd_routez_route_subscriptions{rid="10",server_id="`, "should export subscriptions for rid 10")
 }

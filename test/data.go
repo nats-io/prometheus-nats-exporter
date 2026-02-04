@@ -120,6 +120,61 @@ func GatewayzTestResponse() string {
 
 }
 
+func RoutezTestResponse() string {
+	return `
+{
+  "server_id": "NDFDEPOQYFZSSB6QDWGZSJII6SCG7XG3M2ZPKVHAU4QCFANKG3EKQ7KD",
+  "server_name": "server-a",
+  "now": "2026-02-03T21:25:39.390699121Z",
+  "num_routes": 2,
+  "routes": [
+    {
+      "rid": 10,
+      "remote_id": "NDJUPHLDJX2J5NM7L6XRXQLVIGG33W35FOHGIVZKNO2XZZDJBMO54CAY",
+      "remote_name": "server-b",
+      "did_solicit": true,
+      "is_configured": true,
+      "ip": "10.89.201.117",
+      "port": 6222,
+      "start": "2026-01-27T07:36:25.596386302Z",
+      "last_activity": "2026-02-03T21:23:20.120573554Z",
+      "rtt": "815µs",
+      "uptime": "7d13h49m13s",
+      "idle": "2m19s",
+      "pending_size": 0,
+      "in_msgs": 2,
+      "out_msgs": 2,
+      "in_bytes": 196,
+      "out_bytes": 31,
+      "subscriptions": 2,
+      "compression": "off"
+    },
+    {
+      "rid": 16,
+      "remote_id": "NDJUPHLDJX2J5NM7L6XRXQLVIGG33W35FOHGIVZKNO2XZZDJBMO54CAY",
+      "remote_name": "server-c",
+      "did_solicit": true,
+      "is_configured": true,
+      "ip": "10.89.201.82",
+      "port": 6222,
+      "start": "2026-01-27T07:36:13.038038228Z",
+      "last_activity": "2026-02-03T21:25:39.346602191Z",
+      "rtt": "924µs",
+      "uptime": "7d13h49m26s",
+      "idle": "0s",
+      "pending_size": 0,
+      "in_msgs": 5954512,
+      "out_msgs": 2184642,
+      "in_bytes": 5963399347,
+      "out_bytes": 2169821095,
+      "subscriptions": 80,
+      "account": "SYS",
+      "compression": "off"
+    }
+  ]
+}`
+}
+
 // AccstatzTestResponse is static data for tests
 func AccstatzTestResponse() string {
 	return `{

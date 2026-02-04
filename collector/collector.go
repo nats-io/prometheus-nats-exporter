@@ -491,6 +491,9 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers, []string{}, []string{})
 	}
+	if isRoutezEndpoint(system, endpoint) {
+		return newRoutezCollector(getSystem(system, prefix), endpoint, servers)
+	}
 	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
 }
 
