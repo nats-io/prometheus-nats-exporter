@@ -723,3 +723,105 @@ func TestExporterLeafz(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestExporterJsz(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetJszFilter = "all"
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunJszStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.addr, "jetstream_server_total_streams")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterJszNoMetaKeys(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetJszFilter = "all"
+	opts.JszStreamMetaKeys = ""
+	opts.JszConsumerMetaKeys = ""
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunJszStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("Expected successful start with empty meta keys, got error: %v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.addr, "jetstream_server_total_streams")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterJszWithMetaKeys(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetJszFilter = "all"
+	opts.JszStreamMetaKeys = "key1,key2"
+	opts.JszConsumerMetaKeys = "ckey1,ckey2"
+
+	serverExit := &sync.WaitGroup{}
+
+	serverExit.Add(1)
+	s := pet.RunJszStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("Expected successful start with valid meta keys, got error: %v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.addr, "jetstream_server_total_streams")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestExporterJszInvalidMetaKeys(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	opts := getDefaultExporterTestOptions()
+	opts.GetJszFilter = "all"
+
+	// Test invalid stream meta key
+	opts.JszStreamMetaKeys = "!!!"
+	opts.JszConsumerMetaKeys = ""
+	exp := NewExporter(opts)
+	if err := exp.Start(); err == nil {
+		exp.Stop()
+		t.Fatalf("Expected error with invalid stream meta key containing only special characters")
+	}
+
+	// Test invalid consumer meta key
+	opts.JszStreamMetaKeys = ""
+	opts.JszConsumerMetaKeys = "!!!"
+	exp = NewExporter(opts)
+	if err := exp.Start(); err == nil {
+		exp.Stop()
+		t.Fatalf("Expected error with invalid consumer meta key containing only special characters")
+	}
+}

@@ -54,10 +54,11 @@ func RunServerWithName(name string) *server.Server {
 
 // RunGatewayzStaticServer starts an http server with static content
 func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
-	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
-	http.Handle("/gatewayz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/gatewayz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, GatewayzTestResponse())
-	}))
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
 
 	go func() {
 		defer wg.Done()
@@ -68,10 +69,11 @@ func RunGatewayzStaticServer(wg *sync.WaitGroup) *http.Server {
 
 // RunAccstatzStaticServer starts an http server with static content
 func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
-	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
-	http.Handle("/accstatz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/accstatz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, AccstatzTestResponse())
-	}))
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
 
 	go func() {
 		defer wg.Done()
@@ -82,10 +84,35 @@ func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
 
 // RunLeafzStaticServer runs a leafz static server.
 func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
-	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort)}
-	http.Handle("/leafz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/leafz", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, leafzTestResponse())
-	}))
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
+// RunJszStaticServer runs a jsz static server.
+func RunJszStaticServer(wg *sync.WaitGroup) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/jsz", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, JszTestResponse())
+	})
+	// JSZ collector also needs varz endpoint
+	mux.HandleFunc("/varz", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{
+			"server_id": "SERVER_ID",
+			"server_name": "test-server",
+			"version": "2.10.0",
+			"cluster": {"name": "test-cluster"}
+		}`)
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
 
 	go func() {
 		defer wg.Done()
