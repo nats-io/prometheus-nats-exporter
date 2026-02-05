@@ -200,3 +200,70 @@ func leafzTestResponse() string {
 	]
 }`
 }
+
+// JszTestResponse is static data for tests
+func JszTestResponse() string {
+	return `{
+  "memory": 0,
+  "storage": 0,
+  "reserved_memory": 0,
+  "reserved_storage": 0,
+  "accounts": 1,
+  "ha_assets": 0,
+  "api": {
+    "level": 2,
+    "total": 2,
+    "errors": 0
+  },
+  "server_id": "test_srv",
+  "now": "2026-02-05T13:26:59.579137Z",
+  "config": {
+    "max_memory": 25769803776,
+    "max_storage": 164756938752,
+    "store_dir": "/tmp/nats/jetstream",
+    "sync_interval": 120000000000,
+    "strict": true
+  },
+  "limits": {},
+  "streams": 1,
+  "consumers": 0,
+  "messages": 0,
+  "bytes": 0,
+  "account_details": [
+    {
+      "name": "$G",
+      "id": "$G",
+      "memory": 0,
+      "storage": 0,
+      "reserved_memory": 18446744073709551615,
+      "reserved_storage": 18446744073709551615,
+      "accounts": 0,
+      "ha_assets": 0,
+      "api": {
+        "level": 0,
+        "total": 2,
+        "errors": 0
+      },
+      "stream_detail": [
+        {
+          "name": "test-stream",
+          "created": "2026-02-05T13:25:33.398032Z",
+          "cluster": {
+            "leader": "NCPHOZHAPLS57BTXBSSAGS4G56KXHUCW5PT737UL2FER5WNGGWW4TSHY"
+          },
+          "state": {
+            "messages": 0,
+            "bytes": 0,
+            "first_seq": 0,
+            "first_ts": "0001-01-01T00:00:00Z",
+            "last_seq": 0,
+            "last_ts": "0001-01-01T00:00:00Z",
+            "consumer_count": 0
+          }
+        }
+      ]
+    }
+  ],
+  "total": 1
+}`
+}

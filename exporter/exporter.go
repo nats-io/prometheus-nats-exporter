@@ -234,17 +234,23 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		default:
 			return fmt.Errorf("invalid jsz filter %q", opts.GetJszFilter)
 		}
+		var streamMetaKeys, consumerMetaKeys []string
 		keyRegex := regexp.MustCompile("[a-zA-Z0-9_]+")
-		streamMetaKeys := strings.Split(opts.JszSteamMetaKeys, ",")
-		for _, k := range streamMetaKeys {
-			if !keyRegex.MatchString(k) {
-				return fmt.Errorf("invalid jsz stream meta key: '%s'", k)
+		if opts.JszSteamMetaKeys != "" {
+			streamMetaKeys = strings.Split(opts.JszSteamMetaKeys, ",")
+			for _, k := range streamMetaKeys {
+				if !keyRegex.MatchString(k) {
+					return fmt.Errorf("invalid jsz stream meta key: '%s'", k)
+				}
 			}
 		}
-		consumerMetaKeys := strings.Split(opts.JszConsumerMetaKeys, ",")
-		for _, k := range consumerMetaKeys {
-			if !keyRegex.MatchString(k) {
-				return fmt.Errorf("invalid jsz consumer meta key: '%s'", k)
+
+		if opts.JszConsumerMetaKeys != "" {
+			consumerMetaKeys = strings.Split(opts.JszConsumerMetaKeys, ",")
+			for _, k := range consumerMetaKeys {
+				if !keyRegex.MatchString(k) {
+					return fmt.Errorf("invalid jsz consumer meta key: '%s'", k)
+				}
 			}
 		}
 		ne.createJszCollector(opts.GetJszFilter, streamMetaKeys, consumerMetaKeys)
