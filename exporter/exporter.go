@@ -61,7 +61,7 @@ type NATSExporterOptions struct {
 	GetAccountz             bool
 	GetLeafz                bool
 	GetJszFilter            string
-	JszSteamMetaKeys        string
+	JszStreamMetaKeys       string
 	JszConsumerMetaKeys     string
 	RetryInterval           time.Duration
 	CertFile                string
@@ -236,8 +236,8 @@ func (ne *NATSExporter) InitializeCollectors() error {
 		}
 		var streamMetaKeys, consumerMetaKeys []string
 		keyRegex := regexp.MustCompile("[a-zA-Z0-9_]+")
-		if opts.JszSteamMetaKeys != "" {
-			streamMetaKeys = strings.Split(opts.JszSteamMetaKeys, ",")
+		if opts.JszStreamMetaKeys != "" {
+			streamMetaKeys = strings.Split(opts.JszStreamMetaKeys, ",")
 			for _, k := range streamMetaKeys {
 				if !keyRegex.MatchString(k) {
 					return fmt.Errorf("invalid jsz stream meta key: '%s'", k)

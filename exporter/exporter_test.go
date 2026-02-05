@@ -753,7 +753,7 @@ func TestExporterJszNoMetaKeys(t *testing.T) {
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetJszFilter = "all"
-	opts.JszSteamMetaKeys = ""
+	opts.JszStreamMetaKeys = ""
 	opts.JszConsumerMetaKeys = ""
 
 	serverExit := &sync.WaitGroup{}
@@ -779,7 +779,7 @@ func TestExporterJszWithMetaKeys(t *testing.T) {
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetJszFilter = "all"
-	opts.JszSteamMetaKeys = "key1,key2"
+	opts.JszStreamMetaKeys = "key1,key2"
 	opts.JszConsumerMetaKeys = "ckey1,ckey2"
 
 	serverExit := &sync.WaitGroup{}
@@ -808,7 +808,7 @@ func TestExporterJszInvalidMetaKeys(t *testing.T) {
 	opts.GetJszFilter = "all"
 
 	// Test invalid stream meta key
-	opts.JszSteamMetaKeys = "!!!"
+	opts.JszStreamMetaKeys = "!!!"
 	opts.JszConsumerMetaKeys = ""
 	exp := NewExporter(opts)
 	if err := exp.Start(); err == nil {
@@ -817,7 +817,7 @@ func TestExporterJszInvalidMetaKeys(t *testing.T) {
 	}
 
 	// Test invalid consumer meta key
-	opts.JszSteamMetaKeys = ""
+	opts.JszStreamMetaKeys = ""
 	opts.JszConsumerMetaKeys = "!!!"
 	exp = NewExporter(opts)
 	if err := exp.Start(); err == nil {
