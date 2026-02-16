@@ -1,6 +1,6 @@
 module github.com/nats-io/prometheus-nats-exporter
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/nats-io/nats-server/v2 v2.12.4
