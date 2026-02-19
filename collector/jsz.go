@@ -15,7 +15,11 @@
 package collector
 
 import (
+	"cmp"
+	"crypto/sha3"
+	"encoding/base64"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -82,6 +86,53 @@ func isJszEndpoint(system string) bool {
 	return system == JetStreamSystem
 }
 
+type groupKey struct {
+	nats.ExternalStream
+	Name string
+}
+
+// Groups by attributes which uniquely identify a source, i.e. Name and ExternalStream
+func groupByIdentity(sources []*nats.StreamSourceInfo) map[groupKey][]*nats.StreamSourceInfo {
+	grouped := make(map[groupKey][]*nats.StreamSourceInfo)
+
+	for _, s := range sources {
+		key := groupKey{Name: s.Name}
+		if s.External != nil {
+			key.ExternalStream = *s.External
+		}
+		grouped[key] = append(grouped[key], s)
+	}
+
+	return grouped
+}
+
+// Creates a deterministic, Base64-encoded SHA3-256 fingerprint
+// of a StreamSourceInfo configuration.
+//
+// It hashes the FilterSubject and all SubjectTransforms. Transforms are sorted
+// before hashing to ensure the same configuration always yields the same ID
+// regardless of slice order.
+//
+// Note: A space (" ") is used as a separator between fields because spaces
+// are invalid characters in NATS subjects, preventing potential hash collisions
+// between different subject combinations.
+func generateSourceID(s *nats.StreamSourceInfo) string {
+	sha := sha3.New256()
+	sha.Write([]byte(s.FilterSubject))
+
+	sortedSts := slices.SortedFunc(slices.Values(s.SubjectTransforms), func(st1, st2 nats.SubjectTransformConfig) int {
+		return cmp.Or(cmp.Compare(st1.Source, st2.Source), cmp.Compare(st1.Destination, st2.Destination))
+	})
+
+	for _, st := range sortedSts {
+		sha.Write([]byte(" "))
+		sha.Write([]byte(st.Source))
+		sha.Write([]byte(" "))
+		sha.Write([]byte(st.Destination))
+	}
+	return base64.StdEncoding.EncodeToString(sha.Sum(nil))
+}
+
 func newJszCollector(
 	system, endpoint string,
 	servers []*CollectedServer,
@@ -119,6 +170,7 @@ func newJszCollector(
 	sourceLabels = append(sourceLabels, "source_name")
 	sourceLabels = append(sourceLabels, "source_api")
 	sourceLabels = append(sourceLabels, "source_deliver")
+	sourceLabels = append(sourceLabels, "source_id")
 
 	mirrorLabels := append([]string{}, streamLabels...)
 	mirrorLabels = append(mirrorLabels, "mirror_name")
@@ -525,25 +577,32 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 
 				// Now with the sources.
-				for _, source := range stream.Sources {
-					sourceName := source.Name
-					var sourceAPI, sourceDeliver string
-					if source.External != nil {
-						sourceAPI = source.External.ApiPrefix
-						sourceDeliver = source.External.DeliverPrefix
+				for _, sourceGroup := range groupByIdentity(stream.Sources) {
+					isSourcingSameStream := len(sourceGroup) >= 2
+					for _, source := range sourceGroup {
+						sourceName := source.Name
+						var sourceAPI, sourceDeliver string
+						if source.External != nil {
+							sourceAPI = source.External.ApiPrefix
+							sourceDeliver = source.External.DeliverPrefix
+						}
+						var sourceID string
+						if isSourcingSameStream {
+							sourceID = generateSourceID(source)
+						}
+						sourceMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
+							return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
+								// Server Labels
+								serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
+								// Stream Labels
+								accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
+								// Source Labels
+								sourceName, sourceAPI, sourceDeliver, sourceID,
+							)
+						}
+						ch <- sourceMetric(nc.streamSourceLag, float64(source.Lag))
+						ch <- sourceMetric(nc.streamSourceActive, float64(source.Active))
 					}
-					sourceMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
-						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
-							// Server Labels
-							serverID, serverName, clusterName, jsDomain, clusterLeader, isMetaLeader,
-							// Stream Labels
-							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
-							// Source Labels
-							sourceName, sourceAPI, sourceDeliver,
-						)
-					}
-					ch <- sourceMetric(nc.streamSourceLag, float64(source.Lag))
-					ch <- sourceMetric(nc.streamSourceActive, float64(source.Active))
 				}
 
 				// Now with the mirror. There can be only one.
