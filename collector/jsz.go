@@ -58,6 +58,8 @@ type jszCollector struct {
 	// Consumer stats
 	consumerDeliveredConsumerSeq *prometheus.Desc
 	consumerDeliveredStreamSeq   *prometheus.Desc
+	consumerLastDelivery         *prometheus.Desc
+	consumerLastAck              *prometheus.Desc
 	consumerNumAckPending        *prometheus.Desc
 	consumerNumRedelivered       *prometheus.Desc
 	consumerNumWaiting           *prometheus.Desc
@@ -278,6 +280,20 @@ func newJszCollector(
 			consumerLabels,
 			nil,
 		),
+		// jetstream_consumer_last_delivery_seconds
+		consumerLastDelivery: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "consumer", "last_delivery_seconds"),
+			"Last delivered time in seconds",
+			consumerLabels,
+			nil,
+		),
+		// jetstream_consumer_last_ack_seconds
+		consumerLastAck: prometheus.NewDesc(
+			prometheus.BuildFQName(system, "consumer", "last_ack_seconds"),
+			"Last ack time in seconds",
+			consumerLabels,
+			nil,
+		),
 		// jetstream_consumer_num_ack_pending
 		consumerNumAckPending: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "consumer", "num_ack_pending"),
@@ -386,6 +402,8 @@ func (nc *jszCollector) Describe(ch chan<- *prometheus.Desc) {
 	// Consumer state
 	ch <- nc.consumerDeliveredConsumerSeq
 	ch <- nc.consumerDeliveredStreamSeq
+	ch <- nc.consumerLastDelivery
+	ch <- nc.consumerLastAck
 	ch <- nc.consumerNumAckPending
 	ch <- nc.consumerNumRedelivered
 	ch <- nc.consumerNumWaiting
@@ -604,8 +622,18 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 					consumerMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
 						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value, consumerLabelValues...)
 					}
+					var consumerLastDelivery float64
+					if consumer.Delivered.Last != nil {
+						consumerLastDelivery = float64(consumer.TimeStamp.Sub(*consumer.Delivered.Last).Seconds())
+					}
+					var consumerLastAck float64
+					if consumer.AckFloor.Last != nil {
+						consumerLastAck = float64(consumer.TimeStamp.Sub(*consumer.AckFloor.Last).Seconds())
+					}
 					ch <- consumerMetric(nc.consumerDeliveredConsumerSeq, float64(consumer.Delivered.Consumer))
 					ch <- consumerMetric(nc.consumerDeliveredStreamSeq, float64(consumer.Delivered.Stream))
+					ch <- consumerMetric(nc.consumerLastDelivery, consumerLastDelivery)
+					ch <- consumerMetric(nc.consumerLastAck, consumerLastAck)
 					ch <- consumerMetric(nc.consumerNumAckPending, float64(consumer.NumAckPending))
 					ch <- consumerMetric(nc.consumerNumRedelivered, float64(consumer.NumRedelivered))
 					ch <- consumerMetric(nc.consumerNumWaiting, float64(consumer.NumWaiting))
