@@ -1,5 +1,5 @@
 #syntax=docker/dockerfile:1.13
-FROM --platform=$BUILDPLATFORM golang:1.25.6-trixie AS build
+FROM --platform=$BUILDPLATFORM golang:1.26.0-trixie AS build
 
 ARG GITHUB_RUN_ID
 
