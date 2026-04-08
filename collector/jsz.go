@@ -623,11 +623,11 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value, consumerLabelValues...)
 					}
 					if consumer.Delivered.Last != nil {
-						consumerLastDelivery := float64(consumer.TimeStamp.Sub(*consumer.Delivered.Last).Seconds())
+						consumerLastDelivery := consumer.TimeStamp.Sub(*consumer.Delivered.Last).Seconds()
 						ch <- consumerMetric(nc.consumerLastDelivery, consumerLastDelivery)
 					}
 					if consumer.AckFloor.Last != nil {
-						consumerLastAck := float64(consumer.TimeStamp.Sub(*consumer.AckFloor.Last).Seconds())
+						consumerLastAck := consumer.TimeStamp.Sub(*consumer.AckFloor.Last).Seconds()
 						ch <- consumerMetric(nc.consumerLastAck, consumerLastAck)
 					}
 					ch <- consumerMetric(nc.consumerDeliveredConsumerSeq, float64(consumer.Delivered.Consumer))
