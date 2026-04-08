@@ -283,14 +283,14 @@ func newJszCollector(
 		// jetstream_consumer_last_delivery_seconds
 		consumerLastDelivery: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "consumer", "last_delivery_seconds"),
-			"Last delivered time in seconds",
+			"Seconds since last message delivery to consumer",
 			consumerLabels,
 			nil,
 		),
 		// jetstream_consumer_last_ack_seconds
 		consumerLastAck: prometheus.NewDesc(
 			prometheus.BuildFQName(system, "consumer", "last_ack_seconds"),
-			"Last ack time in seconds",
+			"Seconds since last ack from consumer",
 			consumerLabels,
 			nil,
 		),
