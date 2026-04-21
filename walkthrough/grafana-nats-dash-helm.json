@@ -151,7 +151,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_cpu",
+          "expr": "nats_varz_cpu{server_id=~\"$server\"}",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_cpu",
@@ -243,7 +243,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_mem",
+          "expr": "nats_varz_mem{server_id=~\"$server\"}",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_mem",
@@ -346,7 +346,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_in_bytes",
+          "expr": "nats_varz_in_bytes{server_id=~\"$server\"}",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_in_bytes",
@@ -436,7 +436,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_in_msgs",
+          "expr": "nats_varz_in_msgs{server_id=~\"$server\"}",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_in_msgs",
@@ -526,7 +526,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_out_bytes",
+          "expr": "nats_varz_out_bytes{server_id=~\"$server\"}",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_out_bytes",
@@ -616,7 +616,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_out_msgs",
+          "expr": "nats_varz_out_msgs{server_id=~\"$server\"}",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_out_msgs",
@@ -722,7 +722,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_connections",
+          "expr": "nats_varz_connections{server_id=~\"$server\"}",
           "intervalFactor": 1,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_connections",
@@ -815,7 +815,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_subscriptions",
+          "expr": "nats_varz_subscriptions{server_id=~\"$server\"}",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
@@ -909,7 +909,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "nats_varz_slow_consumers",
+          "expr": "nats_varz_slow_consumers{server_id=~\"$server\"}",
           "intervalFactor": 1,
           "legendFormat": "{{server_id}}",
           "metric": "nats_varz_slow_consumers",
@@ -926,7 +926,28 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {},
+        "definition": "label_values(nats_varz_cpu, server_id)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Server",
+        "multi": true,
+        "name": "server",
+        "options": [],
+        "query": {
+          "query": "label_values(nats_varz_cpu, server_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query",
+        "datasource": "${DS__NATS-PROMETHEUS}"
+      }
+    ]
   },
   "time": {
     "from": "now-5m",
