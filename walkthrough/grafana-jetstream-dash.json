@@ -598,7 +598,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "sum(jetstream_stream_total_bytes) by (stream_name)",
+          "expr": "sum(jetstream_stream_total_bytes{server_id=~"$server",stream_name=~"$stream"}) by (stream_name)",
           "interval": "",
           "legendFormat": "{{stream_name}}",
           "refId": "A"
@@ -679,7 +679,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "sum(jetstream_stream_total_messages) by (stream_name)",
+          "expr": "sum(jetstream_stream_total_messages{server_id=~"$server",stream_name=~"$stream"}) by (stream_name)",
           "interval": "",
           "legendFormat": "{{stream_name}}",
           "refId": "A"
