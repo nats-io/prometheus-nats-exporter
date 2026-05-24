@@ -97,62 +97,62 @@ func newGateway(system, endpoint, gwType string) *gateway {
 		configured: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_configured"),
 			"configured",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connStart: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_start_time_seconds"),
 			"conn_start_time_seconds",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connLastActivity: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_last_activity_seconds"),
 			"conn_last_activity_seconds",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connUptime: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_uptime_seconds"),
 			"conn_uptime_seconds",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connIdle: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_idle_seconds"),
 			"conn_idle_seconds",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connRtt: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_rtt"),
 			"rtt",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connPendingBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_pending_bytes"),
 			"pending_bytes",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connInMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_in_msgs"),
 			"in_msgs",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connOutMsgs: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_out_msgs"),
 			"out_msgs",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connInBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_in_bytes"),
 			"in_bytes",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connOutBytes: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_out_bytes"),
 			"out_bytes",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 		connSubscriptions: prometheus.NewDesc(
 			prometheus.BuildFQName(system, endpoint, gwType+"_conn_subscriptions"),
 			"subscriptions",
-			[]string{"gateway_name", "cid", "remote_gateway_name", "server_id"},
+			[]string{"gateway_name", "cid", "ip", "remote_gateway_name", "server_id"},
 			nil),
 	}
 
@@ -182,31 +182,32 @@ func (gw *gateway) Collect(server *CollectedServer, lgwName, rgwName string,
 	idle, _ := time.ParseDuration(rgw.Connection.Idle)
 	rtt, _ := time.ParseDuration(rgw.Connection.RTT)
 	uptime, _ := time.ParseDuration(rgw.Connection.Uptime)
+	ip := rgw.Connection.IP
 
 	ch <- prometheus.MustNewConstMetric(gw.configured, prometheus.GaugeValue,
-		boolToFloat(rgw.IsConfigured), lgwName, cid, rgwName, server.ID)
+		boolToFloat(rgw.IsConfigured), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connStart, prometheus.GaugeValue,
-		float64(rgw.Connection.Start.Unix()), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.Start.Unix()), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connLastActivity, prometheus.GaugeValue,
-		float64(rgw.Connection.LastActivity.Unix()), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.LastActivity.Unix()), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connUptime, prometheus.GaugeValue,
-		uptime.Seconds(), lgwName, cid, rgwName, server.ID)
+		uptime.Seconds(), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connIdle, prometheus.GaugeValue,
-		idle.Seconds(), lgwName, cid, rgwName, server.ID)
+		idle.Seconds(), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connRtt, prometheus.GaugeValue,
-		rtt.Seconds(), lgwName, cid, rgwName, server.ID)
+		rtt.Seconds(), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connPendingBytes, prometheus.GaugeValue,
-		float64(rgw.Connection.Pending), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.Pending), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connInMsgs, prometheus.GaugeValue,
-		float64(rgw.Connection.InMsgs), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.InMsgs), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connOutMsgs, prometheus.GaugeValue,
-		float64(rgw.Connection.OutMsgs), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.OutMsgs), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connInBytes, prometheus.GaugeValue,
-		float64(rgw.Connection.InBytes), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.InBytes), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connOutBytes, prometheus.GaugeValue,
-		float64(rgw.Connection.OutBytes), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.OutBytes), lgwName, cid, ip, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connSubscriptions, prometheus.GaugeValue,
-		float64(rgw.Connection.NumSubs), lgwName, cid, rgwName, server.ID)
+		float64(rgw.Connection.NumSubs), lgwName, cid, ip, rgwName, server.ID)
 }
 
 // Gatewayz output
@@ -230,6 +231,7 @@ type ConnInfo struct {
 	RTT          string    `json:"rtt,omitempty"`
 	Uptime       string    `json:"uptime"`
 	Idle         string    `json:"idle"`
+	IP           string    `json:"ip"`
 	Pending      int       `json:"pending_bytes"`
 	InMsgs       int64     `json:"in_msgs"`
 	OutMsgs      int64     `json:"out_msgs"`
