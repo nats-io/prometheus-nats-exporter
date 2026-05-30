@@ -179,9 +179,12 @@ func (gw *gateway) Collect(server *CollectedServer, lgwName, rgwName string,
 	rgw *RemoteGatewayz, ch chan<- prometheus.Metric) {
 
 	cid := strconv.FormatUint(rgw.Connection.Cid, 10)
-	idle, _ := time.ParseDuration(rgw.Connection.Idle)
+	// NATS server formats these durations with day/year units (e.g. "1d0h0m0s")
+	// which time.ParseDuration cannot handle, so use the custom parseDuration
+	// from connz.go (returns milliseconds). See issue #420.
+	idleSecs := parseDuration(rgw.Connection.Idle) / 1000
+	uptimeSecs := parseDuration(rgw.Connection.Uptime) / 1000
 	rtt, _ := time.ParseDuration(rgw.Connection.RTT)
-	uptime, _ := time.ParseDuration(rgw.Connection.Uptime)
 
 	ch <- prometheus.MustNewConstMetric(gw.configured, prometheus.GaugeValue,
 		boolToFloat(rgw.IsConfigured), lgwName, cid, rgwName, server.ID)
@@ -190,9 +193,9 @@ func (gw *gateway) Collect(server *CollectedServer, lgwName, rgwName string,
 	ch <- prometheus.MustNewConstMetric(gw.connLastActivity, prometheus.GaugeValue,
 		float64(rgw.Connection.LastActivity.Unix()), lgwName, cid, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connUptime, prometheus.GaugeValue,
-		uptime.Seconds(), lgwName, cid, rgwName, server.ID)
+		uptimeSecs, lgwName, cid, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connIdle, prometheus.GaugeValue,
-		idle.Seconds(), lgwName, cid, rgwName, server.ID)
+		idleSecs, lgwName, cid, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connRtt, prometheus.GaugeValue,
 		rtt.Seconds(), lgwName, cid, rgwName, server.ID)
 	ch <- prometheus.MustNewConstMetric(gw.connPendingBytes, prometheus.GaugeValue,
