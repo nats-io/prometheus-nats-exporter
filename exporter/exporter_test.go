@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -670,10 +671,37 @@ func TestExporterGatewayz(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	_, err := checkExporterForResult(exp.addr, "gnatsd_gatewayz_inbound_gateway_conn_in_msgs")
+	body, err := checkExporterForResult(exp.addr, "gnatsd_gatewayz_inbound_gateway_conn_in_msgs")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+
+	// Regression for #420: the outbound gateway fixture uses a day-unit duration
+	// ("1d2h3m4s" = 93784s) that time.ParseDuration cannot handle. The custom
+	// parseDuration must report the real value instead of truncating to 0.
+	assertMetricValue(t, body, "gnatsd_gatewayz_outbound_gateway_conn_uptime_seconds", 93784)
+	assertMetricValue(t, body, "gnatsd_gatewayz_outbound_gateway_conn_idle_seconds", 86400)
+}
+
+// assertMetricValue finds the first sample line for the given metric name and
+// fails if its trailing value differs from want.
+func assertMetricValue(t *testing.T, body, metric string, want float64) {
+	t.Helper()
+	for _, line := range strings.Split(body, "\n") {
+		if !strings.HasPrefix(line, metric) {
+			continue
+		}
+		fields := strings.Fields(line)
+		got, err := strconv.ParseFloat(fields[len(fields)-1], 64)
+		if err != nil {
+			t.Fatalf("could not parse value from %q: %v", line, err)
+		}
+		if got != want {
+			t.Fatalf("%s = %v, want %v", metric, got, want)
+		}
+		return
+	}
+	t.Fatalf("metric %s not found in response", metric)
 }
 
 func TestExporterAccstatz(t *testing.T) {
