@@ -1,7 +1,7 @@
 #syntax=docker/dockerfile:1.21
 ARG GO_APP
 
-FROM alpine:3.23.4 AS deps
+FROM alpine:3.24.0 AS deps
 
 ARG GO_APP
 ARG GORELEASER_DIST_DIR=/go/src/dist
@@ -38,7 +38,7 @@ RUN <<EOT
   cp ${BIN_PATH} /go/bin
 EOT
 
-FROM alpine:3.23.4
+FROM alpine:3.24.0
 
 ARG GO_APP
 ENV GO_APP=${GO_APP}
