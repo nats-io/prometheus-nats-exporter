@@ -115,6 +115,12 @@ Usage:  ./prometheus-nats-exporter <flags> url
         Server certificate file (Enables HTTPS).
   -tlskey string
         Private key for server certificate (used with HTTPS).
+  -natstlscacert string
+        CA certificate for NATS.
+  -natstlscert string
+        Client certificate file for NATS.
+  -natstlskey string
+        Private key for NATS certificate.
   -use_internal_server_id
         Enables using ServerID from /varz
   -use_internal_server_name
