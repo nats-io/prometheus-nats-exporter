@@ -97,6 +97,21 @@ func RunLeafzStaticServer(wg *sync.WaitGroup) *http.Server {
 	return srv
 }
 
+// RunRoutezStaticServer runs a routez static server.
+func RunRoutezStaticServer(wg *sync.WaitGroup) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/routez", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, RoutezTestResponse())
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
 // RunJszStaticServer runs a jsz static server.
 func RunJszStaticServer(wg *sync.WaitGroup) *http.Server {
 	mux := http.NewServeMux()
