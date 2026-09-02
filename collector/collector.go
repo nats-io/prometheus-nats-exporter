@@ -488,6 +488,9 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isLeafzEndpoint(system, endpoint) {
 		return newLeafzCollector(getSystem(system, prefix), endpoint, servers)
 	}
+	if isRoutezEndpoint(system, endpoint) {
+		return newRoutezCollector(getSystem(system, prefix), endpoint, servers)
+	}
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers, []string{}, []string{})
 	}
