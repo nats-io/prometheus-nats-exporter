@@ -84,7 +84,7 @@ If no metric flags are passed, the exporter defaults to `-varz` only (not "nothi
 - Each NATS endpoint has its own collector file (e.g., `varz.go`, `connz.go`, `jsz.go`)
 - `NATSCollector`: Base type for standard collectors using reflection-based metric extraction (`objectToMetrics` in `collector.go`)
 - JetStream collector (`jsz.go`): Custom implementation using Prometheus `Describe`/`Collect` pattern — required because nested account→stream→consumer hierarchy needs typed labels with fixed cardinality
-- Custom (non-reflection) collectors: `connz.go`, `gatewayz.go`, `leafz.go`, `accountz.go`, `accstatz.go`, `healthz.go`, `jsz.go`. Reflection-only: `varz.go`, `subz.go`, `routez.go`
+- Custom (non-reflection) collectors: `connz.go`, `gatewayz.go`, `leafz.go`, `routez.go`, `accountz.go`, `accstatz.go`, `healthz.go`, `jsz.go`. Reflection-only endpoints: `varz`, `subsz`
 - Collectors poll NATS HTTP endpoints and transform JSON responses into Prometheus metrics
 - All metrics are gauges (snapshots of current state)
 - Metric naming: Uses "gnatsd" namespace for backward compatibility (not "nats")

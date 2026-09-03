@@ -752,6 +752,29 @@ func TestExporterLeafz(t *testing.T) {
 	}
 }
 
+func TestExporterRoutez(t *testing.T) {
+	opts := getStaticExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetRoutez = true
+
+	serverExit := &sync.WaitGroup{}
+	serverExit.Add(1)
+	s := pet.RunRoutezStaticServer(serverExit)
+	defer s.Shutdown(context.TODO())
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	_, err := checkExporterForResult(exp.addr, "gnatsd_routez_route_pending_bytes")
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
 func TestExporterJsz(t *testing.T) {
 	opts := getStaticExporterTestOptions()
 	opts.ListenAddress = "localhost"
