@@ -96,7 +96,7 @@ selecting a view of the last five minutes will be more exciting).
 
 Experiment running benchmarks and applications and you'll see a dashboard like the one below!
 
-![Dashboard Image](images/GrafanaDashboard.jpg?raw=true "Grafana NATS Dashboard")
+![Dashboard Image](images/GrafanaDashboard.png?raw=true "Grafana NATS Dashboard")
 
 If you're using JetStream, you can import the JetStream dashboard (`grafana-jetstream-dash.json`) too:
 
