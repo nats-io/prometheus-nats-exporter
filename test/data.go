@@ -201,6 +201,61 @@ func leafzTestResponse() string {
 }`
 }
 
+// RoutezTestResponse is static data for routez tests.
+func RoutezTestResponse() string {
+	return `{
+	"server_id": "ROUTEZ_SERVER_ID",
+	"server_name": "routez-server",
+	"now": "2026-09-01T19:00:00Z",
+	"num_routes": 2,
+	"routes": [
+		{
+			"rid": 101,
+			"remote_id": "REMOTE_SERVER_ID",
+			"remote_name": "route-peer",
+			"did_solicit": true,
+			"is_configured": true,
+			"ip": "127.0.0.1",
+			"port": 6222,
+			"start": "2026-08-31T16:56:56Z",
+			"last_activity": "2026-09-01T18:59:55Z",
+			"rtt": "1.234ms",
+			"uptime": "1d2h3m4s",
+			"idle": "5s",
+			"pending_size": 4096,
+			"in_msgs": 1200,
+			"out_msgs": 1300,
+			"in_bytes": 24000,
+			"out_bytes": 26000,
+			"subscriptions": 42,
+			"compression": "s2_fast"
+		},
+		{
+			"rid": 102,
+			"remote_id": "REMOTE_SERVER_ID",
+			"remote_name": "route-peer",
+			"did_solicit": true,
+			"is_configured": false,
+			"ip": "127.0.0.1",
+			"port": 6222,
+			"start": "2026-09-01T18:00:00Z",
+			"last_activity": "2026-09-01T18:59:59Z",
+			"rtt": "900us",
+			"uptime": "1h",
+			"idle": "1s",
+			"pending_size": 64,
+			"in_msgs": 2200,
+			"out_msgs": 2300,
+			"in_bytes": 44000,
+			"out_bytes": 46000,
+			"subscriptions": 7,
+			"account": "APP",
+			"compression": "s2_fast"
+		}
+	]
+}`
+}
+
 // JszTestResponse is static data for tests
 func JszTestResponse() string {
 	return `{
