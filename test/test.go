@@ -121,6 +121,21 @@ func RunJszStaticServer(wg *sync.WaitGroup) *http.Server {
 	return srv
 }
 
+// RunExpvarzStaticServer runs a /debug/vars static server.
+func RunExpvarzStaticServer(wg *sync.WaitGroup) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/debug/vars", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, ExpvarzTestResponse())
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
 // RunServerWithPortsAndName runs the NATS server with a monitor port and a name in a go routine
 func RunServerWithPortsAndName(cport, mport int, serverName string) *server.Server {
 	var enableLogging bool

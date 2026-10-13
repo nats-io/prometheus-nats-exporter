@@ -752,6 +752,27 @@ func TestExporterLeafz(t *testing.T) {
 	}
 }
 
+// Runs against a real server so the test catches changes in the /debug/vars shape.
+func TestExporterExpvarz(t *testing.T) {
+	opts := getDefaultExporterTestOptions()
+	opts.ListenAddress = "localhost"
+	opts.ListenPort = 0
+	opts.GetExpvarz = true
+
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	exp := NewExporter(opts)
+	if err := exp.Start(); err != nil {
+		t.Fatalf("%v", err)
+	}
+	defer exp.Stop()
+
+	if _, err := checkExporterForResult(exp.addr, "gnatsd_expvarz_memstats_sys_bytes"); err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
 func TestExporterJsz(t *testing.T) {
 	opts := getStaticExporterTestOptions()
 	opts.ListenAddress = "localhost"
