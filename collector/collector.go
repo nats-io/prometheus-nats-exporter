@@ -15,10 +15,14 @@
 package collector
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io"
 	"maps"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +60,13 @@ type NATSCollector struct {
 	system         string
 	servers        []*CollectedServer
 	serverRespKeys map[string]struct{}
+}
+
+// TLSOptions specify NATS TLS cerfificates
+type TLSOptions struct {
+	CaFile   string
+	CertFile string
+	KeyFile  string
 }
 
 // newPrometheusGaugeVec creates a custom GaugeVec
@@ -428,9 +439,16 @@ func mapKeys(input map[string]any, prefix string) map[string]struct{} {
 	return keys
 }
 
-func newNatsCollector(system, endpoint string, servers []*CollectedServer) prometheus.Collector {
-	// TODO:  Potentially add TLS config in the transport.
-	tr := &http.Transport{}
+func newNatsCollector(
+	system,
+	endpoint string,
+	servers []*CollectedServer,
+	tlsOptions *TLSOptions) prometheus.Collector {
+	tlsConfig, err := generateTLSConfig(tlsOptions)
+	if err != nil {
+		Fatalf("Failed to create NATS TLS configuration: %v", err)
+	}
+	tr := &http.Transport{TLSClientConfig: tlsConfig}
 	hc := &http.Client{Transport: tr}
 	nc := &NATSCollector{
 		httpClient: hc,
@@ -453,6 +471,36 @@ func newNatsCollector(system, endpoint string, servers []*CollectedServer) prome
 	return nc
 }
 
+func generateTLSConfig(tlsOptions *TLSOptions) (*tls.Config, error) {
+	if tlsOptions == nil {
+		return nil, nil
+	}
+
+	config := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	cert, err := tls.LoadX509KeyPair(tlsOptions.CertFile, tlsOptions.KeyFile)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error parsing X509 certificate/key pair (%s, %s): %v", tlsOptions.CertFile, tlsOptions.KeyFile, err)
+	}
+	config.Certificates = []tls.Certificate{cert}
+
+	if tlsOptions.CaFile != "" {
+		rootPEM, err := os.ReadFile(tlsOptions.CaFile)
+		if err != nil || rootPEM == nil {
+			return nil, fmt.Errorf("failed to load root ca certificate (%s): %v", tlsOptions.CaFile, err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(rootPEM) {
+			return nil, fmt.Errorf("failed to parse root ca certificate")
+		}
+		config.RootCAs = pool
+	}
+	return config, nil
+}
+
 func getSystem(system, prefix string) string {
 	if prefix == "" {
 		return system
@@ -469,7 +517,12 @@ func boolToFloat(b bool) float64 {
 
 // NewCollector creates a new NATS Collector from a list of monitoring URLs.
 // Each URL should be to a specific endpoint (e.g. varz, connz, healthz, subsz, or routez)
-func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) prometheus.Collector {
+func NewCollector(
+	system,
+	endpoint,
+	prefix string,
+	servers []*CollectedServer,
+	tlsOptions *TLSOptions) prometheus.Collector {
 	if isHealthzEndpoint(system, endpoint) {
 		return newHealthzCollector(getSystem(system, prefix), endpoint, servers)
 	}
@@ -491,7 +544,7 @@ func NewCollector(system, endpoint, prefix string, servers []*CollectedServer) p
 	if isJszEndpoint(system) {
 		return newJszCollector(getSystem(system, prefix), endpoint, servers, []string{}, []string{})
 	}
-	return newNatsCollector(getSystem(system, prefix), endpoint, servers)
+	return newNatsCollector(getSystem(system, prefix), endpoint, servers, tlsOptions)
 }
 
 // NewJszCollector creates a new NATS JetStream Collector.

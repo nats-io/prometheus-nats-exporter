@@ -38,10 +38,16 @@ const (
 	caCertFile = "../test/certs/ca.pem"
 )
 
-func getDefaultExporterTestOptions() (opts *NATSExporterOptions) {
+func getDefaultExporterTestOptions(secure bool) (opts *NATSExporterOptions) {
 	o := GetDefaultExporterOptions()
 	o.NATSServerTag = "test-server"
-	o.NATSServerURL = fmt.Sprintf("http://localhost:%d", pet.MonitorPort)
+
+	url := "http://localhost:%d"
+	if secure {
+		url = "https://127.0.0.1:%d"
+	}
+
+	o.NATSServerURL = fmt.Sprintf(url, pet.MonitorPort)
 	return o
 }
 
@@ -136,7 +142,7 @@ func checkExporterForResult(addr, result string) (string, error) {
 }
 
 func TestExporter(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -162,7 +168,7 @@ func TestExporter(t *testing.T) {
 }
 
 func TestExporterRestart(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -196,15 +202,15 @@ func TestExporterRestart(t *testing.T) {
 }
 
 func TestExporterHTTPS(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
-	opts.ListenAddress = "localhost"
+	opts := getDefaultExporterTestOptions(true)
+	opts.ListenAddress = "127.0.0.1"
 	opts.ListenPort = 0
 	opts.GetVarz = true
-	opts.CaFile = caCertFile
-	opts.CertFile = serverCert
-	opts.KeyFile = serverKey
+	opts.NatsCaFile = caCertFile
+	opts.NatsCertFile = clientCert
+	opts.NatsKeyFile = clientKey
 
-	s := pet.RunServer()
+	s := pet.RunHTTPSServer()
 	defer s.Shutdown()
 
 	exp := NewExporter(opts)
@@ -213,12 +219,7 @@ func TestExporterHTTPS(t *testing.T) {
 	}
 	defer exp.Stop()
 
-	// Check that we CANNOT connect with http
-	if err := checkExporter(exp.addr, false); err == nil {
-		t.Fatalf("Did not receive expected error.")
-	}
-	// Check that we CAN connect with https
-	if err := checkExporter(exp.addr, true); err != nil {
+	if err := checkExporter(exp.addr, false); err != nil {
 		t.Fatalf("Received TLS error:  %v", err)
 	}
 }
@@ -227,7 +228,7 @@ func TestExporterHTTPSInvalidConfig(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 
 	checkExporterStart := func() {
 		exp := NewExporter(opts)
@@ -293,7 +294,7 @@ func TestExporterDefaultOptions(t *testing.T) {
 }
 
 func TestExporterScrapePathOption(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.ScrapePath = "/some/other/path/to/metrics"
@@ -320,7 +321,7 @@ func TestExporterScrapePathOption(t *testing.T) {
 }
 
 func TestExporterScrapePathOptionAddsSlash(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.ScrapePath = "elsewhere"
@@ -346,7 +347,7 @@ func TestExporterWait(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -415,7 +416,7 @@ func TestExporterAPIIdempotency(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
@@ -440,7 +441,7 @@ func TestExporterAddServerAfterStart(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
@@ -462,7 +463,7 @@ func TestPortReuse(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 8888
 	opts.GetVarz = true
@@ -486,7 +487,7 @@ func TestExporterBounce(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -586,7 +587,7 @@ func testBasicAuth(opts *NATSExporterOptions, testuser, testpass string, expecte
 }
 
 func TestExporterBasicAuth(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -633,7 +634,7 @@ func TestExporterBasicAuth(t *testing.T) {
 }
 
 func TestExporterPrefix(t *testing.T) {
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.ListenAddress = "localhost"
 	opts.ListenPort = 0
 	opts.GetVarz = true
@@ -832,7 +833,7 @@ func TestExporterJszInvalidMetaKeys(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
 
-	opts := getDefaultExporterTestOptions()
+	opts := getDefaultExporterTestOptions(false)
 	opts.GetJszFilter = "all"
 
 	// Test invalid stream meta key

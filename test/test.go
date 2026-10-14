@@ -16,8 +16,11 @@
 package test
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -33,6 +36,14 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const (
+	clientCert = "../test/certs/client.pem"
+	clientKey  = "../test/certs/client.key"
+	serverCert = "../test/certs/server.pem"
+	serverKey  = "../test/certs/server.key"
+	caCert     = "../test/certs/ca.pem"
+)
+
 // ClientPort is the default port for clients to connect
 const ClientPort = 11224
 
@@ -45,6 +56,77 @@ const StaticPort = 11425
 // RunServer runs the NATS server in a go routine
 func RunServer() *server.Server {
 	return RunServerWithPorts(ClientPort, MonitorPort)
+}
+
+// RunHTTPSServer runs a secure NATS server
+func RunHTTPSServer() *server.Server {
+	resetPreviousHTTPConnections()
+	tlsConfig := &tls.Config{}
+
+	caCertValue, err := os.ReadFile(caCert)
+	if err != nil {
+		log.Fatalf("Got error reading RootCA file: %s", err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCertValue)
+	tlsConfig.RootCAs = caCertPool
+
+	cert, err := tls.LoadX509KeyPair(serverCert, serverKey)
+	if err != nil {
+		log.Fatalf("Got error reading client certificates: %s", err)
+	}
+	tlsConfig.Certificates = []tls.Certificate{cert}
+
+	opts := &server.Options{
+		ServerName:  "",
+		Host:        "127.0.0.1",
+		Port:        ClientPort,
+		HTTPHost:    "127.0.0.1",
+		HTTPSPort:   MonitorPort,
+		NoLog:       false,
+		NoSigs:      true,
+		TLS:         true,
+		TLSVerify:   true,
+		TLSCaCert:   caCert,
+		TLSCert:     serverCert,
+		TLSKey:      serverKey,
+		AllowNonTLS: false,
+		TLSConfig:   tlsConfig,
+	}
+
+	s, err := server.NewServer(opts)
+	if err != nil {
+		panic(fmt.Sprintf("No NATS Server object returned (%v)", err))
+	}
+
+	l := logger.NewStdLogger(true, true, true, false, true)
+	s.SetLogger(l, true, true)
+
+	go s.Start()
+
+	end := time.Now().Add(10 * time.Second)
+	for time.Now().Before(end) {
+		netAddr := s.Addr()
+		if netAddr == nil {
+			continue
+		}
+		addr := s.Addr().String()
+		if addr == "" {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+		conn, err := net.Dial("tcp", addr)
+		if err != nil {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		_ = conn.Close()
+
+		time.Sleep(25 * time.Millisecond)
+
+		return s
+	}
+	panic("Unable to start secure NATS Server in Go Routine")
 }
 
 // RunServerWithName runs the NATS server in a go routine
@@ -229,8 +311,18 @@ func resetPreviousHTTPConnections() {
 }
 
 // CreateClientConnSubscribeAndPublish creates a conn and publishes
-func CreateClientConnSubscribeAndPublish(t *testing.T) *nats.Conn {
-	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", ClientPort))
+func CreateClientConnSubscribeAndPublish(t *testing.T, secure bool) *nats.Conn {
+	var nc *nats.Conn
+	var err error
+
+	if secure {
+		clientCert := nats.ClientCert(clientCert, clientKey)
+		caCert := nats.RootCAs(caCert)
+		nc, err = nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", ClientPort), clientCert, caCert)
+	} else {
+		nc, err = nats.Connect(fmt.Sprintf("nats://localhost:%d", ClientPort))
+	}
+
 	if err != nil {
 		t.Fatalf("Error creating client: %v\n", err)
 	}
