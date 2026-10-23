@@ -134,6 +134,32 @@ configured) is supported.
 e.g.
 `http://denver1.foobar.com:8222`
 
+### Route metrics
+
+Enable `-routez` to export one series for each route connection. Metric names use
+the configured prefix: `gnatsd` by default and commonly `nats` in Helm deployments.
+
+| Metric suffix | Source | Description |
+| --- | --- | --- |
+| `routez_num_routes` | `num_routes` | Total route connections for the server. |
+| `routez_route_info` | constant `1` | Route metadata, including `is_configured`, `did_solicit`, and `compression` labels. |
+| `routez_route_pending_bytes` | `pending_size` | Bytes waiting to be written to the route. |
+| `routez_route_rtt_seconds` | `rtt` | Route round-trip time in seconds. |
+| `routez_route_in_msgs` | `in_msgs` | Messages received over the route. |
+| `routez_route_out_msgs` | `out_msgs` | Messages sent over the route. |
+| `routez_route_in_bytes` | `in_bytes` | Bytes received over the route. |
+| `routez_route_out_bytes` | `out_bytes` | Bytes sent over the route. |
+| `routez_route_subscriptions` | `subscriptions` | Subscriptions propagated over the route. |
+| `routez_route_uptime_seconds` | `uptime` | Route uptime in seconds. |
+| `routez_route_idle_seconds` | `idle` | Route idle time in seconds. |
+| `routez_route_start_time_seconds` | `start` | Route start time as Unix seconds. |
+| `routez_route_last_activity_seconds` | `last_activity` | Last route activity as Unix seconds. |
+
+`routez_route_pending_bytes` should normally remain near zero; sustained or
+spiky values can indicate head-of-line blocking on that route. The `rid` label
+distinguishes pooled connections to the same peer, while `account` identifies
+dedicated pinned-account routes.
+
 # Monitoring
 
 The NATS Prometheus exporter exposes metrics through an HTTP interface, and will
