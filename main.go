@@ -78,7 +78,7 @@ func updateOptions(debugAndTrace, useSysLog bool, opts *exporter.NATSExporterOpt
 
 	metricsSpecified := opts.GetConnz || opts.GetVarz || opts.GetSubz || opts.GetHealthz ||
 		opts.GetHealthzJsEnabledOnly || opts.GetHealthzJsServerOnly ||
-		opts.GetRoutez || opts.GetGatewayz || opts.GetAccstatz || opts.GetAccountz || opts.GetLeafz ||
+		opts.GetRoutez || opts.GetGatewayz || opts.GetAccstatz || opts.GetAccountz || opts.GetLeafz || opts.GetIpqueuesz ||
 		opts.GetJszFilter == ""
 	if !metricsSpecified {
 		// No logger setup yet, so use fmt
@@ -129,6 +129,9 @@ func main() {
 	flag.BoolVar(&opts.GetAccstatz, "accstatz", false, "Get accstatz metrics.")
 	flag.BoolVar(&opts.GetAccountz, "accountz", false, "Get account details metrics.")
 	flag.BoolVar(&opts.GetLeafz, "leafz", false, "Get leaf metrics.")
+	flag.BoolVar(&opts.GetIpqueuesz, "ipqueuesz", false, "Get internal queue metrics (non-empty queues only).")
+	flag.StringVar(&opts.IpqueueszFilter, "ipqueuesz_filter", "",
+		"Only report internal queues whose name contains this string (e.g. \" messages\").")
 	flag.BoolVar(&opts.GetRoutez, "routez", false, "Get route metrics.")
 	flag.BoolVar(&opts.GetSubz, "subz", false, "Get subscription metrics.")
 	flag.BoolVar(&opts.GetVarz, "varz", false, "Get general metrics.")
