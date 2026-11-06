@@ -267,3 +267,34 @@ func JszTestResponse() string {
   "total": 1
 }`
 }
+
+// ExpvarzTestResponse is static /debug/vars data for tests, trimmed to the
+// memstats fields the collector reads plus a few it ignores.
+func ExpvarzTestResponse() string {
+	return `{
+"cmdline": ["nats-server", "--config", "/etc/nats-config/nats.conf"],
+"memstats": {
+	"Alloc": 1610612736,
+	"TotalAlloc": 987654321000,
+	"Sys": 4294967296,
+	"Mallocs": 123456789,
+	"Frees": 123000000,
+	"HeapAlloc": 1610612736,
+	"HeapSys": 3758096384,
+	"HeapIdle": 1879048192,
+	"HeapInuse": 1879048192,
+	"HeapReleased": 536870912,
+	"HeapObjects": 456789,
+	"NextGC": 2147483648,
+	"LastGC": 1760000000500000000,
+	"PauseTotalNs": 2500000000,
+	"PauseNs": [1000, 2000, 3000],
+	"NumGC": 4200,
+	"NumForcedGC": 3,
+	"GCCPUFraction": 0.125,
+	"EnableGC": true,
+	"DebugGC": false,
+	"BySize": [{"Size": 0, "Mallocs": 0, "Frees": 0}]
+}
+}`
+}
