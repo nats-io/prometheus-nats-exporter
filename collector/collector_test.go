@@ -826,6 +826,99 @@ func TestJetStreamSourceMetricsWithoutExternal(t *testing.T) {
 	verifyLabels(JetStreamSystem, url, "streams", expectedLabels, t)
 }
 
+func TestJetStreamSourceMetricsWithDuplicateStream(t *testing.T) {
+	clientPort := 4232
+	monitorPort := 8232
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABCD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a source stream
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "source-stream",
+		Subjects: []string{"source.*"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a stream with two same sources, one defined with FilterSubject
+	// and the second with SubjectTransforms
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "target-stream",
+		Subjects: []string{"target.*"},
+		Sources: []*nats.StreamSource{
+			{
+				Name: "source-stream",
+				SubjectTransforms: []nats.SubjectTransformConfig{
+					{
+						Source:      "source.A.>",
+						Destination: "target.A.>",
+					},
+				},
+			},
+			{
+				Name: "source-stream",
+				SubjectTransforms: []nats.SubjectTransformConfig{
+					{
+						Source:      "source.B.>",
+						Destination: "target.B.>",
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Publish some messages to the source stream
+	js.Publish("source.A.test", []byte("messageA"))
+	js.Publish("source.B.test", []byte("messageB"))
+	time.Sleep(2 * time.Second)
+
+	// Test containing two metrics with different source_id
+	for _, sourceID := range []string{
+		"M79JucyyatEvvtgsj5zrb1bgmHuqOcgzi6bn5ntmvt8=",
+		"0cx2qEU1Cti/FRLVkPSfSXauBQ0V0HgLwQWeAv5CoVQ=",
+	} {
+		expectedLabels := map[string]map[string]string{
+			"jetstream_stream_source_lag": {
+				"source_name":    "source-stream",
+				"source_api":     "",
+				"source_deliver": "",
+				"source_id":      sourceID,
+				"stream_name":    "target-stream",
+			},
+			"jetstream_stream_source_active_duration_ns": {
+				"source_name":    "source-stream",
+				"source_api":     "",
+				"source_deliver": "",
+				"source_id":      sourceID,
+				"stream_name":    "target-stream",
+			},
+		}
+		verifyLabels(JetStreamSystem, url, "streams", expectedLabels, t)
+	}
+}
+
 func TestMapKeys(t *testing.T) {
 	m := map[string]any{
 		"foo": "bar",
