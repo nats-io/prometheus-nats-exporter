@@ -67,6 +67,9 @@ type NATSExporterOptions struct {
 	CertFile                string
 	KeyFile                 string
 	CaFile                  string
+	NatsCertFile            string
+	NatsCaFile              string
+	NatsKeyFile             string
 	NATSServerURL           string
 	NATSServerTag           string
 	HTTPUser                string // User in metrics scrape by prometheus.
@@ -132,10 +135,18 @@ func NewExporter(opts *NATSExporterOptions) *NATSExporter {
 }
 
 func (ne *NATSExporter) createCollector(system, endpoint string) {
-	ne.registerCollector(system, endpoint,
-		collector.NewCollector(system, endpoint,
-			ne.opts.Prefix,
-			ne.servers))
+	var tlsOptions *collector.TLSOptions
+
+	if ne.opts.NatsCertFile != "" {
+		tlsOptions = &collector.TLSOptions{
+			CaFile:   ne.opts.NatsCaFile,
+			CertFile: ne.opts.NatsCertFile,
+			KeyFile:  ne.opts.NatsKeyFile,
+		}
+	}
+
+	ne.registerCollector(
+		system, endpoint, collector.NewCollector(system, endpoint, ne.opts.Prefix, ne.servers, tlsOptions))
 }
 
 func (ne *NATSExporter) createJszCollector(endpoint string, streamMetaKeys, consumerMetaKeys []string) {
