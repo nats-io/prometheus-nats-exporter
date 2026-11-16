@@ -121,6 +121,9 @@ func newJszCollector(
 	sourceLabels = append(sourceLabels, "source_name")
 	sourceLabels = append(sourceLabels, "source_api")
 	sourceLabels = append(sourceLabels, "source_deliver")
+	// A stream may source the same origin several times with different filters; without the
+	// filter those series collide and the whole scrape fails.
+	sourceLabels = append(sourceLabels, "source_filter")
 
 	mirrorLabels := append([]string{}, streamLabels...)
 	mirrorLabels = append(mirrorLabels, "mirror_name")
@@ -550,6 +553,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 						sourceAPI = source.External.ApiPrefix
 						sourceDeliver = source.External.DeliverPrefix
 					}
+					sourceFilter := sourceFilterLabel(source)
 					sourceMetric := func(key *prometheus.Desc, value float64) prometheus.Metric {
 						return prometheus.MustNewConstMetric(key, prometheus.GaugeValue, value,
 							// Server Labels
@@ -557,7 +561,7 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 							// Stream Labels
 							accountName, accountName, accountID, streamName, streamLeader, isStreamLeader, streamRaftGroup,
 							// Source Labels
-							sourceName, sourceAPI, sourceDeliver,
+							sourceName, sourceAPI, sourceDeliver, sourceFilter,
 						)
 					}
 					ch <- sourceMetric(nc.streamSourceLag, float64(source.Lag))
@@ -642,4 +646,18 @@ func (nc *jszCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 		}
 	}
+}
+
+// sourceFilterLabel identifies which part of the origin stream a source reads: its filter
+// subject, or the source subjects of its subject transforms joined by ",". Empty when the
+// source reads the whole origin.
+func sourceFilterLabel(source *nats.StreamSourceInfo) string {
+	if source.FilterSubject != "" {
+		return source.FilterSubject
+	}
+	srcs := make([]string, 0, len(source.SubjectTransforms))
+	for _, tr := range source.SubjectTransforms {
+		srcs = append(srcs, tr.Source)
+	}
+	return strings.Join(srcs, ",")
 }
