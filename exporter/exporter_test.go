@@ -752,6 +752,50 @@ func TestExporterLeafz(t *testing.T) {
 	}
 }
 
+func TestExporterIpqueuesz(t *testing.T) {
+	var serverExit sync.WaitGroup
+	serverExit.Add(1)
+	s := pet.RunIpqueueszStaticServer(&serverExit)
+	defer s.Close()
+
+	for _, tc := range []struct {
+		name         string
+		prefix       string
+		filter       string
+		metricPrefix string
+	}{
+		{name: "default", metricPrefix: "gnatsd"},
+		{name: "filtered_custom_prefix", prefix: "nats", filter: " messages", metricPrefix: "nats"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := getStaticExporterTestOptions()
+			opts.ListenAddress = "localhost"
+			opts.ListenPort = 0
+			opts.GetIpqueuesz = true
+			opts.IpqueueszFilter = tc.filter
+			opts.Prefix = tc.prefix
+
+			exp := NewExporter(opts)
+			if err := exp.Start(); err != nil {
+				t.Fatalf("%v", err)
+			}
+			defer exp.Stop()
+
+			body, err := checkExporterForResult(exp.addr, tc.metricPrefix+"_ipqueuesz_pending")
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+			labels := fmt.Sprintf("{queue=%q,server_id=%q}",
+				"[ACC:backend] stream 'inactive-bet-stake-2' messages", opts.NATSServerTag)
+			assertMetricValue(t, body, tc.metricPrefix+"_ipqueuesz_pending"+labels, 81234)
+			assertMetricValue(t, body, tc.metricPrefix+"_ipqueuesz_in_progress"+labels, 512)
+			if strings.Contains(body, "Route Outbound") != (tc.filter == "") {
+				t.Fatalf("Unexpected route queue presence for filter %q", tc.filter)
+			}
+		})
+	}
+}
+
 func TestExporterJsz(t *testing.T) {
 	opts := getStaticExporterTestOptions()
 	opts.ListenAddress = "localhost"

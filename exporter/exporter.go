@@ -60,6 +60,8 @@ type NATSExporterOptions struct {
 	GetAccstatz             bool
 	GetAccountz             bool
 	GetLeafz                bool
+	GetIpqueuesz            bool
+	IpqueueszFilter         string
 	GetJszFilter            string
 	JszStreamMetaKeys       string
 	JszConsumerMetaKeys     string
@@ -227,6 +229,10 @@ func (ne *NATSExporter) InitializeCollectors() error {
 	}
 	if opts.GetRoutez {
 		ne.createCollector(collector.CoreSystem, "routez")
+	}
+	if opts.GetIpqueuesz {
+		ne.registerCollector(collector.CoreSystem, "ipqueuesz",
+			collector.NewIpqueueszCollector(opts.Prefix, opts.IpqueueszFilter, ne.servers))
 	}
 	if opts.GetJszFilter != "" {
 		switch strings.ToLower(opts.GetJszFilter) {

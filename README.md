@@ -76,6 +76,10 @@ Usage:  ./prometheus-nats-exporter <flags> url
         Set the password for HTTP scrapes. NATS bcrypt supported.
   -http_user string
         Enable basic auth and set user name for HTTP scrapes.
+  -ipqueuesz
+        Get internal queue metrics (non-empty queues only).
+  -ipqueuesz_filter string
+        Only report internal queues whose name contains this string (e.g. " messages").
   -jsz string
         Select JetStream metrics to filter (e.g streams, accounts, consumers)
   -jsz_stream_meta_keys
@@ -160,6 +164,34 @@ gnatsd_varz_in_msgs{server_id="http://localhost:8222"} 0
 # TYPE gnatsd_varz_max_connections gauge
 gnatsd_varz_max_connections{server_id="http://localhost:8222"} 65536
 ```
+
+## Internal queue metrics
+
+Enable `-ipqueuesz` to collect internal queue sizes from the NATS server's
+`/ipqueuesz` endpoint. To select queues by a case-sensitive substring of their
+name, also set `-ipqueuesz_filter`:
+
+```bash
+prometheus-nats-exporter -ipqueuesz -ipqueuesz_filter " messages" "http://localhost:8222"
+```
+
+This example selects stream message queues. Without a filter, all non-empty
+internal queues are reported. The collector exposes two gauges, each labeled
+with `server_id` and `queue` (the queue name):
+
+| Metric | Description |
+| --- | --- |
+| `gnatsd_ipqueuesz_pending` | Items waiting in the queue. |
+| `gnatsd_ipqueuesz_in_progress` | Items taken from the queue and still being processed. |
+
+`-prefix` replaces `gnatsd`, so `-prefix nats` produces
+`nats_ipqueuesz_pending` and `nats_ipqueuesz_in_progress`.
+
+The server omits queues when both pending and in-progress counts are zero.
+Their samples therefore disappear from subsequent scrapes rather than reporting
+zero. Account for this when building dashboards and recovery conditions for
+alerts. Requests to the NATS endpoint time out after five seconds; failed
+requests produce no queue samples for that server.
 
 # The NATS Prometheus Exporter API
 
