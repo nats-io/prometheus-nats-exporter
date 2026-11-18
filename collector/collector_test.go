@@ -16,6 +16,7 @@ package collector
 import (
 	"fmt"
 	"maps"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -212,6 +213,76 @@ func verifyLabels(system, url, endpoint string, expectedLabels map[string]map[st
 				expectedLabelSet, metricName, actualLabelSets)
 		}
 	}
+}
+
+type metricSample struct {
+	labels map[string]string
+	value  float64
+}
+
+func collectMetricSamples(
+	system, url, endpoint, prefix string,
+	metricNames []string,
+) (map[string][]metricSample, error) {
+	servers := []*CollectedServer{{ID: "id", URL: url}}
+	coll := NewCollector(system, endpoint, prefix, servers)
+	wanted := make(map[string]struct{}, len(metricNames))
+	for _, metricName := range metricNames {
+		wanted[metricName] = struct{}{}
+	}
+
+	metrics := make(chan prometheus.Metric)
+	go func() {
+		coll.Collect(metrics)
+		close(metrics)
+	}()
+
+	samples := make(map[string][]metricSample)
+	for metric := range metrics {
+		metricName := parseDesc(metric.Desc().String())
+		if _, ok := wanted[metricName]; !ok {
+			continue
+		}
+		pb := &dto.Metric{}
+		if err := metric.Write(pb); err != nil {
+			return nil, err
+		}
+		labels := make(map[string]string, len(pb.GetLabel()))
+		for _, label := range pb.GetLabel() {
+			labels[label.GetName()] = label.GetValue()
+		}
+		samples[metricName] = append(samples[metricName], metricSample{
+			labels: labels,
+			value:  pb.GetGauge().GetValue(),
+		})
+	}
+	return samples, nil
+}
+
+func assertMetricSample(
+	t *testing.T,
+	samples map[string][]metricSample,
+	metricName string,
+	wantLabels map[string]string,
+	wantValue float64,
+) {
+	t.Helper()
+	for _, sample := range samples[metricName] {
+		matches := true
+		for label, value := range wantLabels {
+			if sample.labels[label] != value {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			if math.Abs(sample.value-wantValue) > 1e-9 {
+				t.Fatalf("%s%v = %v, want %v", metricName, wantLabels, sample.value, wantValue)
+			}
+			return
+		}
+	}
+	t.Fatalf("metric %s with labels %v not found in samples %v", metricName, wantLabels, samples[metricName])
 }
 
 func TestServerIDFromVarz(t *testing.T) {
@@ -478,6 +549,140 @@ func TestLeafzMetricLabels(t *testing.T) {
 
 	verifyLabels(CoreSystem, url, "leafz", expectedLabels1, t)
 	verifyLabels(CoreSystem, url, "leafz", expectedLabels2, t)
+}
+
+func TestRoutezMetricLabels(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	s := pet.RunRoutezStaticServer(&wg)
+	defer s.Close()
+
+	url := fmt.Sprintf("http://localhost:%d", pet.StaticPort)
+	expectedPooledRoute := map[string]map[string]string{
+		"gnatsd_routez_route_pending_bytes": {
+			"server_id":   "id",
+			"rid":         "101",
+			"remote_id":   "REMOTE_SERVER_ID",
+			"remote_name": "route-peer",
+			"account":     "",
+			"ip":          "127.0.0.1",
+			"port":        "6222",
+		},
+	}
+	expectedPinnedRoute := map[string]map[string]string{
+		"gnatsd_routez_route_pending_bytes": {
+			"server_id":   "id",
+			"rid":         "102",
+			"remote_id":   "REMOTE_SERVER_ID",
+			"remote_name": "route-peer",
+			"account":     "APP",
+			"ip":          "127.0.0.1",
+			"port":        "6222",
+		},
+	}
+
+	verifyLabels(CoreSystem, url, "routez", expectedPooledRoute, t)
+	verifyLabels(CoreSystem, url, "routez", expectedPinnedRoute, t)
+}
+
+func TestRoutezMetrics(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	s := pet.RunRoutezStaticServer(&wg)
+	defer s.Close()
+
+	metricNames := []string{
+		"gnatsd_routez_num_routes",
+		"gnatsd_routez_server_id",
+		"gnatsd_routez_server_name",
+		"gnatsd_routez_route_info",
+		"gnatsd_routez_route_pending_bytes",
+		"gnatsd_routez_route_rtt_seconds",
+		"gnatsd_routez_route_in_msgs",
+		"gnatsd_routez_route_out_msgs",
+		"gnatsd_routez_route_in_bytes",
+		"gnatsd_routez_route_out_bytes",
+		"gnatsd_routez_route_subscriptions",
+		"gnatsd_routez_route_uptime_seconds",
+		"gnatsd_routez_route_idle_seconds",
+		"gnatsd_routez_route_start_time_seconds",
+		"gnatsd_routez_route_last_activity_seconds",
+	}
+	url := fmt.Sprintf("http://localhost:%d", pet.StaticPort)
+	samples, err := collectMetricSamples(CoreSystem, url, "routez", "", metricNames)
+	if err != nil {
+		t.Fatalf("Failed to collect routez metrics: %v", err)
+	}
+
+	assertMetricSample(t, samples, "gnatsd_routez_num_routes", map[string]string{"server_id": "id"}, 2)
+	assertMetricSample(t, samples, "gnatsd_routez_server_id",
+		map[string]string{"server_id": "id", "value": "ROUTEZ_SERVER_ID"}, 1)
+	assertMetricSample(t, samples, "gnatsd_routez_server_name",
+		map[string]string{"server_id": "id", "value": "routez-server"}, 1)
+
+	routeLabels := map[string]string{"rid": "101", "account": ""}
+	assertMetricSample(t, samples, "gnatsd_routez_route_info", map[string]string{
+		"rid":           "101",
+		"is_configured": "true",
+		"did_solicit":   "true",
+		"compression":   "s2_fast",
+	}, 1)
+	assertMetricSample(t, samples, "gnatsd_routez_route_pending_bytes", routeLabels, 4096)
+	assertMetricSample(t, samples, "gnatsd_routez_route_rtt_seconds", routeLabels, 0.001234)
+	assertMetricSample(t, samples, "gnatsd_routez_route_in_msgs", routeLabels, 1200)
+	assertMetricSample(t, samples, "gnatsd_routez_route_out_msgs", routeLabels, 1300)
+	assertMetricSample(t, samples, "gnatsd_routez_route_in_bytes", routeLabels, 24000)
+	assertMetricSample(t, samples, "gnatsd_routez_route_out_bytes", routeLabels, 26000)
+	assertMetricSample(t, samples, "gnatsd_routez_route_subscriptions", routeLabels, 42)
+	assertMetricSample(t, samples, "gnatsd_routez_route_uptime_seconds", routeLabels, 93784)
+	assertMetricSample(t, samples, "gnatsd_routez_route_idle_seconds", routeLabels, 5)
+	assertMetricSample(t, samples, "gnatsd_routez_route_start_time_seconds", routeLabels,
+		float64(time.Date(2026, time.August, 31, 16, 56, 56, 0, time.UTC).Unix()))
+	assertMetricSample(t, samples, "gnatsd_routez_route_last_activity_seconds", routeLabels,
+		float64(time.Date(2026, time.September, 1, 18, 59, 55, 0, time.UTC).Unix()))
+	assertMetricSample(t, samples, "gnatsd_routez_route_pending_bytes",
+		map[string]string{"rid": "102", "account": "APP"}, 64)
+}
+
+func TestRoutezDurationParsing(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		parse func(string) float64
+		want  float64
+	}{
+		{"rtt", "1.234ms", routeRTTSeconds, 0.001234},
+		{"empty rtt", "", routeRTTSeconds, 0},
+		{"malformed rtt", "unknown", routeRTTSeconds, 0},
+		{"uptime with day", "1d2h3m4s", routeDurationSeconds, 93784},
+		{"empty uptime", "", routeDurationSeconds, 0},
+		{"malformed uptime", "unknown", routeDurationSeconds, 0},
+		{"idle", "2m3s", routeDurationSeconds, 123},
+		{"empty idle", "", routeDurationSeconds, 0},
+		{"malformed idle", "unknown", routeDurationSeconds, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.parse(test.value); math.Abs(got-test.want) > 1e-9 {
+				t.Fatalf("parse(%q) = %v, want %v", test.value, got, test.want)
+			}
+		})
+	}
+}
+
+func TestRoutezPrefix(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	s := pet.RunRoutezStaticServer(&wg)
+	defer s.Close()
+
+	metricName := "nats_routez_route_pending_bytes"
+	url := fmt.Sprintf("http://localhost:%d", pet.StaticPort)
+	samples, err := collectMetricSamples(CoreSystem, url, "routez", "nats", []string{metricName})
+	if err != nil {
+		t.Fatalf("Failed to collect routez metrics: %v", err)
+	}
+	assertMetricSample(t, samples, metricName, map[string]string{"rid": "101"}, 4096)
 }
 
 func TestAccountzMetricLabels(t *testing.T) {
