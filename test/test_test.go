@@ -21,5 +21,5 @@ func TestCreateClientConnSubscribeAndPublish(t *testing.T) {
 	s := RunServer()
 	defer s.Shutdown()
 
-	CreateClientConnSubscribeAndPublish(t).Close()
+	CreateClientConnSubscribeAndPublish(t, false).Close()
 }
