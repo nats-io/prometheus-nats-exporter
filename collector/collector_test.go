@@ -16,6 +16,8 @@ package collector
 import (
 	"fmt"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -850,5 +852,92 @@ func TestMapKeys(t *testing.T) {
 	keys := mapKeys(m, "")
 	if !maps.Equal(keys, expected) {
 		t.Fatalf("expected %v, got %v", expected, keys)
+	}
+}
+
+func TestIpqueueszTimeout(t *testing.T) {
+	release := make(chan struct{})
+	s := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	defer s.Close()
+	defer close(release)
+
+	coll := NewIpqueueszCollector("", "", []*CollectedServer{{ID: "id", URL: s.URL}})
+	metrics := make(chan prometheus.Metric, 2)
+	done := make(chan struct{})
+	go func() {
+		coll.Collect(metrics)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(7 * time.Second):
+		t.Fatal("Collection did not time out for a stalled endpoint")
+	}
+	if len(metrics) != 0 {
+		t.Fatal("Expected no metrics after a request timeout")
+	}
+}
+
+func TestIpqueuesz(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	s := pet.RunIpqueueszStaticServer(&wg)
+	defer s.Close()
+
+	url := fmt.Sprintf("http://localhost:%d", pet.StaticPort)
+	collect := func(filter string) map[string][2]float64 {
+		coll := NewIpqueueszCollector("", filter, []*CollectedServer{{ID: "id", URL: url}})
+		ch := make(chan prometheus.Metric)
+		go func() { coll.Collect(ch); close(ch) }()
+		got := map[string][2]float64{}
+		for m := range ch {
+			pb := &dto.Metric{}
+			if err := m.Write(pb); err != nil {
+				t.Fatalf("Unable to write metric: %v", err)
+			}
+			var queue string
+			for _, l := range pb.GetLabel() {
+				if l.GetName() == "server_id" && l.GetValue() != "id" {
+					t.Fatalf("Unexpected server_id %q", l.GetValue())
+				}
+				if l.GetName() == "queue" {
+					queue = l.GetValue()
+				}
+			}
+			v := got[queue]
+			switch parseDesc(m.Desc().String()) {
+			case "gnatsd_ipqueuesz_pending":
+				v[0] = pb.GetGauge().GetValue()
+			case "gnatsd_ipqueuesz_in_progress":
+				v[1] = pb.GetGauge().GetValue()
+			default:
+				t.Fatalf("Unexpected metric %s", m.Desc())
+			}
+			got[queue] = v
+		}
+		return got
+	}
+
+	all := collect("")
+	if len(all) != 3 {
+		t.Fatalf("Expected 3 queues, got %v", all)
+	}
+	if v := all["[ACC:backend] stream 'inactive-bet-stake-2' messages"]; v != [2]float64{81234, 512} {
+		t.Fatalf("Unexpected pending/in_progress %v", v)
+	}
+
+	// The filter contains a space, so it must be query-escaped.
+	filtered := collect(" messages")
+	if len(filtered) != 2 {
+		t.Fatalf("Expected 2 stream queues, got %v", filtered)
+	}
+	if _, ok := filtered["Route Outbound"]; ok {
+		t.Fatalf("Filter not applied: %v", filtered)
 	}
 }

@@ -16,6 +16,7 @@
 package test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -23,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -80,6 +82,39 @@ func RunAccstatzStaticServer(wg *sync.WaitGroup) *http.Server {
 		srv.ListenAndServe()
 	}()
 	return srv
+}
+
+// RunIpqueueszStaticServer runs an ipqueuesz static server that applies the
+// "queues" name filter the way nats-server does.
+func RunIpqueueszStaticServer(wg *sync.WaitGroup) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ipqueuesz", func(w http.ResponseWriter, r *http.Request) {
+		filter := r.URL.Query().Get("queues")
+		queues := map[string]server.IpqueueszStatusIPQ{}
+		for name, q := range IpqueueszTestResponse() {
+			if strings.Contains(name, filter) {
+				queues[name] = q
+			}
+		}
+		b, _ := json.Marshal(queues)
+		w.Write(b)
+	})
+	srv := &http.Server{Addr: ":" + strconv.Itoa(StaticPort), Handler: mux}
+
+	go func() {
+		defer wg.Done()
+		srv.ListenAndServe()
+	}()
+	return srv
+}
+
+// IpqueueszTestResponse is the fixture served by RunIpqueueszStaticServer.
+func IpqueueszTestResponse() map[string]server.IpqueueszStatusIPQ {
+	return map[string]server.IpqueueszStatusIPQ{
+		"[ACC:backend] stream 'inactive-bet-stake-2' messages": {Pending: 81234, InProgress: 512},
+		"[ACC:backend] stream 'balance-transfer-1' messages":   {Pending: 7},
+		"Route Outbound": {Pending: 3, InProgress: 1},
+	}
 }
 
 // RunLeafzStaticServer runs a leafz static server.
