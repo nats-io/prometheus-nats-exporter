@@ -64,6 +64,8 @@ Usage:  ./prometheus-nats-exporter <flags> url
         Get connection metrics.
   -connz_detailed connz
         Get detailed connection metrics for each client. Enables flag connz implicitly.
+  -expvarz
+        Get the server's Go runtime memory and GC metrics from /debug/vars.
   -gatewayz
         Get gateway metrics.
   -healthz
@@ -160,6 +162,33 @@ gnatsd_varz_in_msgs{server_id="http://localhost:8222"} 0
 # TYPE gnatsd_varz_max_connections gauge
 gnatsd_varz_max_connections{server_id="http://localhost:8222"} 65536
 ```
+
+## Go runtime metrics
+
+`-expvarz` reads the NATS server's `/debug/vars` endpoint and exports the
+server's own Go memory and garbage collector statistics (`runtime.MemStats`).
+The exporter's own `go_*` metrics describe the exporter process, not the server.
+
+| Metric | Type | Source |
+|---|---|---|
+| `gnatsd_expvarz_memstats_gc_cycles_total` | counter | `NumGC` |
+| `gnatsd_expvarz_memstats_forced_gc_cycles_total` | counter | `NumForcedGC` |
+| `gnatsd_expvarz_memstats_gc_pause_seconds_total` | counter | `PauseTotalNs` |
+| `gnatsd_expvarz_memstats_alloc_bytes_total` | counter | `TotalAlloc` |
+| `gnatsd_expvarz_memstats_heap_alloc_bytes` | gauge | `HeapAlloc` |
+| `gnatsd_expvarz_memstats_heap_objects` | gauge | `HeapObjects` |
+| `gnatsd_expvarz_memstats_heap_inuse_bytes` | gauge | `HeapInuse` |
+| `gnatsd_expvarz_memstats_next_gc_bytes` | gauge | `NextGC` |
+| `gnatsd_expvarz_memstats_sys_bytes` | gauge | `Sys` |
+| `gnatsd_expvarz_memstats_last_gc_time_seconds` | gauge | `LastGC` |
+| `gnatsd_expvarz_memstats_gc_cpu_fraction` | gauge | `GCCPUFraction` |
+
+`gc_cpu_fraction` is a lifetime average since the server started, so it reacts
+slowly to a change. For current GC activity use
+`rate(gnatsd_expvarz_memstats_gc_cycles_total[5m])` (collections per second)
+and `rate(gnatsd_expvarz_memstats_gc_pause_seconds_total[5m])` (fraction of
+time spent in stop-the-world pauses). `rate(gnatsd_expvarz_memstats_alloc_bytes_total[5m])`
+is the allocation rate that drives GC frequency.
 
 # The NATS Prometheus Exporter API
 

@@ -480,6 +480,70 @@ func TestLeafzMetricLabels(t *testing.T) {
 	verifyLabels(CoreSystem, url, "leafz", expectedLabels2, t)
 }
 
+func TestExpvarzMetrics(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	s := pet.RunExpvarzStaticServer(&wg)
+	defer s.Close()
+
+	servers := []*CollectedServer{{ID: "id", URL: fmt.Sprintf("http://localhost:%d", pet.StaticPort)}}
+	coll := NewCollector(CoreSystem, "expvarz", "", servers)
+
+	ch := make(chan prometheus.Metric)
+	go func() {
+		coll.Collect(ch)
+		close(ch)
+	}()
+	got := make(map[string]*dto.Metric)
+	for m := range ch {
+		pb := &dto.Metric{}
+		if err := m.Write(pb); err != nil {
+			t.Fatalf("Unable to write metric: %v", err)
+		}
+		got[parseDesc(m.Desc().String())] = pb
+	}
+
+	cases := []struct {
+		name    string
+		counter bool
+		want    float64
+	}{
+		{"gnatsd_expvarz_memstats_gc_cycles_total", true, 4200},
+		{"gnatsd_expvarz_memstats_forced_gc_cycles_total", true, 3},
+		{"gnatsd_expvarz_memstats_gc_pause_seconds_total", true, 2.5},
+		{"gnatsd_expvarz_memstats_alloc_bytes_total", true, 987654321000},
+		{"gnatsd_expvarz_memstats_heap_alloc_bytes", false, 1610612736},
+		{"gnatsd_expvarz_memstats_heap_objects", false, 456789},
+		{"gnatsd_expvarz_memstats_heap_inuse_bytes", false, 1879048192},
+		{"gnatsd_expvarz_memstats_next_gc_bytes", false, 2147483648},
+		{"gnatsd_expvarz_memstats_sys_bytes", false, 4294967296},
+		{"gnatsd_expvarz_memstats_last_gc_time_seconds", false, 1760000000.5},
+		{"gnatsd_expvarz_memstats_gc_cpu_fraction", false, 0.125},
+	}
+	if len(got) != len(cases) {
+		t.Fatalf("Expected %d metrics, got %d: %v", len(cases), len(got), got)
+	}
+	for _, c := range cases {
+		pb, ok := got[c.name]
+		if !ok {
+			t.Fatalf("Metric %s not collected", c.name)
+		}
+		if (pb.GetCounter() != nil) != c.counter {
+			t.Fatalf("Metric %s: expected counter=%v, got %v", c.name, c.counter, pb)
+		}
+		val := pb.GetGauge().GetValue()
+		if c.counter {
+			val = pb.GetCounter().GetValue()
+		}
+		if val != c.want {
+			t.Fatalf("Expected %s=%v, got %v", c.name, c.want, val)
+		}
+		if l := pb.GetLabel(); len(l) != 1 || l[0].GetName() != "server_id" || l[0].GetValue() != "id" {
+			t.Fatalf("Metric %s: expected only server_id=id, got %v", c.name, l)
+		}
+	}
+}
+
 func TestAccountzMetricLabels(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
