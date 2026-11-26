@@ -346,7 +346,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "gnatsd_varz_in_bytes",
+          "expr": "rate(gnatsd_varz_in_bytes[$__rate_interval])",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "gnatsd_varz_in_bytes",
@@ -436,7 +436,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "gnatsd_varz_in_msgs",
+          "expr": "rate(gnatsd_varz_in_msgs[$__rate_interval])",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "gnatsd_varz_in_msgs",
@@ -526,7 +526,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "gnatsd_varz_out_bytes",
+          "expr": "rate(gnatsd_varz_out_bytes[$__rate_interval])",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "gnatsd_varz_out_bytes",
@@ -616,7 +616,7 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
-          "expr": "gnatsd_varz_out_msgs",
+          "expr": "rate(gnatsd_varz_out_msgs[$__rate_interval])",
           "intervalFactor": 2,
           "legendFormat": "{{server_id}}",
           "metric": "gnatsd_varz_out_msgs",
