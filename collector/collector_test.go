@@ -262,6 +262,48 @@ func TestVarz(t *testing.T) {
 	verifyCollector(CoreSystem, url, "varz", cases, t)
 }
 
+// slow_consumers is a cumulative server total and must be exposed as a counter.
+func TestVarzSlowConsumersIsCounter(t *testing.T) {
+	s := pet.RunServer()
+	defer s.Shutdown()
+
+	url := fmt.Sprintf("http://localhost:%d/", pet.MonitorPort)
+	servers := []*CollectedServer{{ID: "id", URL: url}}
+	coll := NewCollector(CoreSystem, "varz", "", servers)
+
+	// Scrape twice: a counter must report the current total, not accumulate it.
+	for scrape := 0; scrape < 2; scrape++ {
+		found := false
+		c := make(chan prometheus.Metric)
+		go coll.Collect(c)
+	loop:
+		for {
+			select {
+			case m := <-c:
+				if parseDesc(m.Desc().String()) != "gnatsd_varz_slow_consumers" {
+					continue
+				}
+				found = true
+				pb := &dto.Metric{}
+				if err := m.Write(pb); err != nil {
+					t.Fatalf("Unable to write metric: %v", err)
+				}
+				if pb.GetCounter() == nil {
+					t.Fatalf("gnatsd_varz_slow_consumers should be a counter, got %v", pb)
+				}
+				if pb.GetCounter().GetValue() != 0 {
+					t.Fatalf("Expected gnatsd_varz_slow_consumers=0, got %v", pb.GetCounter().GetValue())
+				}
+			case <-time.After(10 * time.Millisecond):
+				break loop
+			}
+		}
+		if !found {
+			t.Fatalf("gnatsd_varz_slow_consumers was not collected")
+		}
+	}
+}
+
 func TestStartAndConfigLoadTimeVarz(t *testing.T) {
 	s := pet.RunServer()
 	defer s.Shutdown()
