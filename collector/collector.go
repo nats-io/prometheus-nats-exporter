@@ -47,6 +47,13 @@ type metric struct {
 	time   bool
 }
 
+// counterDesc is a stat exposed as a true Prometheus counter. The NATS server
+// reports these as monotonically increasing totals, so each scrape emits the
+// current total as a const counter rather than accumulating into a CounterVec.
+type counterDesc struct {
+	desc *prometheus.Desc
+}
+
 // NATSCollector collects NATS metrics
 type NATSCollector struct {
 	sync.Mutex
@@ -195,6 +202,8 @@ func (nc *NATSCollector) Describe(ch chan<- *prometheus.Desc) {
 			m.Describe(ch)
 		case *prometheus.CounterVec:
 			m.Describe(ch)
+		case *counterDesc:
+			ch <- m.desc
 		default:
 			Tracef("Describe: Unknown metric type: %v", k)
 		}
@@ -270,6 +279,15 @@ func (nc *NATSCollector) collectStatsFromRequests(
 			}
 		}
 		m.Collect(ch) // update the stat.
+	case *counterDesc:
+		for id, response := range resps {
+			switch v := lookupValue(response, stat.path).(type) {
+			case float64: // json only has floats
+				ch <- prometheus.MustNewConstMetric(m.desc, prometheus.CounterValue, v, id)
+			default:
+				Debugf("value %s no longer a float", key, id, v)
+			}
+		}
 	default:
 		Tracef("Unknown Metric Type %s", key)
 	}
@@ -370,6 +388,15 @@ func (nc *NATSCollector) objectToMetrics(response map[string]interface{}, namesp
 		i := response[k]
 		switch v := i.(type) {
 		case float64: // all json numbers are handled here.
+			if nc.endpoint == "varz" && len(prefix) == 0 && k == "slow_consumers" {
+				// slow_consumers is a cumulative total on the server, so expose it as a counter.
+				nc.Stats[fqn] = metric{
+					path: path,
+					metric: &counterDesc{desc: prometheus.NewDesc(
+						prometheus.BuildFQName(namespace, nc.endpoint, fqn), fqn, []string{"server_id"}, nil)},
+				}
+				break
+			}
 			nc.Stats[fqn] = metric{
 				path:   path,
 				metric: newPrometheusGaugeVec(nc.system, nc.endpoint, fqn, "", namespace),
