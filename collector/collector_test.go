@@ -826,6 +826,69 @@ func TestJetStreamSourceMetricsWithoutExternal(t *testing.T) {
 	verifyLabels(JetStreamSystem, url, "streams", expectedLabels, t)
 }
 
+// One origin sourced several times with different filters (the cross-account pattern where
+// each filter subject has its own CONSUMER.CREATE rule) must yield one series per filter,
+// not duplicate series that fail the whole scrape.
+func TestJetStreamSourceMetricsSameOriginSeveralFilters(t *testing.T) {
+	clientPort := 4232
+	monitorPort := 8232
+	s, err := pet.RunJetStreamServerWithPorts(clientPort, monitorPort, "ABC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(s.StoreDir())
+		s.Shutdown()
+	}()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/", monitorPort)
+	nc, err := nats.Connect(fmt.Sprintf("nats://localhost:%d", clientPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+
+	js, err := nc.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = js.AddStream(&nats.StreamConfig{Name: "events", Subjects: []string{"evt.>"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = js.AddStream(&nats.StreamConfig{
+		Name: "copy",
+		Sources: []*nats.StreamSource{
+			{Name: "events", FilterSubject: "evt.a"},
+			{Name: "events", FilterSubject: "evt.b"},
+			{Name: "events", SubjectTransforms: []nats.SubjectTransformConfig{
+				{Source: "evt.c", Destination: "evt.c"}, {Source: "evt.d", Destination: "evt.d"}}},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+
+	metrics := []string{"jetstream_stream_source_lag", "jetstream_stream_source_active_duration_ns"}
+	labelValues, err := getLabelValues(JetStreamSystem, url, "streams", metrics)
+	if err != nil {
+		t.Fatalf("Failed to get label values: %v", err)
+	}
+	for _, m := range metrics {
+		got := map[string]bool{}
+		for _, ls := range labelValues[m] {
+			if ls["stream_name"] == "copy" {
+				got[ls["source_filter"]] = true
+			}
+		}
+		for _, want := range []string{"evt.a", "evt.b", "evt.c,evt.d"} {
+			if !got[want] {
+				t.Fatalf("%s: no series with source_filter=%q; got %v", m, want, got)
+			}
+		}
+	}
+}
+
 func TestMapKeys(t *testing.T) {
 	m := map[string]any{
 		"foo": "bar",
